@@ -1,0 +1,44 @@
+.section {
+  border-bottom: 1px solid var(--border);
+  background: var(--accent-bg);
+}
+
+.inner {
+  max-width: var(--lp-maxw);
+  margin: 0 auto;
+  padding: var(--lp-section-y) var(--lp-pad-inline);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.title {
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  margin: 0 0 8px;
+  color: var(--text-h);
+}
+
+.body {
+  font-size: 16px;
+  line-height: 1.5;
+  max-width: 52ch;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .actions {
+    width: 100%;
+  }
+
+  .actions > a {
+    flex: 1 1 100%;
+  }
+}

@@ -80,18 +80,23 @@ triggered by sufficient historical data).
 
 ### Prerequisites
 
-- Java 17+ and Maven/Gradle (for `backend-spring`)
-- Node.js 18+ (for `backend-node` and `frontend`)
+- Java (**latest LTS** — e.g. 21) and Maven/Gradle (for `backend-spring`)
+- Node.js (**latest LTS** — e.g. 22) for `backend-node` and `frontend`
+- Python (**latest LTS/stable** — e.g. 3.12) for `ml-hotspots`, if/when Phase 7 is triggered
 - PostgreSQL 15+ with the `pgvector` extension enabled
 - An API key for the embedding provider and LLM provider (see `.env.example`
   in each service)
+
+> **Version policy:** this project uses **LTS versions only** for all
+> runtimes (Java, Node.js, Python). Do not use bleeding-edge/current
+> releases — check the LTS schedule before upgrading anything.
 
 ### Local setup
 
 ```bash
 # Clone the repo
-git clone <TODO: repo-url>
-cd civicpulse
+git clone https://github.com/Proj-CivicPulse/CivicPulse.git
+cd CivicPulse
 
 # 1. Database
 createdb civicpulse
@@ -153,22 +158,15 @@ This is a private group project repo. Workflow for contributors:
 
 | Name | Role | GitHub |
 |---|---|---|
-| TODO: Name 1 | TODO: e.g. Backend (Spring Boot) | TODO: @handle |
-| TODO: Name 2 | TODO: e.g. AI Layer (Node.js) | TODO: @handle |
-| TODO: Name 3 | TODO: e.g. Frontend (React) | TODO: @handle |
-| TODO: Name 4 | TODO: e.g. ML / Evaluation | TODO: @handle |
-
-**Course / Institution:** TODO
-**Advisor / Instructor:** TODO
-**Submission deadline:** TODO
+| Suryansh | Backend — Spring Boot | TODO: @handle |
+| Abhishek | Backend — Node.js (AI layer) | TODO: @handle |
+| Devansh | UI/UX — design | TODO: @handle |
+| Manya | ML / Python | TODO: @handle |
+| Ria | TODO — not yet decided | TODO: @handle |
+| Alaafiya | TODO — not yet decided | TODO: @handle |
 
 ---
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
-TODO: confirm this is acceptable under your course/institution's IP policy
-before publishing the repo publicly. If there's any chance of
-commercialization or the policy is unclear, hold off on adding a LICENSE
-file (or keep the repo private) until confirmed with your advisor.

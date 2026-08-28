@@ -1,0 +1,30 @@
+.topbar {
+  border-bottom: 1px solid var(--border);
+}
+
+.inner {
+  max-width: var(--lp-maxw);
+  margin: 0 auto;
+  padding: 16px var(--lp-pad-inline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wordmark {
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.2px;
+  color: var(--text-h);
+  text-decoration: none;
+}
+
+.link {
+  font-size: 15px;
+  color: var(--lp-accent);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}

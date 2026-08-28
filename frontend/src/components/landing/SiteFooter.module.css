@@ -1,0 +1,15 @@
+.footer {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.inner {
+  max-width: var(--lp-maxw);
+  margin: 0 auto;
+  padding: 40px var(--lp-pad-inline);
+}
+
+.note {
+  margin-top: 6px;
+  opacity: 0.75;
+}

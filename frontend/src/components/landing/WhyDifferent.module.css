@@ -1,0 +1,44 @@
+.section {
+  border-bottom: 1px solid var(--border);
+}
+
+.inner {
+  max-width: var(--lp-maxw);
+  margin: 0 auto;
+  padding: var(--lp-section-y) var(--lp-pad-inline);
+}
+
+.title {
+  font-size: 24px;
+  letter-spacing: -0.3px;
+  margin: 0 0 32px;
+  color: var(--text-h);
+}
+
+.points {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px 40px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.point {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 12px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.mark {
+  color: var(--lp-accent);
+  margin-top: 3px;
+}
+
+@media (max-width: 768px) {
+  .points {
+    grid-template-columns: 1fr;
+  }
+}
