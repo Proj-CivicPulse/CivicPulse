@@ -3,10 +3,49 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; connect-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline';" />
-    <title>App</title>
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <meta name="description"
+        content="CivicPulse groups related citizen complaints into prioritized, explainable incidents for city officers — using semantic matching, not keyword or category filters." />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#16171d" media="(prefers-color-scheme: dark)" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="%VITE_APP_NAME%" />
+    <meta property="og:locale" content="en_IN" />
+    <meta property="og:title" content="%VITE_APP_NAME% — Civic complaint management" />
+    <meta property="og:description"
+        content="Related citizen complaints, grouped into prioritized and explainable incidents for city officers." />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="%VITE_APP_NAME% — Civic complaint management" />
+    <meta name="twitter:description"
+        content="Related citizen complaints, grouped into prioritized and explainable incidents for city officers." />
+
+    <style>
+        /* Hide native scrollbars app-wide; scrolling still works. */
+        html,
+        body,
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        *::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            display: none;
+        }
+    </style>
+
+    <title>%VITE_APP_NAME% — Civic complaint management</title>
 </head>
 
 <body>

@@ -83,7 +83,9 @@ triggered by sufficient historical data).
 - Java (**latest LTS** — e.g. 21) and Maven/Gradle (for `backend-spring`)
 - Node.js (**latest LTS** — e.g. 22) for `backend-node` and `frontend`
 - Python (**latest LTS/stable** — e.g. 3.12) for `ml-hotspots`, if/when Phase 7 is triggered
-- PostgreSQL 15+ with the `pgvector` extension enabled
+- **Docker Desktop** — runs local PostgreSQL + pgvector via
+  `docker-compose.yml` (no local Postgres install needed). A native
+  PostgreSQL 15+ with `pgvector` also works if you prefer.
 - An API key for the embedding provider and LLM provider (see `.env.example`
   in each service)
 
@@ -98,9 +100,8 @@ triggered by sufficient historical data).
 git clone https://github.com/Proj-CivicPulse/CivicPulse.git
 cd CivicPulse
 
-# 1. Database
-createdb civicpulse
-psql civicpulse -c "CREATE EXTENSION IF NOT EXISTS vector;"
+# 1. Database — PostgreSQL 17 + pgvector in Docker (see next section)
+docker compose up -d postgres
 
 # 2. Spring Boot service
 cd backend-spring
@@ -109,7 +110,7 @@ cp .env.example .env   # fill in DB credentials, JWT secret
 
 # 3. Node.js AI service
 cd ../backend-node
-cp .env.example .env   # fill in DB credentials, embedding/LLM API keys
+cp .env.example .env   # DATABASE_URL already points at the Docker DB
 npm install
 npm run dev
 
@@ -121,6 +122,96 @@ npm run dev
 
 Each service's own `README.md` (inside its folder) has service-specific
 details once those folders are scaffolded.
+
+---
+
+## Database (local, via Docker)
+
+`docker-compose.yml` at the repo root runs **PostgreSQL 17 with the
+`pgvector` extension** (`pgvector/pgvector:pg17`). The `vector` extension is
+created automatically on first startup by
+`docker/postgres/initdb/01-enable-vector.sql`.
+
+Defaults (database `civicpulse`, user `civicpulse`, password `civicpulse`,
+port `5432`) match `backend-node/.env`, so
+`DATABASE_URL=postgres://civicpulse:civicpulse@localhost:5432/civicpulse`
+works unchanged. These are **local-only throwaway credentials** — to change
+them, `cp .env.example .env` at the repo root and edit (that `.env` is
+gitignored).
+
+### First-time setup
+
+1. Install **[Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)**
+   (WSL 2 backend — the installer enables it; if it complains, run
+   `wsl --install` from an elevated PowerShell and reboot).
+2. **Launch Docker Desktop and wait for it to say "Engine running"**
+   (whale icon in the system tray, not animating). The Docker CLI talks to
+   this background engine — if it isn't running you get:
+   `failed to connect to the docker API at npipe:////./pipe/docker_engine`.
+   Tip: Docker Desktop → Settings → General → *Start Docker Desktop when
+   you sign in*.
+3. Verify the engine is reachable — `docker version` must show a **Server**
+   section, not just Client:
+   ```powershell
+   docker version
+   docker run --rm hello-world
+   ```
+4. From the repo root, start the database:
+   ```powershell
+   docker compose up -d postgres
+   ```
+   The first run pulls `pgvector/pgvector:pg17` from Docker Hub (~150 MB,
+   one-time, needs internet) and initializes the data volume. Watch it come
+   up healthy with `docker compose ps` (`STATUS` → `healthy`).
+
+That's the whole setup for anyone cloning the repo — no local PostgreSQL
+install, no manual database or user creation, credentials already match
+`backend-node/.env.example`.
+
+### Commands
+
+All commands are run **from the repo root**, in PowerShell or Windows
+Terminal, with **Docker Desktop running**:
+
+| Task | Command |
+|---|---|
+| Start (detached) | `docker compose up -d postgres` |
+| Stop (keep data) | `docker compose stop postgres` |
+| Restart | `docker compose restart postgres` |
+| Status / health | `docker compose ps` |
+| Follow logs | `docker compose logs -f postgres` |
+| Open `psql` | `docker compose exec postgres psql -U civicpulse -d civicpulse` |
+| Verify pgvector | `docker compose exec postgres psql -U civicpulse -d civicpulse -c "\dx vector"` |
+| Full reset (delete container **and** data volume) | `docker compose down -v` |
+| Stop + remove container, keep data | `docker compose down` |
+
+Notes:
+
+- **Safe to rerun.** `docker compose up -d` is idempotent; the init SQL uses
+  `CREATE EXTENSION IF NOT EXISTS`.
+- The init script runs **only on first initialization** (empty data
+  volume). After a `docker compose down` (without `-v`) the existing volume
+  is reused and the script does **not** re-run — it doesn't need to, the
+  extension is already there. If you ever start from a volume that predates
+  this setup, enable it once by hand:
+  `docker compose exec postgres psql -U civicpulse -d civicpulse -c "CREATE EXTENSION IF NOT EXISTS vector;"`
+- Port `5432` is published on `127.0.0.1` only. If it's already in use
+  (e.g. a native Postgres service), stop that service or set `POSTGRES_PORT`
+  in the root `.env` and update `DATABASE_URL` in `backend-node/.env` to
+  match.
+- No schema/migrations are included — the repo has none yet (Phase 0).
+
+**Troubleshooting**
+
+| Symptom | Fix |
+|---|---|
+| `failed to connect to the docker API at npipe:////./pipe/docker_engine` | Docker Desktop isn't running. Launch it, wait for "Engine running". |
+| `ports are not available: exposing port TCP 127.0.0.1:5432` / `bind: ... forbidden by its access permissions` | Something else already owns port 5432 — usually a **native PostgreSQL Windows service**. Either stop it (`Stop-Service postgresql-x64-18; Set-Service postgresql-x64-18 -StartupType Manual` in an elevated PowerShell), **or** keep both: put `POSTGRES_PORT=5433` in the repo-root `.env` and change `DATABASE_URL` in `backend-node/.env` to `...@localhost:5433/...`. Find the culprit with `netstat -ano \| findstr :5432`. |
+| Docker Desktop won't start / "virtualization" error | Enable virtualization (VT-x / AMD-V / SVM) in BIOS/UEFI; run `wsl --update`. |
+| `docker compose` → "command not found" but `docker` works | Old standalone Compose. Use `docker-compose` (hyphen), or update Docker Desktop (v2 bundles `docker compose`). |
+| `no such service: #` (or `'#' is not recognized`) | You pasted a trailing `# comment` into **cmd.exe**, where `#` isn't a comment. Run the command without it, or use PowerShell. |
+| Pull fails with an auth/rate-limit error | `docker login` with a free Docker Hub account, then retry. |
+| `psql: FATAL: role "civicpulse" does not exist` | Data volume was created before this setup. `docker compose down -v` then `up -d` to reinitialize (destroys local data). |
 
 ---
 

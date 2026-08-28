@@ -1,0 +1,18 @@
+{
+  "name": "CivicPulse",
+  "short_name": "CivicPulse",
+  "description": "Group related citizen complaints into prioritized, explainable incidents for city officers.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}
