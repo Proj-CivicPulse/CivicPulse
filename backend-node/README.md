@@ -40,20 +40,23 @@ compiled `dist/` runs under plain `node`.
 ## Setup
 
 ```bash
-# from the repo root — start Postgres + pgvector first
-docker compose up -d postgres
-
 cd backend-node
-cp .env.example .env      # DATABASE_URL already matches the Docker DB
+cp .env.example .env      # paste your Neon DATABASE_URL
 npm install
 npm run dev               # tsx watch, hot reload on :3001
 ```
 
-Requires a reachable PostgreSQL (see `DATABASE_URL`). The repo root
-`docker-compose.yml` provides one (PostgreSQL 17 + `pgvector`, credentials
-pre-matched to `.env.example`) — see **Database (local, via Docker)** in
-the [root README](../README.md). `GET /health` reports `error` / 503 until
-the DB actually answers.
+Requires a reachable PostgreSQL — the project uses **Neon**; see
+**Database (Neon)** in the [root README](../README.md). `GET /health`
+reports `error` / 503 until the database actually answers.
+
+**Run `backend-spring` at least once first.** It owns every migration and
+creates the schema (and the `pgvector` extension) on a fresh database. This
+service never runs DDL.
+
+`DATABASE_URL` is a **libpq** URL (`postgres://user:pass@host/db?sslmode=require`).
+backend-spring's `DB_URL` is a **JDBC** URL with credentials as separate
+properties — the two are not interchangeable.
 
 ### Scripts
 
@@ -78,8 +81,9 @@ exits the process with a message naming the variable and the rule it broke
 |---|---|---|---|
 | `PORT` | no | `3001` | Frontend proxy forwards `/api/ai/*` here |
 | `NODE_ENV` | no | `development` | `development` \| `production` \| `test` |
-| `DATABASE_URL` | **yes** | — | `postgres://…` / `postgresql://…` |
+| `DATABASE_URL` | **yes** | — | Neon libpq URL; `sslmode=require` is mandatory |
 | `FRONTEND_ORIGIN` | **yes** | — | Single CORS origin, no wildcards |
+| `HEALTHCHECK_TIMEOUT_MS` | no | `10000` | Ceiling on the `/health` probe. Sized for a Neon cold start; lower for a local DB. |
 | `LOG_LEVEL` | no | `info` | pino level |
 
 ---

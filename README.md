@@ -65,14 +65,18 @@ triggered by sufficient historical data).
 
 ### Service boundaries
 
+> **Spring Boot is the single writer and the single schema owner. Node.js is
+> the intelligence layer that decides *what* should be written.**
+
 - **Spring Boot owns:** auth, users, complaint CRUD, officer CRUD, dashboard
-  APIs
+  APIs, priority calculation, all `Incident` writes, **and every database
+  migration**
 - **Node.js owns:** embedding generation, incident matching, Copilot/LLM
-  orchestration
-- Open ownership questions (priority calculation, `Incident` table writes,
-  shared-table migrations) are tracked and resolved in
-  [`docs/service-boundaries.md`](docs/service-boundaries.md) — see that file
-  before touching shared tables.
+  orchestration. It never runs DDL.
+- The Phase-0 ownership questions are **resolved** in
+  [`docs/service-boundaries.md`](docs/service-boundaries.md) — read it before
+  touching shared tables. The cross-service wire format is in
+  [`docs/api-contract.md`](docs/api-contract.md).
 
 ---
 
@@ -80,12 +84,12 @@ triggered by sufficient historical data).
 
 ### Prerequisites
 
-- Java (**latest LTS** — e.g. 21) and Maven/Gradle (for `backend-spring`)
+- Java (**latest LTS** — e.g. 21) for `backend-spring`. No Maven install
+  needed — the repo ships the Maven wrapper (`./mvnw`).
 - Node.js (**latest LTS** — e.g. 22) for `backend-node` and `frontend`
 - Python (**latest LTS/stable** — e.g. 3.12) for `ml-hotspots`, if/when Phase 7 is triggered
-- **Docker Desktop** — runs local PostgreSQL + pgvector via
-  `docker-compose.yml` (no local Postgres install needed). A native
-  PostgreSQL 15+ with `pgvector` also works if you prefer.
+- A **[Neon](https://neon.com)** account — the project uses Neon's hosted
+  serverless PostgreSQL with `pgvector`. Nothing to install locally.
 - An API key for the embedding provider and LLM provider (see `.env.example`
   in each service)
 
@@ -100,17 +104,17 @@ triggered by sufficient historical data).
 git clone https://github.com/Proj-CivicPulse/CivicPulse.git
 cd CivicPulse
 
-# 1. Database — PostgreSQL 17 + pgvector in Docker (see next section)
-docker compose up -d postgres
+# 1. Database — nothing to install. Create a Neon project and copy your
+#    connection string (see the next section).
 
-# 2. Spring Boot service
+# 2. Spring Boot service (core API). Applies the schema migrations on boot.
 cd backend-spring
-cp .env.example .env   # fill in DB credentials, JWT secret
-./mvnw spring-boot:run
+cp .env.example .env   # paste your Neon DB_URL; set JWT_SECRET (32+ chars)
+./mvnw spring-boot:run # no local Maven install needed
 
 # 3. Node.js AI service
 cd ../backend-node
-cp .env.example .env   # DATABASE_URL already points at the Docker DB
+cp .env.example .env   # paste your Neon DATABASE_URL
 npm install
 npm run dev
 
@@ -125,93 +129,91 @@ details once those folders are scaffolded.
 
 ---
 
-## Database (local, via Docker)
+## Database (Neon)
 
-`docker-compose.yml` at the repo root runs **PostgreSQL 17 with the
-`pgvector` extension** (`pgvector/pgvector:pg17`). The `vector` extension is
-created automatically on first startup by
-`docker/postgres/initdb/01-enable-vector.sql`.
+The project uses **[Neon](https://neon.com)** — hosted serverless PostgreSQL
+with `pgvector`. There is nothing to install locally, and everyone on the
+team can share one database or take their own branch of it.
 
-Defaults (database `civicpulse`, user `civicpulse`, password `civicpulse`,
-port `5432`) match `backend-node/.env`, so
-`DATABASE_URL=postgres://civicpulse:civicpulse@localhost:5432/civicpulse`
-works unchanged. These are **local-only throwaway credentials** — to change
-them, `cp .env.example .env` at the repo root and edit (that `.env` is
-gitignored).
+**The schema is not created by hand.** `backend-spring` owns every
+migration (Flyway) and applies them on startup — including
+`CREATE EXTENSION vector`. A brand-new, empty Neon database is fully
+provisioned the first time you run the Spring service.
 
 ### First-time setup
 
-1. Install **[Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)**
-   (WSL 2 backend — the installer enables it; if it complains, run
-   `wsl --install` from an elevated PowerShell and reboot).
-2. **Launch Docker Desktop and wait for it to say "Engine running"**
-   (whale icon in the system tray, not animating). The Docker CLI talks to
-   this background engine — if it isn't running you get:
-   `failed to connect to the docker API at npipe:////./pipe/docker_engine`.
-   Tip: Docker Desktop → Settings → General → *Start Docker Desktop when
-   you sign in*.
-3. Verify the engine is reachable — `docker version` must show a **Server**
-   section, not just Client:
-   ```powershell
-   docker version
-   docker run --rm hello-world
-   ```
-4. From the repo root, start the database:
-   ```powershell
-   docker compose up -d postgres
-   ```
-   The first run pulls `pgvector/pgvector:pg17` from Docker Hub (~150 MB,
-   one-time, needs internet) and initializes the data volume. Watch it come
-   up healthy with `docker compose ps` (`STATUS` → `healthy`).
+1. Create a free account at [neon.com](https://neon.com) and create a
+   project. Pick a region near you.
+2. From the project dashboard, copy the **connection string**. Neon shows
+   two; use the **direct** one — the host *without* `-pooler` in it. Both
+   backends run their own connection pool, so Neon's PgBouncer pooler would
+   just be a second pool in front. (Switch to `-pooler` only for a
+   serverless deployment.)
+3. Put it in each service's `.env` — note the two formats differ:
 
-That's the whole setup for anyone cloning the repo — no local PostgreSQL
-install, no manual database or user creation, credentials already match
-`backend-node/.env.example`.
+   | Service | Var | Format |
+   |---|---|---|
+   | `backend-spring` | `DB_URL` + `DB_USERNAME` + `DB_PASSWORD` | **JDBC**: `jdbc:postgresql://HOST/neondb?sslmode=require`, credentials as separate properties, no `channel_binding` |
+   | `backend-node` | `DATABASE_URL` | **libpq**: `postgres://USER:PASS@HOST/neondb?sslmode=require` |
 
-### Commands
+   Both `.env.example` files spell this out. `sslmode=require` is mandatory —
+   Neon refuses plaintext connections.
+4. Start `backend-spring` once (`./mvnw spring-boot:run`). Flyway creates
+   the extension, all five tables, and seeds reference wards/departments.
 
-All commands are run **from the repo root**, in PowerShell or Windows
-Terminal, with **Docker Desktop running**:
+### Working with the database
 
-| Task | Command |
+Use the **SQL Editor** in the Neon Console for ad-hoc queries — no `psql`
+install required. If you do want a local client:
+
+```bash
+psql "postgres://USER:PASS@HOST/neondb?sslmode=require"
+```
+
+| Task | How |
 |---|---|
-| Start (detached) | `docker compose up -d postgres` |
-| Stop (keep data) | `docker compose stop postgres` |
-| Restart | `docker compose restart postgres` |
-| Status / health | `docker compose ps` |
-| Follow logs | `docker compose logs -f postgres` |
-| Open `psql` | `docker compose exec postgres psql -U civicpulse -d civicpulse` |
-| Verify pgvector | `docker compose exec postgres psql -U civicpulse -d civicpulse -c "\dx vector"` |
-| Full reset (delete container **and** data volume) | `docker compose down -v` |
-| Stop + remove container, keep data | `docker compose down` |
+| Inspect data | Neon Console → SQL Editor, or `psql` with the connection string |
+| Apply new migrations | Add `V*__*.sql` in `backend-spring/src/main/resources/db/migration/`, restart the service |
+| Reset the schema | Neon Console → SQL Editor → `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` then restart `backend-spring` |
+| Give yourself an isolated copy | Neon Console → Branches → **New branch** (see below) |
 
-Notes:
+### Branches — use them
 
-- **Safe to rerun.** `docker compose up -d` is idempotent; the init SQL uses
-  `CREATE EXTENSION IF NOT EXISTS`.
-- The init script runs **only on first initialization** (empty data
-  volume). After a `docker compose down` (without `-v`) the existing volume
-  is reused and the script does **not** re-run — it doesn't need to, the
-  extension is already there. If you ever start from a volume that predates
-  this setup, enable it once by hand:
-  `docker compose exec postgres psql -U civicpulse -d civicpulse -c "CREATE EXTENSION IF NOT EXISTS vector;"`
-- Port `5432` is published on `127.0.0.1` only. If it's already in use
-  (e.g. a native Postgres service), stop that service or set `POSTGRES_PORT`
-  in the root `.env` and update `DATABASE_URL` in `backend-node/.env` to
-  match.
-- No schema/migrations are included — the repo has none yet (Phase 0).
+Neon branches are copy-on-write clones: instant, and free on the starter
+plan. This is the main reason Neon suits a team project.
+
+- **Per developer.** Branch off `main`, point your `.env` at it, and you can
+  break things without affecting anyone else.
+- **For tests.** `./mvnw verify` is a real integration test — it runs the
+  migrations against whatever your `.env` points at. Aim it at a throwaway
+  branch with `TEST_DB_URL` / `TEST_DB_USERNAME` / `TEST_DB_PASSWORD`
+  (see `backend-spring/src/test/resources/application-test.yaml`) rather
+  than at shared data.
+
+### Things to know
+
+- **The compute suspends when idle** (a few minutes on the free plan). The
+  next request wakes it, which takes a second or two. Both services size
+  their timeouts for this — `HEALTH_TIMEOUT_SECONDS` / `HEALTHCHECK_TIMEOUT_MS`
+  default to 10s, and connection timeouts to 15s. A local database can use
+  much tighter values.
+- **Never commit a connection string.** Neon credentials live only in
+  `.env` files, which are gitignored. If one is ever exposed, rotate it:
+  Neon Console → your project → **Roles** → *Reset password*.
+- **Free-tier limits** are compute-hours and storage. Leaving a service
+  running with an idle connection pool keeps the compute awake, so both
+  backends deliberately release idle connections.
 
 **Troubleshooting**
 
 | Symptom | Fix |
 |---|---|
-| `failed to connect to the docker API at npipe:////./pipe/docker_engine` | Docker Desktop isn't running. Launch it, wait for "Engine running". |
-| `ports are not available: exposing port TCP 127.0.0.1:5432` / `bind: ... forbidden by its access permissions` | Something else already owns port 5432 — usually a **native PostgreSQL Windows service**. Either stop it (`Stop-Service postgresql-x64-18; Set-Service postgresql-x64-18 -StartupType Manual` in an elevated PowerShell), **or** keep both: put `POSTGRES_PORT=5433` in the repo-root `.env` and change `DATABASE_URL` in `backend-node/.env` to `...@localhost:5433/...`. Find the culprit with `netstat -ano \| findstr :5432`. |
-| Docker Desktop won't start / "virtualization" error | Enable virtualization (VT-x / AMD-V / SVM) in BIOS/UEFI; run `wsl --update`. |
-| `docker compose` → "command not found" but `docker` works | Old standalone Compose. Use `docker-compose` (hyphen), or update Docker Desktop (v2 bundles `docker compose`). |
-| `no such service: #` (or `'#' is not recognized`) | You pasted a trailing `# comment` into **cmd.exe**, where `#` isn't a comment. Run the command without it, or use PowerShell. |
-| Pull fails with an auth/rate-limit error | `docker login` with a free Docker Hub account, then retry. |
-| `psql: FATAL: role "civicpulse" does not exist` | Data volume was created before this setup. `docker compose down -v` then `up -d` to reinitialize (destroys local data). |
+| `password authentication failed` | Password was rotated or mistyped. Copy a fresh connection string from the Neon Console. |
+| `no pg_hba.conf entry ... no encryption` | `sslmode=require` is missing from the URL. |
+| JDBC: `The connection attempt failed` / unknown parameter | You pasted the libpq URL into `DB_URL`. It must start `jdbc:postgresql://`, carry no credentials, and drop `channel_binding`. |
+| First request after a break is slow, or `/health` returns `error` once | Neon compute waking from suspend. Retry; if it persists, raise `HEALTH_TIMEOUT_SECONDS`. |
+| `relation "users" does not exist` | Migrations have not run. Start `backend-spring` once. |
+| Flyway: `Migration checksum mismatch` | An already-applied migration file was edited. Never edit one — add a new `V*__*.sql` (or reset the schema on a scratch branch). |
 
 ---
 
@@ -220,8 +222,10 @@ Notes:
 Following a phased roadmap (see [`docs/roadmap.md`](docs/roadmap.md) for the
 full detail):
 
-- [ ] Phase 0 — Foundations (repo, schema, auth skeleton, service-boundary
-      decisions)
+- [x] Phase 0 — Foundations. Running skeleton: Neon Postgres + pgvector,
+      Flyway schema for all five tables, JWT auth (cookie-based) in Spring,
+      both services health-checked against the database and reachable through
+      the frontend proxy, service-boundary decisions written down.
 - [ ] Phase 1 — Complaint ingestion
 - [ ] Phase 2 — Embeddings + incident matching
 - [ ] Phase 3 — Explainable priority engine

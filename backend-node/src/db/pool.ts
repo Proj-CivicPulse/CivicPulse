@@ -2,14 +2,24 @@ import { Pool } from 'pg';
 import { env } from '../config/env.ts';
 import { logger } from '../config/logger.ts';
 
-// Single shared connection pool for the whole process. pgvector needs no
-// special client config — when Phase 2 adds vector columns, queries just
-// cast to/from `vector` in SQL, so nothing here has to change now.
+// Single shared connection pool for the whole process.
+//
+// TLS comes from `sslmode=require` in DATABASE_URL — node-postgres parses it
+// off the connection string, so there is no `ssl` option to set here. Neon
+// refuses plaintext connections, so a URL missing that parameter fails to
+// connect rather than silently downgrading.
+//
+// pgvector needs no special client config: when Phase 2 adds vector columns,
+// queries just cast to/from `vector` in SQL.
 export const pool = new Pool({
     connectionString: env.DATABASE_URL,
     max: 10,
+    // Neon suspends its compute when idle, so releasing connections quickly
+    // lets it actually sleep instead of being held awake for nothing.
     idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 5_000,
+    // Longer than a local socket would ever need: waking a suspended Neon
+    // compute takes a second or two, and that shows up as connection time.
+    connectionTimeoutMillis: 15_000,
     // allowExitOnIdle stays at its default (false): the pool is closed
     // explicitly by the graceful-shutdown handler in src/index.ts.
 });
@@ -24,7 +34,10 @@ pool.on('error', (err) => {
 // up at the TCP level but the server never answers (frozen DB, network
 // black hole) — pool.query() would otherwise hang with no client-side
 // timeout. Scoped to the health check so it doesn't constrain real queries.
-const HEALTHCHECK_TIMEOUT_MS = 3_000;
+//
+// Sized for a Neon cold start, not a local socket: too tight and an idle
+// database reports itself down on the first request after a quiet period.
+const HEALTHCHECK_TIMEOUT_MS = env.HEALTHCHECK_TIMEOUT_MS;
 
 /**
  * Real dependency check for the health endpoint. Runs a trivial

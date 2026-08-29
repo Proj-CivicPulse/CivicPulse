@@ -7,13 +7,13 @@
 
 ### === Java / Spring Boot (backend-spring) ===
 backend-spring/target/
-backend-spring/.mvn/
-backend-spring/mvnw
-backend-spring/mvnw.cmd
+# NOTE: mvnw, mvnw.cmd and .mvn/ are deliberately NOT ignored — the Maven
+# wrapper is committed so a fresh clone (and CI) can build with ./mvnw
+# without installing Maven. It is configured as distributionType=only-script,
+# so no maven-wrapper.jar is committed either.
 *.class
 *.jar
 *.war
-!.mvn/wrapper/maven-wrapper.jar
 .gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar

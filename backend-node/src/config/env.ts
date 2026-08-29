@@ -28,6 +28,10 @@ const EnvSchema = z.object({
     LOG_LEVEL: z
         .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
         .default('info'),
+    // Ceiling on the /health database probe. Defaults high enough to absorb
+    // a Neon cold start (its compute suspends when idle); lower it for a
+    // local database.
+    HEALTHCHECK_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
