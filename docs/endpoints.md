@@ -5,30 +5,43 @@ off once it's implemented **and** documented in
 [`api-contract.md`](api-contract.md) (for anything crossing the Spring↔Node
 boundary).
 
-## ⚠️ Open decisions — blocking some endpoints below
+## Decisions
 
-- [ ] **Citizen auth requirement** — does submitting/tracking a complaint
-      require an account, or is submission open/anonymous? Affects
-      `POST /complaints` and `GET /complaints/mine`.
-- [ ] **Priority calculation ownership** — Spring or Node? See
-      `service-boundaries.md`. Affects whether priority is computed inline
-      in Spring or via a dedicated Node endpoint.
+- [x] **Citizen auth requirement** — **submission is open/anonymous;
+      tracking requires an account.** `POST /complaints` is public;
+      `GET /complaints/mine` requires the `citizen` role. Already reflected
+      in `SecurityConfig`, in the nullable `complaints.user_id` column, and
+      in the frontend's public `/submit-complaint` route.
+- [x] **Priority calculation ownership** — **backend-spring**, recomputed
+      inline whenever an incident's membership changes. See
+      `service-boundaries.md` decision 1.
+- [x] **Incident writes / `incident_id` write-back** — **backend-spring**,
+      synchronously, in one transaction via
+      `POST /internal/incidents/attach`. See decision 2.
+- [x] **Shared-table migrations** — **backend-spring**, via Flyway.
+      Node never runs DDL. See decision 3.
+
+### ⚠️ Still open
+
 - [ ] **Photo upload mechanism** — direct-to-storage upload (client sends a
       `photoUrl` string) vs. a multipart upload endpoint on Spring. Current
       frontend scaffold (`complaint.service.ts`) assumes the former.
+- [ ] **Auth between services** — `/internal/*` is unauthenticated and
+      localhost-only today. See `api-contract.md` open questions.
 
 ---
 
 ## Spring Boot (`backend-spring`)
 
 ### Health
-- [ ] `GET /health`
+- [x] `GET /health` — real DB check (`SELECT 1`), `{status:'ok'|'error'}`, 200/503
 
 ### Auth — Phase 0
-- [ ] `POST /auth/login`
-- [ ] `POST /auth/logout`
-- [ ] `GET /auth/me`
-- [ ] `POST /auth/refresh`
+- [x] `POST /auth/register` *(not originally listed; always creates a citizen)*
+- [x] `POST /auth/login` — sets httpOnly cookies, returns `{user}`
+- [x] `POST /auth/logout` — clears cookies, 204
+- [x] `GET /auth/me` — session restore, 401 when unauthenticated
+- [x] `POST /auth/refresh` — rotates the token pair
 
 ### Officers — Phase 0/1
 - [ ] `GET /officers`
@@ -78,16 +91,16 @@ boundary).
 ## Node.js (`backend-node`)
 
 ### Health
-- [ ] `GET /health`
+- [x] `GET /health` — real DB check (`SELECT 1`), `{status:'ok'|'error'}`, 200/503
 
 ### Complaint processing — Phase 2 (core bottleneck)
-- [ ] `POST /complaints/{id}/process`
+- [ ] `POST /complaints/{id}/process` — *route exists, returns 501 `NOT_IMPLEMENTED`*
 
 ### Copilot — Phase 6
-- [ ] `POST /copilot/query`
+- [ ] `POST /copilot/query` — *route exists, body validated, returns 501*
 
 ### Hotspots — Phase 7, conditional
-- [ ] `GET /hotspots/predict` *(proxies to `ml-hotspots`)*
+- [ ] `GET /hotspots/predict` *(proxies to `ml-hotspots`)* — *route exists, returns 501*
 
 ---
 
