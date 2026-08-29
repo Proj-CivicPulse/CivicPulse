@@ -1,0 +1,41 @@
+# Test overrides, layered ON TOP of src/main/resources/application.yaml.
+#
+# Deliberately a PROFILE file (application-test.yaml), not application.yaml:
+# a test-classpath file with the same name as the main one replaces it
+# outright instead of merging, which would silently drop the Flyway and
+# ddl-auto=validate settings and make the context test pass without ever
+# touching the schema.
+#
+# The context test is a real integration test — it applies the migrations
+# and validates every JPA entity against the result. It therefore needs a
+# reachable database, and by default uses whatever your .env points at.
+#
+# ⚠️ That means `./mvnw verify` runs migrations against your real Neon
+# database. Migrations are idempotent, so this is safe — but everyone on the
+# team sharing one branch will contend for the same schema, and each run
+# wakes the compute.
+#
+# The clean fix, and the reason Neon is a good choice here: give each
+# developer (and CI) their own BRANCH. In the Neon Console → Branches →
+# "New branch" from main; it is a copy-on-write clone, instant and free on
+# the starter plan. Then point DB_* in your .env at that branch.
+#
+# TEST_DB_* below lets you aim the tests somewhere different from the app
+# without touching .env — useful for CI, which should always use a
+# throwaway branch.
+
+spring:
+  datasource:
+    url: ${TEST_DB_URL:${DB_URL}}
+    username: ${TEST_DB_USERNAME:${DB_USERNAME}}
+    password: ${TEST_DB_PASSWORD:${DB_PASSWORD}}
+
+app:
+  frontend-origin: http://localhost:5173
+  cookie-secure: false
+  health-timeout-seconds: 10
+
+jwt:
+  secret: test-only-secret-value-not-used-anywhere-real-0123456789
+  access-expiration: 900000
+  refresh-expiration: 604800000
