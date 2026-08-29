@@ -3,33 +3,91 @@ package com.civicpulse.backend_spring.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SecurityErrorHandlers securityErrorHandlers;
+    private final AppProperties appProperties;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Exactly one allowed origin, from configuration — never a wildcard.
+     * {@code allowCredentials} is required for the httpOnly auth cookie, and
+     * the CORS spec forbids pairing it with "*".
+     *
+     * In local dev the frontend actually reaches this service through the
+     * Vite proxy (same-origin), so CORS is not exercised; this exists for
+     * any deployment where the browser talks to the API directly.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of(appProperties.getFrontendOrigin()));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // Safe to disable ONLY because the auth cookies are
+                // SameSite=Lax, so a cross-site request never carries them.
+                // Re-enable CSRF tokens if any cookie ever becomes SameSite=None.
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint(securityErrorHandlers.authenticationEntryPoint())
+                        .accessDeniedHandler(securityErrorHandlers.accessDeniedHandler())
+                )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/health").permitAll()
+                        // Liveness/readiness probe — must stay reachable
+                        // even when everything else is locked down.
+                        .requestMatchers("/health").permitAll()
+
+                        // Login, register, logout, and refresh are how a
+                        // caller *gets* credentials, so they cannot require them.
+                        .requestMatchers("/auth/login", "/auth/register",
+                                "/auth/logout", "/auth/refresh").permitAll()
+
+                        // Submitting a complaint is open/anonymous by
+                        // decision (docs/endpoints.md); tracking your own
+                        // complaints below is not.
+                        .requestMatchers(HttpMethod.POST, "/complaints").permitAll()
+
+                        .requestMatchers("/complaints/mine").hasRole("CITIZEN")
+                        .requestMatchers("/incidents/**", "/dashboard/**", "/analytics/**")
+                                .hasRole("OFFICER")
+
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(

@@ -1,5 +1,6 @@
 package com.civicpulse.backend_spring.config;
 
+import com.civicpulse.backend_spring.service.auth.AuthCookieFactory;
 import com.civicpulse.backend_spring.service.auth.JwtService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -10,17 +11,50 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
+/**
+ * Authenticates a request from its access token.
+ *
+ * Two accepted transports, in priority order:
+ * <ol>
+ *   <li>the httpOnly {@code cp_access_token} cookie — how the browser app
+ *       authenticates (see {@link AuthCookieFactory} for why);</li>
+ *   <li>an {@code Authorization: Bearer} header — kept for service-to-service
+ *       calls (backend-node → backend-spring {@code /internal/*}) and for
+ *       curl/Postman during development, neither of which has a cookie jar.</li>
+ * </ol>
+ *
+ * A missing or invalid token is not rejected here — the filter simply
+ * leaves the context unauthenticated and lets the authorization rules in
+ * SecurityConfig decide, so public endpoints keep working.
+ */
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final JwtService jwtService;
+
+    private Optional<String> extractToken(HttpServletRequest request) {
+        Optional<String> fromCookie = AuthCookieFactory.readCookie(request, AuthCookieFactory.ACCESS_COOKIE);
+        if (fromCookie.isPresent()) {
+            return fromCookie;
+        }
+
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
+            return Optional.of(authHeader.substring(BEARER_PREFIX.length()));
+        }
+        return Optional.empty();
+    }
 
     @Override
     protected void doFilterInternal(
@@ -29,43 +63,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String token = authHeader.substring(7);
-
-        if (!jwtService.isTokenValid(token)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        try {
-            Claims claims = jwtService.extractClaims(token);
-
-            Long userId = Long.valueOf(claims.getSubject());
-            String role = claims.get("role", String.class);
-
-            var authorities = List.of(
-                    new SimpleGrantedAuthority("ROLE_" + role)
-            );
-
-            var authentication = new UsernamePasswordAuthenticationToken(
-                    userId,
-                    null,
-                    authorities
-            );
-
-            SecurityContextHolder.getContext()
-                    .setAuthentication(authentication);
-
-        } catch (Exception e) {
-            SecurityContextHolder.clearContext();
+        // Don't overwrite an authentication established earlier in the chain.
+        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+            extractToken(request)
+                    .flatMap(token -> jwtService.parse(token, JwtService.TYPE_ACCESS))
+                    .ifPresent(claims -> authenticate(request, claims));
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void authenticate(HttpServletRequest request, Claims claims) {
+        try {
+            Long userId = jwtService.extractUserId(claims);
+            String role = jwtService.extractRole(claims);
+            if (role == null || role.isBlank()) {
+                return;
+            }
+
+            // Spring Security's hasRole()/@PreAuthorize expect the ROLE_ prefix.
+            var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+
+            var authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        } catch (NumberFormatException ex) {
+            // Malformed subject — treat as unauthenticated rather than 500.
+            SecurityContextHolder.clearContext();
+        }
     }
 }
