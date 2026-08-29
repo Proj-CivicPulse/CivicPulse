@@ -8,6 +8,9 @@ import { useAuthStore } from './stores/auth.store';
 // Eagerly loaded — it's the entry point every visitor sees first, so
 // code-splitting it would only add a loading flash.
 import Landing from './pages/Landing';
+// Eager too: it renders nothing but a redirect, so a lazy chunk would add
+// a network round-trip in the middle of the login flow.
+import Portal from './pages/Portal';
 
 // If a deploy ships new JS chunk hashes while a tab is still open, a stale
 // lazy-loaded route fails to fetch its chunk. Reload once, automatically,
@@ -76,6 +79,10 @@ export default function App() {
                 Assumption per docs/endpoints.md open decision; flag if
                 the team decides otherwise. */}
                         <Route path="/submit-complaint" element={<SubmitComplaint />} />
+
+                        {/* Role dispatcher. Login and both route guards send
+                            users here instead of guessing a destination. */}
+                        <Route path="/portal" element={<Portal />} />
 
                         <Route
                             path="/my-complaints"
