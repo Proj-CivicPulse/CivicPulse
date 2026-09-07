@@ -12,7 +12,7 @@ import styles from './MapView.module.css';
  * works with no setup at all.
  */
 const TILE_URL = MAP_TILE_API_KEY
-    ? `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?api_key=${encodeURIComponent(MAP_TILE_API_KEY)}`
+    ? `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(MAP_TILE_API_KEY)}`
     : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
 export interface MapMarker {
