@@ -3,28 +3,66 @@ import { SPRING_API_PATH } from '../config/constants';
 
 export type ComplaintStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 
+/**
+ * Wire shape per docs/api-contract.md. Ids are strings, enums lowercase, and
+ * the DB's latitude/longitude columns arrive as lat/long.
+ */
 export interface Complaint {
     id: string;
-    category: string;
+    /** Human-readable receipt, e.g. "CP-2026-W17-00412". Generated on insert. */
+    referenceNo: string;
+    /** null when the report was submitted anonymously. */
+    userId: string | null;
     wardId: string;
+    /** null until the matcher attaches this complaint to an incident. */
+    incidentId: string | null;
+    /**
+     * Total complaints in this one's incident, including this one. null when
+     * unmatched.
+     *
+     * Carried on the complaint rather than read from GET /incidents/{id},
+     * which is officer-only — a citizen cannot fetch incidents at all, so this
+     * is the only route by which "Grouped with N other reports" can reach the
+     * My reports screen. It is an aggregate count and leaks no other incident
+     * detail.
+     */
+    incidentComplaintCount: number | null;
+    /** null until an officer triages it. */
+    departmentId: string | null;
+    title?: string;
+    description: string;
+    category: string;
     lat: number;
     long: number;
-    description: string;
-    photoUrl?: string;
+    /**
+     * Street address for the coordinates. Null when geocoding is disabled or
+     * the point has no address — always render coordinates as the fallback.
+     */
+    address: string | null;
     status: ComplaintStatus;
-    incidentId: string | null;
+    photoUrl?: string;
     createdAt: string;
+    updatedAt: string;
 }
 
 export interface CreateComplaintInput {
+    title?: string;
+    description: string;
     category: string;
-    wardId: string;
+    /**
+     * Optional. When omitted the server derives the ward from lat/long via
+     * GET /wards/resolve, which is the path the submit flow uses — the system
+     * knowing your ward from the pin is the trust moment, not a dropdown.
+     */
+    wardId?: string;
     lat: number;
     long: number;
-    description: string;
-    // TODO: shape depends on the still-open photo-upload decision in
-    // docs/endpoints.md — assumes direct-to-storage upload producing a URL,
-    // not a multipart endpoint. Update this if the team decides otherwise.
+    /**
+     * The upload mechanism is still an open decision in docs/endpoints.md
+     * (direct-to-storage URL vs. a multipart endpoint on Spring). No storage
+     * provider is configured, so the submit form ships this block disabled
+     * rather than shipping a fake uploader.
+     */
     photoUrl?: string;
 }
 
@@ -32,6 +70,11 @@ export interface ComplaintFilters {
     wardId?: string;
     category?: string;
     status?: ComplaintStatus;
+}
+
+export interface UpdateComplaintInput {
+    status?: ComplaintStatus;
+    departmentId?: string;
 }
 
 function buildQuery(filters: ComplaintFilters = {}): string {
@@ -44,16 +87,20 @@ function buildQuery(filters: ComplaintFilters = {}): string {
 }
 
 export const complaintService = {
-    create: (input: CreateComplaintInput) => post<Complaint>(SPRING_API_PATH, '/complaints', input),
+    /** Public — submission does not require an account (docs/endpoints.md). */
+    create: (input: CreateComplaintInput) =>
+        post<Complaint>(SPRING_API_PATH, '/complaints', input),
 
-    list: (filters?: ComplaintFilters) => get<Complaint[]>(SPRING_API_PATH, `/complaints${buildQuery(filters)}`),
+    /** Officer only — this is every citizen's complaint text. */
+    list: (filters?: ComplaintFilters) =>
+        get<Complaint[]>(SPRING_API_PATH, `/complaints${buildQuery(filters)}`),
 
     getById: (id: string) => get<Complaint>(SPRING_API_PATH, `/complaints/${id}`),
 
-    // TODO: requires citizen auth — open decision in docs/endpoints.md on
-    // whether complaint submission/tracking requires an account at all.
+    /** Citizen role required. Tracking is what an account buys you. */
     mine: () => get<Complaint[]>(SPRING_API_PATH, '/complaints/mine'),
 
-    updateStatus: (id: string, status: ComplaintStatus) =>
-        patch<Complaint>(SPRING_API_PATH, `/complaints/${id}`, { status }),
+    /** Officer only. */
+    update: (id: string, changes: UpdateComplaintInput) =>
+        patch<Complaint>(SPRING_API_PATH, `/complaints/${id}`, changes),
 };

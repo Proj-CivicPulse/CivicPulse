@@ -30,9 +30,10 @@ async function tryRefreshSession(): Promise<boolean> {
 
     refreshInFlight = (async () => {
         try {
-            // TODO: POST /api/core/auth/refresh doesn't exist yet — add it as
-            // part of the Phase 0 JWT auth skeleton. Until then this always
-            // fails and callers fall through to the logout/redirect path.
+            // Public by design — the access token is expected to be expired
+            // here. Spring rotates both cookies and returns 401 if the refresh
+            // cookie is missing or invalid, at which point callers fall through
+            // to the logout/redirect path.
             const response = await fetch(`${SPRING_API_PATH}/auth/refresh`, {
                 method: 'POST',
                 credentials: 'include',
