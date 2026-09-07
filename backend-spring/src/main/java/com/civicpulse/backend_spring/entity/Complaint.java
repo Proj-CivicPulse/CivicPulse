@@ -67,6 +67,14 @@ public class Complaint {
     @ToString.Exclude
     private Department department;
 
+    /**
+     * Human-readable receipt, e.g. "CP-2026-W17-00412". Allocated once by
+     * ReferenceNumberService inside the creating transaction and never
+     * rewritten — hence {@code updatable = false}.
+     */
+    @Column(name = "reference_no", nullable = false, updatable = false, length = 32)
+    private String referenceNo;
+
     @Column(name = "title")
     private String title;
 
@@ -86,6 +94,13 @@ public class Complaint {
     @Column(name = "status", nullable = false)
     @Builder.Default
     private ComplaintStatus status = ComplaintStatus.OPEN;
+
+    /**
+     * Street address for the coordinates, filled in on creation when geocoding
+     * is enabled. Null is normal: geocoding is optional and best-effort.
+     */
+    @Column(name = "address", length = 512)
+    private String address;
 
     @Column(name = "photo_url", length = 1024)
     private String photoUrl;

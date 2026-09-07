@@ -92,6 +92,10 @@ public class Incident {
     @Column(name = "longitude")
     private Double longitude;
 
+    /** Street address of the incident centroid. Null when geocoding is off. */
+    @Column(name = "address", length = 512)
+    private String address;
+
     @Column(name = "ai_recommendation", columnDefinition = "TEXT")
     private String aiRecommendation;
 

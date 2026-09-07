@@ -30,11 +30,31 @@ public class Ward {
     @Column(name = "id")
     private Long id;
 
+    /**
+     * Stable ward number used in complaint reference numbers (the "17" in
+     * CP-2026-W17-00412). Independent of {@code name}, which is a mutable
+     * display label — a printed reference must not change when a ward is
+     * renamed.
+     */
+    @Column(name = "code", nullable = false, length = 16)
+    private String code;
+
     @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "zone")
     private String zone;
+
+    /**
+     * Ward centroid. Nullable: a ward imported from city data may arrive
+     * without coordinates, and WardResolver skips those rather than the
+     * schema refusing to store the ward at all.
+     */
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
