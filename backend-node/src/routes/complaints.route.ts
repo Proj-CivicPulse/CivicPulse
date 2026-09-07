@@ -20,10 +20,18 @@ const processBody = z.strictObject({});
  * generate an embedding (services/embedding.service), run candidate
  * filtering + similarity matching (services/matching.service), then attach
  * the complaint to a new or existing incident via Spring
- * (POST /internal/incidents/:id/complaints).
+ * (POST /internal/incidents/attach).
  *
- * Blocked on open service-boundary decisions — see docs/service-boundaries.md
- * (who writes the Incident table; sync call vs. queue).
+ * Note the route name: not /internal/incidents/:id/complaints, because
+ * incidentId may be null ("start a new incident") and a null cannot occupy a
+ * path segment. docs/endpoints.md has been corrected to match.
+ *
+ * Every /internal/* call must send the X-Internal-Token header; Spring denies
+ * the whole prefix when its INTERNAL_TOKEN is unset.
+ *
+ * Service-boundary decisions are now settled — see docs/service-boundaries.md:
+ * Spring owns the Incident write and is called synchronously, no queue. What
+ * remains for this route is the embedding and similarity work itself.
  */
 complaintsRoute.post('/complaints/:id/process', (req, _res) => {
     processParams.parse(req.params);

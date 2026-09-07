@@ -12,8 +12,15 @@ It is the **single writer and single schema owner**. backend-node decides
 *what* should be written (semantic matching) and asks this service to write
 it.
 
-> **Status:** Phase 0. Auth and the schema are live. Complaint, incident,
-> dashboard, and `/internal/*` endpoints are not built yet.
+> **Status:** Phases 0-4. Auth, schema, wards, complaints, incidents,
+> dashboard, and `/internal/*` are live. Priority scoring is real and carries
+> human-readable reasons.
+>
+> Complaint-to-incident grouping is a **placeholder** (ward + category + a
+> 14-day window + a 1.5 km radius) until Phase 2 semantic matching lands in
+> backend-node. It is config-gated on `INCIDENT_GROUPING_STRATEGY` and every
+> decision is logged, so it can be measured and switched off. It is not
+> semantic matching and is not presented as such.
 
 ---
 
@@ -73,6 +80,16 @@ locally, absent in production where the platform injects real env vars.
 | `JWT_ACCESS_EXPIRATION` | no | `900000` (15 min) | ms |
 | `JWT_REFRESH_EXPIRATION` | no | `604800000` (7 days) | ms |
 | `LOG_LEVEL` | no | `INFO` | |
+| `WARD_RESOLVER` | no | `centroid` | Which `WardResolver` to use. `centroid` is nearest-seeded-centroid; a future `postgis` would do point-in-polygon. |
+| `WARD_RESOLUTION_MAX_KM` | no | `25` | Points further than this from every ward centroid resolve to **no ward** (404) rather than being filed into the least-distant one. |
+| `INTERNAL_TOKEN` | for Node | *(blank)* | Shared secret for `/internal/*`. **Blank denies everything** — an unset secret breaks the integration rather than opening it. Also required by the dev seed script below. |
+| `INCIDENT_GROUPING_STRATEGY` | no | `naive` | `naive` or `none`. Set `none` to leave incident assignment entirely to Node. |
+| `INCIDENT_GROUPING_WINDOW_DAYS` | no | `14` | Only join incidents opened within this window. |
+| `INCIDENT_GROUPING_MAX_KM` | no | `1.5` | Only join incidents whose centroid is within this radius. |
+| `GEOCODING_PROVIDER` | no | `none` | `none` or `google`. Default needs no key and no billing account — addresses simply stay null. |
+| `GOOGLE_GEOCODING_API_KEY` | for geocoding | *(blank)* | **Server-side only.** Never reaches the browser, so restrict it by **IP address**, not HTTP referrer. |
+| `HTTP_CONNECT_TIMEOUT_MS` | no | `3000` | Bound on outbound third-party calls. |
+| `HTTP_READ_TIMEOUT_MS` | no | `5000` | As above. An untimed client pins a request thread when the provider is slow. |
 
 ---
 
@@ -91,9 +108,20 @@ reverse proxy — it must never appear in a `@RequestMapping`.
 | `GET /auth/me` | cookie | **live** — session restore |
 | `POST /auth/refresh` | refresh cookie | **live** — rotates the pair |
 | `POST /auth/logout` | public | **live** — clears cookies, 204 |
-| `POST /complaints` | public | Phase 1 |
-| `GET /complaints/mine` | `citizen` | Phase 1 |
-| `/incidents/**`, `/dashboard/**`, `/analytics/**` | `officer` | Phase 3–5 |
+| `GET /wards`, `GET /wards/{id}` | public | **live** — municipal reference data |
+| `GET /wards/resolve?lat=&long=` | public | **live** — derives a ward from coordinates; 404 beyond 25 km |
+| `GET /wards/summary` | **public** | **live** — landing-page strip. **Counts, never rows** |
+| `GET /departments`, `GET /departments/{id}` | cookie | **live** |
+| `POST /complaints` | public | **live** — anonymous allowed; `wardId` optional, derived from coordinates |
+| `GET /complaints` | `officer` | **live** — full complaint text, so not merely `authenticated` |
+| `GET /complaints/mine` | `citizen` | **live** |
+| `GET /complaints/{id}` | cookie | **live** — citizen reads only their own; **404 not 403** otherwise |
+| `PATCH /complaints/{id}` | `officer` | **live** |
+| `GET /incidents` (+ `{id}`, `{id}/complaints`, `PATCH`) | `officer` | **live** |
+| `GET /dashboard/summary`, `/dashboard/wards/{id}/summary` | `officer` | **live** |
+| `POST /internal/incidents/attach` | `X-Internal-Token` | **live** — Node decides, Spring writes |
+| `GET /internal/complaints/{id}`, `GET /internal/wards/{id}` | `X-Internal-Token` | **live** |
+| `/analytics/**` | `officer` | Phase 5 |
 
 Authorization is **default-deny** (`anyRequest().authenticated()`), so a new
 controller is protected until someone opens it deliberately. One visible
@@ -139,6 +167,29 @@ DROP SCHEMA public CASCADE; CREATE SCHEMA public;
 Prefer doing that on a **Neon branch** rather than shared data — see
 **Branches** in the root README.
 
+### Seeding demo data
+
+```bash
+node scripts/seed-dev-data.mjs            # create ~24 incidents across all wards
+node scripts/seed-dev-data.mjs --rescore  # only re-derive priority, no new rows
+```
+
+Dev only — deliberately a script rather than a Flyway migration, because a
+migration would carry demo content into every environment including production.
+
+It drives the real API rather than inserting rows, so reference numbers, ward
+derivation, grouping, and the priority reasons all come from production code
+paths instead of a JavaScript reimplementation that would drift.
+
+The one thing the API cannot produce is **age**: everything it creates is new,
+so the age term of the priority formula would be zero everywhere and the whole
+queue would score the same. The script backdates `created_at` in SQL, then
+replays `POST /internal/incidents/attach` per incident to recompute against
+those ages — which is why it needs `INTERNAL_TOKEN` set.
+
+`--rescore` is useful on its own: the age term is time-dependent, so stored
+scores drift with no writes at all. It does what a scheduled refresh would.
+
 ### Creating an officer
 
 Self-service registration always creates a **citizen** — there is no public
@@ -158,15 +209,31 @@ the token).
 
 ```
 src/main/java/com/civicpulse/backend_spring/
-├── config/          SecurityConfig, JwtAuthenticationFilter, CORS,
-│                    typed+validated properties, security error handlers
-├── controller/      HealthController, AuthController
+├── config/          SecurityConfig, JwtAuthenticationFilter, CORS, typed+validated
+│                    properties, security error handlers,
+│                    InternalTokenAuthorizationManager (guards /internal/*)
+├── controller/      Health, Auth, Ward, Department, Complaint, Incident,
+│                    Dashboard, Internal
 ├── dto/             request/response shapes — controllers NEVER return entities
+│   ├── Wire.java    the wire contract in one place: string ids, lowercase
+│   │                enums, ISO-8601 UTC timestamps with a trailing Z
+│   └── {auth,ward,department,complaint,incident,dashboard,internal}/
 ├── entity/          JPA entities (must match the migrations)
 ├── enums/           UserRole, ComplaintStatus, IncidentStatus
-├── exception/       ApiError (shared wire shape), ErrorCode, GlobalExceptionHandler
+├── exception/       ApiError (shared wire shape), ErrorCode,
+│                    GlobalExceptionHandler, ValidationException
 ├── repository/      Spring Data JPA repositories
-└── service/auth/    AuthService, JwtService, AuthCookieFactory
+│   ├── projection/  interface projections for grouped counts
+│   └── spec/        IncidentSpecifications — composable optional filters
+├── service/
+│   ├── auth/        AuthService, JwtService, AuthCookieFactory
+│   ├── complaint/   ComplaintService, ReferenceNumberService
+│   ├── dashboard/   DashboardService
+│   ├── incident/    IncidentService, IncidentAttachmentService,
+│   │                NaiveIncidentGrouper (placeholder, config-gated)
+│   ├── priority/    PriorityService, PriorityBand, PriorityResult
+│   └── ward/        WardService, WardResolver, CentroidWardResolver
+└── util/            GeoDistance (haversine; one impl, three callers)
 ```
 
 **Controllers return DTOs, never entities.** An entity carries the password
