@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore, type UserRole } from '../stores/auth.store';
+import { homePathForRole } from '../lib/routes';
 
 interface Props {
     children: ReactNode;
@@ -14,7 +15,11 @@ export default function ProtectedRoute({ children, requireRole }: Props) {
     // user briefly flashes the login redirect on every page refresh.
     if (loading) return null;
     if (!isAuthenticated) return <Navigate to="/login" replace />;
-    if (requireRole && user?.role !== requireRole) return <Navigate to="/portal" replace />;
+    // Wrong role for this route: send them straight to the home their own role
+    // owns, rather than to a shared dispatcher that would only bounce them again.
+    if (requireRole && user?.role !== requireRole) {
+        return <Navigate to={homePathForRole(user?.role)} replace />;
+    }
 
     return <>{children}</>;
 }

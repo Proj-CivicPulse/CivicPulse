@@ -1,15 +1,29 @@
 .footer {
-  color: var(--text);
-  font-size: 14px;
+    background: var(--surface);
+    border-top: 1px solid var(--rule);
+    margin-top: auto;
 }
 
 .inner {
-  max-width: var(--lp-maxw);
-  margin: 0 auto;
-  padding: 40px var(--lp-pad-inline);
+    max-width: 1040px;
+    margin-inline: auto;
+    padding: var(--space-8) var(--space-6);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-muted);
 }
 
 .note {
-  margin-top: 6px;
-  opacity: 0.75;
+    color: var(--ink-faint);
+}
+
+@media (max-width: 640px) {
+    .inner {
+        padding: var(--space-6) var(--space-4);
+    }
 }

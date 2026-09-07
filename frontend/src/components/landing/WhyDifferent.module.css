@@ -1,44 +1,46 @@
 .section {
-  border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface);
 }
 
 .inner {
-  max-width: var(--lp-maxw);
-  margin: 0 auto;
-  padding: var(--lp-section-y) var(--lp-pad-inline);
+    max-width: 1040px;
+    margin-inline: auto;
+    padding: var(--space-12) var(--space-6);
 }
 
 .title {
-  font-size: 24px;
-  letter-spacing: -0.3px;
-  margin: 0 0 32px;
-  color: var(--text-h);
+    font: var(--t-section);
+    color: var(--ink);
+    margin-bottom: var(--space-6);
 }
 
 .points {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px 40px;
-  list-style: none;
-  padding: 0;
-  margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-5) var(--space-8);
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 .point {
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  gap: 12px;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.mark {
-  color: var(--lp-accent);
-  margin-top: 3px;
+    padding-left: var(--space-4);
+    border-left: 2px solid var(--rule-strong);
+    font: var(--t-body);
+    color: var(--ink-muted);
+    /* Brief §4: citizen prose caps at 66ch. */
+    max-width: 66ch;
 }
 
 @media (max-width: 768px) {
-  .points {
-    grid-template-columns: 1fr;
-  }
+    .points {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .inner {
+        padding: var(--space-10) var(--space-4);
+    }
 }

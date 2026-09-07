@@ -1,27 +1,15 @@
 /*
- * Landing page shell + theming hook.
- *
- * Every landing section reads these --lp-* custom properties, so this block
- * is the single place to retune the whole page once the design is settled.
- * Section-specific layout lives in each component's own .module.css.
- * Global tokens from index.css (--border, --text, --text-h, --bg) are reused
- * where they already fit.
+ * Page shell only. The --lp-* token block that used to live here is gone: tokens
+ * are global now (src/styles/tokens.css), so every surface reads the same scale
+ * rather than the landing page having a private one.
  */
 .page {
-  --lp-accent: var(--accent);
-  --lp-accent-contrast: #fff;
-  --lp-maxw: 1040px;
-  --lp-pad-inline: 24px;
-  --lp-section-y: 64px;
-
-  color: var(--text);
-  text-align: left;
-
-  @media (max-width: 768px) {
-    --lp-section-y: 44px;
-  }
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: var(--ground);
 }
 
 .main {
-  display: block;
+    display: block;
 }

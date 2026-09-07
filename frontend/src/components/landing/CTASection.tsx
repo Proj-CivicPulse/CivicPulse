@@ -1,4 +1,4 @@
-import CTAButton from './CTAButton';
+import Button from '@/components/ui/Button';
 import styles from './CTASection.module.css';
 
 export default function CTASection() {
@@ -6,19 +6,19 @@ export default function CTASection() {
         <section className={styles.section}>
             <div className={styles.inner}>
                 <div>
-                    <h2 className={styles.title}>Report an issue, or sign in to the dashboard.</h2>
+                    <h2 className={styles.title}>Seen something that needs fixing?</h2>
                     <p className={styles.body}>
-                        Submitting a complaint doesn’t require an account. Officers sign in to
-                        review prioritized incidents.
+                        Reporting takes about a minute and doesn&rsquo;t require an account. Create
+                        one only if you want to follow what happens next.
                     </p>
                 </div>
                 <div className={styles.actions}>
-                    <CTAButton to="/submit-complaint" variant="primary">
-                        Submit a Complaint
-                    </CTAButton>
-                    <CTAButton to="/login" variant="secondary">
-                        Officer Login
-                    </CTAButton>
+                    <Button to="/complaints/new" variant="primary">
+                        Report a problem
+                    </Button>
+                    <Button to="/complaints" variant="secondary">
+                        Track a report
+                    </Button>
                 </div>
             </div>
         </section>

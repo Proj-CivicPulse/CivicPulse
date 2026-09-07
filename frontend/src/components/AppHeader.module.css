@@ -1,0 +1,93 @@
+.header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+    /* No shadow. Structure is the rule. */
+}
+
+.inner,
+.innerWide {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    height: var(--header-h);
+    padding-inline: var(--space-6);
+}
+
+.inner {
+    max-width: 1040px;
+    margin-inline: auto;
+}
+
+.wordmark {
+    font: var(--t-ui);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    /* Pushes the actions block to the far edge. */
+    margin-right: auto;
+}
+
+.link,
+.linkActive {
+    font: var(--t-ui);
+    text-decoration: none;
+    white-space: nowrap;
+    padding-block: var(--space-2);
+}
+
+.link {
+    color: var(--ink-muted);
+}
+
+.link:hover {
+    color: var(--ink);
+}
+
+/* Active nav is one of the few places --seal appears outside a primary action. */
+.linkActive {
+    color: var(--seal);
+    font-weight: 500;
+    box-shadow: inset 0 -2px 0 var(--seal);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-left: auto;
+}
+
+.identity {
+    font: var(--t-micro);
+    color: var(--ink-muted);
+    white-space: nowrap;
+}
+
+/*
+ * At 360px the nav labels and the identity would push the sign-out control off
+ * screen. Drop the secondary affordances rather than wrapping the bar to two
+ * rows — the wordmark and the session action are what must survive.
+ */
+@media (max-width: 640px) {
+    .inner,
+    .innerWide {
+        gap: var(--space-3);
+        padding-inline: var(--space-4);
+    }
+
+    .nav {
+        display: none;
+    }
+
+    .identity {
+        display: none;
+    }
+}

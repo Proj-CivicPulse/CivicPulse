@@ -1,0 +1,84 @@
+/* Shared shell for Login and Register — one layout, two forms. */
+
+.page {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: var(--ground);
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    /*
+     * Offset above centre rather than dead-centred: an optically centred form
+     * sits slightly high, and dead-centre is the default nobody chose.
+     */
+    align-items: flex-start;
+    padding: var(--space-16) var(--space-6) var(--space-12);
+}
+
+.panel {
+    width: 380px;
+    max-width: 100%;
+    padding: var(--space-8);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-panel);
+}
+
+.title {
+    font: var(--t-title);
+    font-family: var(--font-display);
+    letter-spacing: var(--tracking-title);
+    color: var(--ink);
+    margin-bottom: var(--space-2);
+}
+
+.intro {
+    font: var(--t-ui);
+    color: var(--ink-muted);
+    margin-bottom: var(--space-6);
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+/*
+ * A form-level error, distinct from Field's per-input error. role="alert" so a
+ * failed sign-in is announced rather than silently appearing above the fold.
+ */
+.formError {
+    padding: var(--space-3);
+    border: 1px solid var(--priority-high-ink);
+    border-left-width: 4px;
+    border-radius: var(--r-sharp);
+    font: var(--t-ui);
+    color: var(--priority-high-ink);
+}
+
+.footer {
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--rule);
+    font: var(--t-ui);
+    color: var(--ink-muted);
+}
+
+.footer a {
+    color: var(--seal);
+}
+
+@media (max-width: 640px) {
+    .main {
+        padding: var(--space-8) var(--space-4);
+    }
+
+    .panel {
+        padding: var(--space-6);
+    }
+}

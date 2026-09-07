@@ -1,0 +1,163 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    /* Fills the viewport exactly: the console scrolls in its regions, not as a page. */
+    height: 100svh;
+    overflow: hidden;
+    background: var(--ground);
+}
+
+/*
+ * Three regions at >= 1280. The detail column only exists when something is
+ * selected, so the map and queue take the full width until then.
+ */
+.layout,
+.layoutWithDetail {
+    display: grid;
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    /*
+     * Margin and gutters, so the three regions read as panels resting on the
+     * register ground rather than one edge-to-edge slab. The gap is what lets
+     * each region carry its own border and radius and still look deliberate.
+     */
+    gap: var(--space-3);
+    padding: var(--space-3);
+    flex: 1;
+    min-height: 0;
+}
+
+.layoutWithDetail {
+    grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--detail-w);
+}
+
+/* Each region is now a bordered panel in its own right. */
+.rail,
+.center,
+.detail {
+    border: 1px solid var(--rule);
+    border-radius: var(--r-panel);
+    background: var(--surface);
+    overflow: hidden;
+}
+
+.rail {
+    min-height: 0;
+}
+
+.railLoading {
+    padding: var(--space-4);
+}
+
+.center {
+    display: grid;
+    /* Map takes ~40% of the height; the queue is the working surface. */
+    grid-template-rows: minmax(200px, 2fr) minmax(0, 3fr);
+    min-width: 0;
+    min-height: 0;
+}
+
+.map {
+    min-height: 0;
+    border-bottom: 1px solid var(--rule);
+}
+
+.queue {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--surface);
+    overflow: hidden;
+}
+
+.queueHead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--rule);
+    flex-shrink: 0;
+}
+
+.queueTitle {
+    font: var(--t-section);
+    color: var(--ink);
+}
+
+.queueCount {
+    font: var(--t-micro);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+}
+
+.queueLoading {
+    padding: var(--space-4);
+}
+
+/* The table scrolls inside here; the page body never scrolls. */
+.queue > :last-child {
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.detail {
+    min-height: 0;
+}
+
+/*
+ * 1024-1279: not enough width for three columns. The detail becomes a drawer
+ * over the right edge rather than crushing the queue.
+ */
+@media (max-width: 1279px) and (min-width: 1024px) {
+    .layoutWithDetail {
+        grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    }
+
+    .detail {
+        position: fixed;
+        /* Inset by the layout padding so the drawer keeps the same margin the
+           in-flow panels have, instead of butting against the viewport. */
+        top: calc(var(--header-h) + var(--space-3));
+        right: var(--space-3);
+        bottom: var(--space-3);
+        width: var(--detail-w);
+        z-index: 10;
+        box-shadow: var(--shadow-overlay);
+    }
+}
+
+/*
+ * Below 1024 the console stacks map-then-queue and the rail becomes a
+ * horizontal band. The page scrolls normally here — a fixed-height three-region
+ * layout has nowhere to go on a phone.
+ */
+@media (max-width: 1023px) {
+    .page {
+        height: auto;
+        min-height: 100svh;
+        overflow: visible;
+    }
+
+    .layout,
+    .layoutWithDetail {
+        grid-template-columns: 1fr;
+    }
+
+    .center {
+        grid-template-rows: 320px auto;
+    }
+
+    .queue > :last-child {
+        overflow-y: visible;
+    }
+
+    /* Full-screen sheet, so the detail is readable rather than a sliver. */
+    .detail {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        border: 0;
+        border-radius: var(--r-none);
+        box-shadow: var(--shadow-overlay);
+    }
+}

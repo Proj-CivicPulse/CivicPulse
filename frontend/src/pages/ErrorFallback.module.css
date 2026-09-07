@@ -1,0 +1,80 @@
+/*
+ * Self-contained on purpose. This renders when something has already gone
+ * wrong, so it depends on nothing but the token layer.
+ */
+.wrap {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: var(--space-16) var(--space-6);
+    background: var(--ground);
+}
+
+.column {
+    width: 560px;
+    max-width: 100%;
+}
+
+.title {
+    font: var(--t-title);
+    letter-spacing: var(--tracking-title);
+    color: var(--ink);
+    margin-bottom: var(--space-3);
+}
+
+.body {
+    font: var(--t-body);
+    color: var(--ink-muted);
+    max-width: 66ch;
+    margin-bottom: var(--space-6);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-8);
+}
+
+.primary {
+    height: 36px;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--seal);
+    border-radius: var(--r-sharp);
+    background: var(--seal);
+    color: var(--surface);
+    font: var(--t-ui);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.primary:hover {
+    background: var(--seal-hover);
+    border-color: var(--seal-hover);
+}
+
+.quiet {
+    font: var(--t-ui);
+    font-weight: 500;
+    color: var(--seal);
+}
+
+.detail {
+    padding: var(--space-3);
+    background: var(--surface-sunk);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--ink-muted);
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+@media (max-width: 640px) {
+    .wrap {
+        padding: var(--space-10) var(--space-4);
+    }
+}

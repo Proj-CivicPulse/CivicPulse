@@ -1,64 +1,74 @@
 .section {
-  border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--rule);
 }
 
 .inner {
-  max-width: var(--lp-maxw);
-  margin: 0 auto;
-  padding: var(--lp-section-y) var(--lp-pad-inline);
+    max-width: 1040px;
+    margin-inline: auto;
+    padding: var(--space-12) var(--space-6);
 }
 
 .title {
-  font-size: 24px;
-  letter-spacing: -0.3px;
-  margin: 0 0 32px;
-  color: var(--text-h);
+    font: var(--t-section);
+    color: var(--ink);
+    margin-bottom: var(--space-6);
 }
 
 .grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
 }
 
+/* A bordered panel. No shadow, no hover-lift. */
 .card {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-6);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-panel);
+}
+
+.icon {
+    color: var(--seal);
+    margin-bottom: var(--space-1);
 }
 
 .cardTitle {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-h);
-  margin: 0 0 8px;
+    font: var(--t-section);
+    color: var(--ink);
 }
 
 .cardBody {
-  font-size: 16px;
-  line-height: 1.5;
-  margin: 0 0 20px;
+    font: var(--t-body);
+    color: var(--ink-muted);
+    max-width: 52ch;
+    /* Pins the action row to the bottom so the two cards align. */
+    flex: 1;
 }
 
 .actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.textLink {
-  color: var(--lp-accent);
-  text-decoration: none;
-  font-size: 15px;
-}
-
-.textLink:hover {
-  text-decoration: underline;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-top: var(--space-2);
 }
 
 @media (max-width: 768px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .inner {
+        padding: var(--space-10) var(--space-4);
+    }
+
+    .card {
+        padding: var(--space-4);
+    }
 }

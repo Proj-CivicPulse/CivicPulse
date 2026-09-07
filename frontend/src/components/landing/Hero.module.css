@@ -1,61 +1,64 @@
 .hero {
-  border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--rule);
 }
 
 .inner {
-  max-width: var(--lp-maxw);
-  margin: 0 auto;
-  padding: calc(var(--lp-section-y) + 8px) var(--lp-pad-inline);
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 48px;
-  align-items: center;
+    max-width: 1040px;
+    margin-inline: auto;
+    padding: var(--space-16) var(--space-6);
 }
 
 .title {
-  font-size: 42px;
-  line-height: 1.1;
-  letter-spacing: -1px;
-  margin: 0 0 16px;
-  color: var(--text-h);
+    font: var(--t-display);
+    letter-spacing: var(--tracking-display);
+    color: var(--ink);
+    margin-bottom: var(--space-6);
+    text-wrap: balance;
 }
 
 .subtitle {
-  font-size: 18px;
-  line-height: 1.5;
-  margin: 0 0 28px;
-  max-width: 46ch;
+    font: var(--t-body);
+    color: var(--ink-muted);
+    /* Brief §6: the hero body caps at 60ch. */
+    max-width: 60ch;
+    margin-bottom: var(--space-8);
 }
 
 .ctaRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
 }
 
-.art {
-  width: 100%;
-  height: auto;
-  color: var(--lp-accent);
+/*
+ * Playfair at 40px is a display size; below ~1024 the two-line hero starts
+ * wrapping awkwardly, so it steps down while staying above the 24px floor the
+ * face requires.
+ */
+@media (max-width: 1024px) {
+    .inner {
+        padding-block: var(--space-12);
+    }
+
+    .title {
+        font-size: 32px;
+        line-height: 38px;
+    }
 }
 
-@media (max-width: 768px) {
-  .inner {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
+@media (max-width: 640px) {
+    .inner {
+        padding: var(--space-10) var(--space-4);
+    }
 
-  .title {
-    font-size: 30px;
-    letter-spacing: -0.6px;
-  }
+    .title {
+        font-size: 28px;
+        line-height: 34px;
+    }
 
-  .art {
-    max-width: 260px;
-    order: -1;
-  }
-
-  .ctaRow > a {
-    flex: 1 1 100%;
-  }
+    /* The forced break fights a narrow column; let it flow. */
+    .title br {
+        display: none;
+    }
 }

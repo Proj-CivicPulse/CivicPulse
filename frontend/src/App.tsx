@@ -4,13 +4,11 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import ErrorFallback from './pages/ErrorFallback';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import RouteFallback from './components/RouteFallback';
 import { useAuthStore } from './stores/auth.store';
 // Eagerly loaded — it's the entry point every visitor sees first, so
 // code-splitting it would only add a loading flash.
 import Landing from './pages/Landing';
-// Eager too: it renders nothing but a redirect, so a lazy chunk would add
-// a network round-trip in the middle of the login flow.
-import Portal from './pages/Portal';
 
 // If a deploy ships new JS chunk hashes while a tab is still open, a stale
 // lazy-loaded route fails to fetch its chunk. Reload once, automatically,
@@ -43,6 +41,8 @@ const SubmitComplaint = lazyWithChunkRecovery(() => import('./pages/SubmitCompla
 const MyComplaints = lazyWithChunkRecovery(() => import('./pages/MyComplaints'));
 const IncidentDashboard = lazyWithChunkRecovery(() => import('./pages/IncidentDashboard'));
 const Login = lazyWithChunkRecovery(() => import('./pages/Login'));
+const Register = lazyWithChunkRecovery(() => import('./pages/Register'));
+const NotFound = lazyWithChunkRecovery(() => import('./pages/NotFound'));
 
 export default function App() {
     const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -71,21 +71,17 @@ export default function App() {
     return (
         <ErrorBoundary fallback={(error, retry) => <ErrorFallback error={error} retry={retry} />}>
             <BrowserRouter>
-                <Suspense fallback={<div>Loading…</div>}>
+                <Suspense fallback={<RouteFallback />}>
                     <Routes>
                         <Route path="/" element={<Landing />} />
 
-                        {/* Public — submitting a complaint doesn't require an account.
-                Assumption per docs/endpoints.md open decision; flag if
-                the team decides otherwise. */}
-                        <Route path="/submit-complaint" element={<SubmitComplaint />} />
-
-                        {/* Role dispatcher. Login and both route guards send
-                            users here instead of guessing a destination. */}
-                        <Route path="/portal" element={<Portal />} />
+                        {/* Public — reporting a problem doesn't require an account.
+                            Settled in docs/endpoints.md; tracking is what an
+                            account buys you. */}
+                        <Route path="/complaints/new" element={<SubmitComplaint />} />
 
                         <Route
-                            path="/my-complaints"
+                            path="/complaints"
                             element={
                                 <ProtectedRoute requireRole="citizen">
                                     <MyComplaints />
@@ -110,6 +106,17 @@ export default function App() {
                                 </PublicRoute>
                             }
                         />
+
+                        <Route
+                            path="/register"
+                            element={
+                                <PublicRoute>
+                                    <Register />
+                                </PublicRoute>
+                            }
+                        />
+
+                        <Route path="*" element={<NotFound />} />
                     </Routes>
                 </Suspense>
             </BrowserRouter>

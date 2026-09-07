@@ -1,44 +1,45 @@
 .section {
-  border-bottom: 1px solid var(--border);
-  background: var(--accent-bg);
+    /*
+     * --surface-sunk, not a --seal wash. The brand colour is for actions and
+     * active states; a large tinted band is decoration.
+     */
+    background: var(--surface-sunk);
+    border-bottom: 1px solid var(--rule);
 }
 
 .inner {
-  max-width: var(--lp-maxw);
-  margin: 0 auto;
-  padding: var(--lp-section-y) var(--lp-pad-inline);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+    max-width: 1040px;
+    margin-inline: auto;
+    padding: var(--space-12) var(--space-6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-8);
+    flex-wrap: wrap;
 }
 
 .title {
-  font-size: 22px;
-  letter-spacing: -0.3px;
-  margin: 0 0 8px;
-  color: var(--text-h);
+    font: var(--t-section);
+    color: var(--ink);
+    margin-bottom: var(--space-2);
 }
 
 .body {
-  font-size: 16px;
-  line-height: 1.5;
-  max-width: 52ch;
+    font: var(--t-body);
+    color: var(--ink-muted);
+    max-width: 56ch;
 }
 
 .actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
 }
 
-@media (max-width: 768px) {
-  .actions {
-    width: 100%;
-  }
-
-  .actions > a {
-    flex: 1 1 100%;
-  }
+@media (max-width: 640px) {
+    .inner {
+        padding: var(--space-10) var(--space-4);
+        gap: var(--space-6);
+    }
 }

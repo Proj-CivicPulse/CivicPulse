@@ -1,0 +1,125 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: var(--ground);
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: var(--space-12) var(--space-6);
+}
+
+.column {
+    width: 720px;
+    max-width: 100%;
+}
+
+.title {
+    font: var(--t-title);
+    letter-spacing: var(--tracking-title);
+    color: var(--ink);
+    margin-bottom: var(--space-6);
+}
+
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-panel);
+    overflow: hidden;
+}
+
+/* 72px rows with a 1px rule between — a ruled register page. */
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-height: var(--row-h-citizen);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--rule);
+}
+
+.row:last-child {
+    border-bottom: 0;
+}
+
+.rowMain {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.reference {
+    font: var(--t-micro);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: var(--ink-muted);
+}
+
+.description {
+    font: var(--t-body);
+    color: var(--ink);
+    /* One line, clipped — the full text lives on the report itself. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.grouped {
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-muted);
+}
+
+.rowMeta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-shrink: 0;
+}
+
+.timestamp {
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-faint);
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .main {
+        padding: var(--space-8) var(--space-4);
+    }
+
+    /* Stack rather than squeeze: the status chip and date would collide. */
+    .row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+    }
+
+    .rowMain {
+        width: 100%;
+    }
+}
+
+/*
+ * Sits beside the reference number rather than on its own line: a resident
+ * scanning this list recognises their report by WHERE it was long before they
+ * recognise a CP- number.
+ */
+.address {
+    color: var(--ink-faint);
+    font-weight: 400;
+}
+
+.address::before {
+    content: '·';
+    margin-inline: var(--space-2);
+    color: var(--rule-strong);
+}

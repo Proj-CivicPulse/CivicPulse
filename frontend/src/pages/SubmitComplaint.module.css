@@ -1,0 +1,185 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: var(--ground);
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: var(--space-12) var(--space-6);
+}
+
+/* Single column. Citizen surfaces are generous — one thing at a time. */
+.column {
+    width: 640px;
+    max-width: 100%;
+}
+
+.title {
+    font: var(--t-title);
+    letter-spacing: var(--tracking-title);
+    color: var(--ink);
+    margin-bottom: var(--space-2);
+}
+
+.lede {
+    font: var(--t-body);
+    color: var(--ink-muted);
+    max-width: 66ch;
+}
+
+.formError {
+    margin-top: var(--space-6);
+    padding: var(--space-3);
+    border: 1px solid var(--priority-high-ink);
+    border-left-width: 4px;
+    border-radius: var(--r-sharp);
+    font: var(--t-ui);
+    color: var(--priority-high-ink);
+}
+
+/*
+ * One question per block: 32px of air and a 1px rule between. The rule is what
+ * makes this read as a form on an official document rather than a stack of
+ * inputs.
+ */
+.block {
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--rule);
+}
+
+.blockTitle {
+    font: var(--t-section);
+    color: var(--ink);
+    margin-bottom: var(--space-4);
+}
+
+.blockHint {
+    font: var(--t-ui);
+    color: var(--ink-muted);
+    margin-bottom: var(--space-4);
+    max-width: 66ch;
+}
+
+.spaced {
+    margin-top: var(--space-5);
+}
+
+.locating {
+    font: var(--t-ui);
+    color: var(--ink-faint);
+    padding: var(--space-6) 0;
+}
+
+/* ------------------------------------------------- derived / review rows */
+
+.derived {
+    margin: var(--space-4) 0 0;
+    border-top: 1px solid var(--rule);
+}
+
+.derivedRow {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--rule);
+}
+
+.derivedLabel {
+    flex: 0 0 120px;
+    font: var(--t-micro);
+    color: var(--ink-muted);
+}
+
+.derivedValue {
+    margin: 0;
+    font: var(--t-data);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+}
+
+.submitRow {
+    margin-top: var(--space-6);
+}
+
+/* --------------------------------------------------------- confirmation */
+
+.receipt {
+    margin-top: var(--space-8);
+    padding: var(--space-6);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--seal);
+    border-radius: var(--r-panel);
+}
+
+.receiptLabel {
+    display: block;
+    font: var(--t-micro);
+    color: var(--ink-muted);
+    margin-bottom: var(--space-2);
+}
+
+.receiptRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+/*
+ * Motion moment 3 of 3: the reference number fades in over 180ms. It is the
+ * whole receipt, so it gets the one piece of emphasis on the page.
+ */
+.reference {
+    font: var(--t-section);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    animation: referenceIn var(--motion-slow) var(--ease);
+    /* Lets a resident double-click to select the whole number. */
+    user-select: all;
+}
+
+@keyframes referenceIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.confirmActions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-top: var(--space-8);
+}
+
+@media (max-width: 640px) {
+    .main {
+        padding: var(--space-8) var(--space-4);
+    }
+
+    .block {
+        margin-top: var(--space-6);
+        padding-top: var(--space-6);
+    }
+
+    .derivedRow {
+        flex-direction: column;
+        gap: var(--space-1);
+    }
+
+    .derivedLabel {
+        flex: none;
+    }
+}

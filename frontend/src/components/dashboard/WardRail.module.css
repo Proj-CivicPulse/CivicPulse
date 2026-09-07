@@ -1,0 +1,147 @@
+.rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    padding: var(--space-4);
+    height: 100%;
+    overflow-y: auto;
+    background: var(--surface);
+}
+
+.group {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.groupTitle {
+    font: var(--t-micro);
+    color: var(--ink-muted);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--rule);
+}
+
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 1px;
+}
+
+/* Officer density is 8/12/16, not the citizen side 24/32/48. */
+.item,
+.itemActive {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-2);
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: var(--r-sharp);
+    background: none;
+    font: var(--t-ui);
+    color: var(--ink-muted);
+    text-align: start;
+    cursor: pointer;
+}
+
+.item:hover {
+    background: var(--ground);
+    color: var(--ink);
+}
+
+.itemActive {
+    background: var(--seal-wash);
+    border-left-color: var(--seal);
+    color: var(--seal);
+    font-weight: 500;
+}
+
+.zone {
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-faint);
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+
+.chip,
+.chipActive {
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+    font: var(--t-micro);
+    color: var(--ink-muted);
+    cursor: pointer;
+}
+
+.chip:hover {
+    border-color: var(--rule-strong);
+    color: var(--ink);
+}
+
+.chipActive {
+    background: var(--seal-wash);
+    border-color: var(--seal);
+    color: var(--seal);
+}
+
+.clear {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--seal);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+/*
+ * Below 1024 the rail becomes a horizontally scrolling band above the map
+ * rather than a column, so map and queue get the full width.
+ */
+@media (max-width: 1023px) {
+    .rail {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: var(--space-5);
+        height: auto;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--rule);
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .group {
+        flex: 0 0 auto;
+    }
+
+    .list {
+        display: flex;
+        gap: var(--space-1);
+    }
+
+    .item,
+    .itemActive {
+        white-space: nowrap;
+        border-left: 0;
+        border-bottom: 2px solid transparent;
+    }
+
+    .itemActive {
+        border-bottom-color: var(--seal);
+    }
+
+    .chips {
+        flex-wrap: nowrap;
+    }
+}
