@@ -1,0 +1,215 @@
+/*
+ * CivicPulse design tokens — "Ward Register".
+ *
+ * THE ONE RULE: this is the only file in the codebase that may contain a
+ * literal colour or a raw type size. Everything else reads var(--*).
+ *
+ * Direction: the material vernacular of Indian municipal administration —
+ * ruled register books, enamel ward signboards, rubber-stamped file covers.
+ * Cool, administrative, unglamorous. Structure comes from 1px rules, not
+ * shadows. Light theme only; these officers work in a lit office during
+ * business hours, and a second palette is maintenance for no user benefit.
+ *
+ * Contrast ratios below were computed against the WCAG 2.1 relative-luminance
+ * formula and are quoted per token. Text needs >= 4.5:1, UI components >= 3:1.
+ */
+
+:root {
+    /* ---------------------------------------------------------------- base */
+
+    --ink: #14211F;         /* primary text. Near-black with a green cast, not #111 */
+    --ink-muted: #4C5A56;   /* secondary text, labels.  7.03:1 on surface, 6.01:1 on ground */
+
+    /*
+     * The brief specified #7A8783 here. Measured, that is 3.63:1 on --surface
+     * and 3.10:1 on --ground — below the 4.5:1 floor the brief itself sets in
+     * its quality section, for the timestamps and helper text this token is
+     * for. Darkened until both grounds pass; the hue and the "recedes behind
+     * --ink-muted" role are unchanged.
+     */
+    --ink-faint: #5E6B67;   /* placeholder, disabled, timestamps. 5.41:1 surface, 4.62:1 ground */
+
+    --ground: #E7EBE6;      /* page background — pale sage-grey, register paper */
+    --surface: #FBFCFA;     /* panels, cards, table background */
+    --surface-sunk: #DFE4DE; /* table header, inset wells, map chrome */
+
+    --rule: #C9D1CA;        /* hairline borders — the primary structural device */
+    --rule-strong: #A9B4AC; /* section dividers, focused input borders */
+
+    /* -------------------------------------------------------- brand/action */
+
+    /*
+     * The only brand colour. Primary actions and active states. Never a
+     * decorative wash over a large area.
+     */
+    --seal: #17494D;        /* deep enamel teal. 9.73:1 on surface; white on it is 10.02:1 */
+    --seal-hover: #0F3538;
+    --seal-wash: #DCE8E8;   /* selected row, active filter chip background */
+
+    /* ------------------------------------------------------- priority ramp */
+
+    /*
+     * Priority is a RANK, so the scale is monotonic in lightness — it survives
+     * greyscale and red-green colour blindness, which matters because these are
+     * map markers.
+     *
+     * Two roles, deliberately. The ramp below is for GRAPHICS ONLY: map markers
+     * and the 4px left rule on an incident card. Those are large marks against
+     * the pale CARTO basemap with a --surface stroke separating them from it.
+     *
+     * For TEXT and 1px chip borders, use the -ink variants further down. The
+     * ramp cannot serve both roles: darkening it enough for 4.5:1 text collapses
+     * medium and high to the same luminance (0.156 vs 0.155) and destroys the
+     * greyscale ordering that is the whole point of an ordinal scale.
+     *
+     * These are functional signal colours. They never appear as a button fill,
+     * a background wash, or brand decoration. That restriction is what keeps
+     * them meaningful.
+     */
+    --priority-low: #7C9A92;      /* L* ~62 */
+    --priority-medium: #B8862B;   /* L* ~60 */
+    --priority-high: #C0562A;     /* L* ~50 */
+    --priority-critical: #8E1F16; /* L* ~32 */
+
+    /* Text + 1px border variants. All >= 4.5:1 on --surface. */
+    --priority-low-ink: #5A7A70;      /* 4.58:1 */
+    --priority-medium-ink: #8F6717;   /* 4.95:1 */
+    --priority-high-ink: #B54F26;     /* 4.96:1 */
+    --priority-critical-ink: #8E1F16; /* 8.65:1 — already passes, no variant needed */
+
+    /* -------------------------------------------------------------- status */
+
+    /*
+     * Kept separate from priority on purpose. Status is CATEGORICAL, priority
+     * is ORDINAL — reusing one ramp for both is the common mistake.
+     *
+     * The brief listed a "rejected" status. No such value exists: the enum in
+     * both ComplaintStatus and IncidentStatus is open | in_progress | resolved
+     * | closed. Renamed to --status-closed, keeping the faint grey, since a
+     * closed report is not an alarm.
+     */
+    --status-open: #17494D;      /* seal.       9.73:1 */
+    --status-progress: #8F6717;  /* medium-ink. 4.95:1 */
+    --status-resolved: #4A7A5C;  /* 4.83:1 */
+    --status-closed: #5E6B67;    /* 5.41:1 — faint by design */
+
+    /* --------------------------------------------------------------- focus */
+
+    --focus: #17494D;
+
+    /* ---------------------------------------------------------- typography */
+
+    /*
+     * THREE FACES, THREE NON-OVERLAPPING JOBS. The split is by role, not by
+     * taste — if you cannot say which of the three a new rule needs, it needs
+     * --font-sans.
+     *
+     *   --font-display  Playfair Display. Page titles and the hero, nothing
+     *                   else. High-contrast: below 24px its hairlines vanish
+     *                   and it reads as decoration rather than type. Never
+     *                   body, never labels, never numerals.
+     *
+     *   --font-ui       Poppins. The interface voice — section headings,
+     *                   buttons, nav, form labels, chips. Geometric and open,
+     *                   which is what keeps a municipal record system from
+     *                   reading as forbidding to a resident.
+     *
+     *   --font-sans     DM Sans. Everything that is READ or COUNTED — prose,
+     *                   table cells, coordinates, counts, timestamps. Poppins
+     *                   is deliberately kept off this: its geometric circular
+     *                   digits are wider and less differentiated, and this is
+     *                   the face that has to hold a column of tabular figures
+     *                   steady.
+     */
+    --font-display: 'Playfair Display Variable', Georgia, 'Times New Roman', serif;
+    --font-ui: 'Poppins', 'DM Sans Variable', system-ui, 'Segoe UI', sans-serif;
+    --font-sans: 'DM Sans Variable', system-ui, 'Segoe UI', Roboto, sans-serif;
+
+    /*
+     * `font` shorthand, so a rule is one line: font: var(--t-body).
+     * Note the shorthand resets line-height and font-variant but NOT
+     * letter-spacing — the display sizes carry their tracking separately.
+     */
+    --t-display: 500 40px/44px var(--font-display);
+    --t-title: 500 28px/34px var(--font-display);
+
+    /* Interface voice. */
+    --t-section: 600 20px/28px var(--font-ui);
+    --t-ui: 500 14px/20px var(--font-ui);
+    --t-micro: 500 12px/16px var(--font-ui);
+
+    /* Read and counted. */
+    --t-body: 400 15px/24px var(--font-sans);
+    --t-data: 400 13px/18px var(--font-sans);
+
+    /*
+     * Poppins runs optically larger than DM Sans at the same nominal size, so
+     * UI tokens carry slightly tighter tracking to stop buttons and nav from
+     * sprawling.
+     */
+    --tracking-ui: -0.005em;
+
+    --tracking-display: -0.02em;
+    --tracking-title: -0.015em;
+
+    /* -------------------------------------------------------------- layout */
+
+    /* 4px base unit, 8px rhythm. Citizen surfaces use 6/8/12; officer 2/3/4. */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /*
+     * No full-round pills anywhere. A 3px chip reads as a form field on an
+     * official document; a 999px pill reads as a consumer app.
+     */
+    --r-sharp: 3px;  /* inputs, buttons, chips, status pills */
+    --r-panel: 6px;  /* cards, panels, modals */
+    --r-none: 0;     /* table cells, map container, full-bleed sections */
+
+    /*
+     * Exactly one shadow token exists, and only for things that genuinely float
+     * above the page: modals, dropdowns, map popovers. Cards do not get shadows.
+     * Cards get borders.
+     */
+    --shadow-overlay: 0 4px 16px rgb(20 33 31 / 12%);
+
+    /* Officer console geometry, referenced by the dashboard grid. */
+    --rail-w: 240px;
+    --detail-w: 360px;
+    --header-h: 56px;
+    --row-h: 36px;      /* officer table row */
+    --row-h-citizen: 72px;
+
+    /* -------------------------------------------------------------- motion */
+
+    /*
+     * Three moments only: marker selection (120ms ring), detail panel swap
+     * (100ms crossfade), submit confirmation (180ms fade-in). No scroll
+     * animation, no page transitions, no hover-lift.
+     */
+    --motion-fast: 100ms;
+    --motion-base: 120ms;
+    --motion-slow: 180ms;
+    --ease: cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+/*
+ * Reduced motion is handled once, here, by zeroing the duration tokens — so
+ * every component satisfies it by construction rather than each remembering
+ * its own media query.
+ */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --motion-fast: 0ms;
+        --motion-base: 0ms;
+        --motion-slow: 0ms;
+    }
+}

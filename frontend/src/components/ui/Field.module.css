@@ -1,0 +1,138 @@
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.labelRow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.label {
+    font: var(--t-ui);
+    font-weight: 500;
+    color: var(--ink);
+}
+
+.aside {
+    font: var(--t-micro);
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.control {
+    width: 100%;
+    min-height: 36px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+    color: var(--ink);
+    font: var(--t-body);
+    transition: border-color var(--motion-base) var(--ease);
+}
+
+@media (pointer: coarse) {
+    .control {
+        min-height: 44px;
+    }
+}
+
+.control::placeholder {
+    color: var(--ink-faint);
+}
+
+.control:hover:not(:disabled) {
+    border-color: var(--ink-faint);
+}
+
+.control:focus {
+    border-color: var(--seal);
+}
+
+.control:disabled {
+    background: var(--surface-sunk);
+    color: var(--ink-faint);
+    cursor: not-allowed;
+}
+
+textarea.control {
+    min-height: 120px;
+    resize: vertical;
+    /* Brief §4: the complaint description caps at 60ch. */
+    max-width: 60ch;
+    line-height: 24px;
+}
+
+select.control {
+    /* Reserve room for the native chevron so long ward names don't collide. */
+    padding-right: var(--space-8);
+}
+
+/* --------------------------------------------------- password reveal */
+
+.revealWrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/*
+ * Reserve the gutter on the input itself rather than shrinking the field, so a
+ * long password never runs underneath the toggle.
+ */
+.hasReveal {
+    padding-right: 44px;
+}
+
+.revealButton {
+    position: absolute;
+    right: 1px;
+    /* Inset by the border so the button never overlaps the focus ring. */
+    top: 1px;
+    bottom: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 0 var(--r-sharp) var(--r-sharp) 0;
+    background: transparent;
+    color: var(--ink-faint);
+    cursor: pointer;
+    transition: color var(--motion-base) var(--ease);
+}
+
+.revealButton:hover {
+    color: var(--ink);
+}
+
+/* Revealed is a state worth seeing at a glance, not just feeling. */
+.revealButton[aria-pressed='true'] {
+    color: var(--seal);
+}
+
+.revealButton:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+}
+
+.invalid {
+    border-color: var(--priority-high-ink);
+}
+
+.helper {
+    font: var(--t-micro);
+    color: var(--ink-muted);
+    max-width: 60ch;
+}
+
+.error {
+    font: var(--t-micro);
+    color: var(--priority-high-ink);
+    max-width: 60ch;
+}

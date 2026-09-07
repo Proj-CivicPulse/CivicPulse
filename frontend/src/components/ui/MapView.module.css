@@ -1,0 +1,149 @@
+.inline,
+.fill {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    border-radius: var(--r-panel);
+    background: var(--surface-sunk);
+}
+
+/* The submit form's location step. */
+.inline {
+    height: 320px;
+}
+
+/* The officer console's map region, which sizes to its grid area. */
+.fill {
+    height: 100%;
+    min-height: 280px;
+    border-radius: var(--r-none);
+    border: 0;
+}
+
+.map {
+    width: 100%;
+    height: 100%;
+}
+
+/* ------------------------------------------------------------- markers */
+
+/*
+ * 12px circles (r=6), 1.5px --surface stroke, no drop shadow, no pin-drop
+ * animation. Declared in CSS rather than passed as Leaflet pathOptions so no
+ * colour literal ever reaches the TypeScript.
+ *
+ * These use the raw priority ramp, not the -ink variants: a filled 12px disc
+ * with a light stroke against the pale CARTO basemap is a graphical mark, and
+ * the ramp is calibrated to stay ordinal in greyscale. See tokens.css.
+ */
+.marker {
+    stroke: var(--surface);
+    stroke-width: 1.5;
+    fill-opacity: 1;
+    cursor: pointer;
+}
+
+.markerLow {
+    fill: var(--priority-low);
+}
+
+.markerMedium {
+    fill: var(--priority-medium);
+}
+
+.markerHigh {
+    fill: var(--priority-high);
+}
+
+.markerCritical {
+    fill: var(--priority-critical);
+}
+
+/*
+ * Motion moment 1 of 3: 120ms ring scale on selection. transform-box lets an
+ * SVG element scale about its own centre rather than the viewport origin.
+ * Duration is a token, so prefers-reduced-motion zeroes it globally.
+ */
+.selectionRing {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ringIn var(--motion-base) var(--ease);
+}
+
+@keyframes ringIn {
+    from {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ----------------------------------------------------------------- pin */
+
+.pinWrap {
+    /* Leaflet puts its own background on divIcon; clear it. */
+    background: none;
+    border: 0;
+}
+
+.pin {
+    display: block;
+    width: 18px;
+    height: 18px;
+    margin: 3px;
+    border-radius: 50%;
+    background: var(--seal);
+    border: 3px solid var(--surface);
+    box-shadow: var(--shadow-overlay);
+    cursor: grab;
+}
+
+.pin:active {
+    cursor: grabbing;
+}
+
+/* ------------------------------------------------- leaflet chrome reskin */
+
+/*
+ * Leaflet ships its own control styling. Bring it onto the token system so the
+ * map doesn't read as a third-party widget dropped into the page.
+ */
+.map :global(.leaflet-container) {
+    background: var(--surface-sunk);
+    font: var(--t-micro);
+}
+
+.map :global(.leaflet-control-attribution) {
+    background: rgb(251 252 250 / 85%);
+    color: var(--ink-muted);
+    font: var(--t-micro);
+    padding: 0 var(--space-1);
+}
+
+.map :global(.leaflet-control-attribution a) {
+    color: var(--seal);
+}
+
+.map :global(.leaflet-bar) {
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    box-shadow: none;
+}
+
+.map :global(.leaflet-bar a) {
+    background: var(--surface);
+    color: var(--ink);
+    border-bottom-color: var(--rule);
+}
+
+.map :global(.leaflet-bar a:hover) {
+    background: var(--ground);
+    color: var(--seal);
+}

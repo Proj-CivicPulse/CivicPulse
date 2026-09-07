@@ -1,0 +1,35 @@
+.wrap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: 100%;
+}
+
+/*
+ * Outline only. No fill, no animation — the shape is the information, and a
+ * shimmer would be the only motion in the system that says nothing.
+ */
+.item {
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    background: transparent;
+}
+
+.row {
+    height: var(--row-h);
+}
+
+.card {
+    height: 72px;
+    border-radius: var(--r-panel);
+}
+
+.text {
+    height: 12px;
+    max-width: 48ch;
+}
+
+.block {
+    height: 200px;
+    border-radius: var(--r-panel);
+}

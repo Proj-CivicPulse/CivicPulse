@@ -12,8 +12,8 @@
 
     <meta name="description"
         content="CivicPulse groups related citizen complaints into prioritized, explainable incidents for city officers — using semantic matching, not keyword or category filters." />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#16171d" media="(prefers-color-scheme: dark)" />
+    <!-- Light theme only (design brief §3), so a single unconditional value. -->
+    <meta name="theme-color" content="#E7EBE6" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="%VITE_APP_NAME%" />
@@ -28,17 +28,22 @@
         content="Related citizen complaints, grouped into prioritized and explainable incidents for city officers." />
 
     <style>
-        /* Hide native scrollbars app-wide; scrolling still works. */
+        /*
+         * Hide the page-level scrollbar only; scrolling still works.
+         *
+         * Deliberately NOT applied to `*`. The officer console's incident queue
+         * is a full-bleed table inside its own overflow-x container, and a
+         * horizontally scrollable region with no scrollbar has zero affordance
+         * that it scrolls at all.
+         */
         html,
-        body,
-        * {
+        body {
             scrollbar-width: none;
             -ms-overflow-style: none;
         }
 
         html::-webkit-scrollbar,
-        body::-webkit-scrollbar,
-        *::-webkit-scrollbar {
+        body::-webkit-scrollbar {
             width: 0;
             height: 0;
             display: none;

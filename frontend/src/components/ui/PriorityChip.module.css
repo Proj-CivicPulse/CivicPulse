@@ -1,0 +1,38 @@
+/*
+ * Uses the -ink ramp, not the raw priority ramp. Text and a 1px border need
+ * >= 4.5:1; the raw ramp is calibrated for map markers and the 4px card rule,
+ * where the mark is large and sits on the pale basemap. See tokens.css.
+ */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 20px;
+    padding: 0 var(--space-2);
+    border: 1px solid currentcolor;
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+    font: var(--t-micro);
+    white-space: nowrap;
+}
+
+.score {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.85;
+}
+
+.low {
+    color: var(--priority-low-ink);
+}
+
+.medium {
+    color: var(--priority-medium-ink);
+}
+
+.high {
+    color: var(--priority-high-ink);
+}
+
+.critical {
+    color: var(--priority-critical-ink);
+}

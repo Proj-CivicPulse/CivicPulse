@@ -1,0 +1,35 @@
+/*
+ * An outlined square, not a filled pill. A 3px chip reads as a form field on an
+ * official document; a 999px pill reads as a consumer app.
+ *
+ * Border and text both use the status colour on a --surface ground. Every value
+ * below is a >= 4.5:1 token, so the text passes as text and the 1px border
+ * clears the 3:1 UI-component floor.
+ */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 var(--space-2);
+    border: 1px solid currentcolor;
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+    font: var(--t-micro);
+    white-space: nowrap;
+}
+
+.open {
+    color: var(--status-open);
+}
+
+.in_progress {
+    color: var(--status-progress);
+}
+
+.resolved {
+    color: var(--status-resolved);
+}
+
+.closed {
+    color: var(--status-closed);
+}

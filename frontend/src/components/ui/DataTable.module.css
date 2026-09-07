@@ -1,0 +1,188 @@
+.wrap {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ---------------------------------------------------------------- pager */
+
+.pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    /* Sits on the sunk ground so it reads as table chrome, not another row. */
+    background: var(--surface-sunk);
+    border-top: 1px solid var(--rule);
+    flex-shrink: 0;
+}
+
+.pageStatus,
+.pageOf {
+    font: var(--t-micro);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+    white-space: nowrap;
+}
+
+.pageButtons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.pageButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    transition:
+        border-color var(--motion-base) var(--ease),
+        color var(--motion-base) var(--ease);
+}
+
+.pageButton:hover:not(:disabled) {
+    border-color: var(--seal);
+    color: var(--seal);
+}
+
+.pageButton:disabled {
+    color: var(--ink-faint);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+@media (pointer: coarse) {
+    .pageButton {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/*
+ * The table owns its horizontal overflow so the page body never scrolls
+ * sideways. index.html deliberately no longer hides scrollbars on `*`, so this
+ * container keeps a visible affordance when the columns outrun the viewport.
+ */
+.scroll {
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    font: var(--t-data);
+    /* Every number in this table sits in a column. */
+    font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------- header */
+
+.head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--surface-sunk);
+}
+
+.th,
+.thEnd {
+    padding: 0 var(--space-3);
+    height: var(--row-h);
+    font: var(--t-micro);
+    color: var(--ink-muted);
+    text-align: start;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--rule-strong);
+}
+
+.thEnd {
+    text-align: end;
+}
+
+/* Sort is a chevron, never a coloured header. */
+.sortButton {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.sortButton:hover {
+    color: var(--ink);
+}
+
+.chevron,
+.chevronActive {
+    display: inline-flex;
+    align-items: center;
+}
+
+.chevron {
+    opacity: 0;
+    transition: opacity var(--motion-base) var(--ease);
+}
+
+.sortButton:hover .chevron {
+    opacity: 0.4;
+}
+
+.chevronActive {
+    opacity: 1;
+    color: var(--seal);
+}
+
+/* ----------------------------------------------------------------- rows */
+
+/* No zebra striping — the 1px rule is the row separator. */
+.row,
+.rowSelected {
+    height: var(--row-h);
+    border-bottom: 1px solid var(--rule);
+    cursor: pointer;
+}
+
+.row:hover {
+    background: var(--ground);
+}
+
+.rowSelected {
+    background: var(--seal-wash);
+}
+
+.td,
+.tdEnd {
+    padding: 0 var(--space-3);
+    color: var(--ink);
+    text-align: start;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 0;
+}
+
+.tdEnd {
+    text-align: end;
+}
+
+.empty {
+    padding: var(--space-6) var(--space-4);
+    font: var(--t-body);
+    color: var(--ink-muted);
+}

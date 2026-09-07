@@ -1,0 +1,89 @@
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-4);
+    border: 1px solid transparent;
+    border-radius: var(--r-sharp);
+    font: var(--t-ui);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    /* Colour only. No transform — hover-lift is explicitly out. */
+    transition:
+        background-color var(--motion-base) var(--ease),
+        border-color var(--motion-base) var(--ease),
+        color var(--motion-base) var(--ease);
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* ------------------------------------------------------------------ sizes */
+
+.default {
+    height: 36px;
+}
+
+.compact {
+    height: 28px;
+    padding: 0 var(--space-3);
+    font: var(--t-micro);
+}
+
+/*
+ * A 28px control is below the 44px touch target floor. Grow both sizes on
+ * coarse pointers rather than shipping a control a thumb can't reliably hit.
+ */
+@media (pointer: coarse) {
+    .default,
+    .compact {
+        min-height: 44px;
+    }
+}
+
+.fullWidth {
+    width: 100%;
+}
+
+/* --------------------------------------------------------------- variants */
+
+.primary {
+    background: var(--seal);
+    color: var(--surface);
+    border-color: var(--seal);
+}
+
+.primary:hover:not(:disabled) {
+    background: var(--seal-hover);
+    border-color: var(--seal-hover);
+}
+
+.secondary {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--rule-strong);
+}
+
+.secondary:hover:not(:disabled) {
+    border-color: var(--seal);
+    color: var(--seal);
+}
+
+.quiet {
+    background: transparent;
+    color: var(--seal);
+    border-color: transparent;
+    padding: 0 var(--space-2);
+}
+
+.quiet:hover:not(:disabled) {
+    color: var(--seal-hover);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
