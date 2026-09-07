@@ -19,6 +19,8 @@ public final class ErrorCode {
     public static final String METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED";
     public static final String EMAIL_ALREADY_EXISTS = "EMAIL_ALREADY_EXISTS";
     public static final String PAYLOAD_TOO_LARGE = "PAYLOAD_TOO_LARGE";
+    /** Already emitted by backend-node; Spring now shares the same code. */
+    public static final String UNSUPPORTED_MEDIA_TYPE = "UNSUPPORTED_MEDIA_TYPE";
     public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
 
     private ErrorCode() {

@@ -5,10 +5,13 @@ import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
@@ -50,6 +53,34 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ApiError> handleValidation(ValidationException ex) {
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, ex.getMessage());
+    }
+
+    /**
+     * A path variable or query parameter could not be converted to its target
+     * type — GET /complaints/abc, or ?minPriority=foo.
+     *
+     * Without this the request falls through to the catch-all below and the
+     * caller gets a 500 for what is plainly their own malformed input.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        Class<?> required = ex.getRequiredType();
+        String expected = required == null ? "valid value" : required.getSimpleName().toLowerCase();
+        // Names the parameter and the expected type, never the value submitted.
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR,
+                ex.getName() + " must be a valid " + expected);
+    }
+
+    /** A required query parameter was absent, e.g. /wards/resolve with no lat. */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParam(MissingServletRequestParameterException ex) {
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR,
+                ex.getParameterName() + " is required");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidationExceptions(MethodArgumentNotValidException ex) {
         // Field names and the rule they broke are safe to return; the values
@@ -78,6 +109,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         return build(HttpStatus.METHOD_NOT_ALLOWED, ErrorCode.METHOD_NOT_ALLOWED,
                 "Method " + ex.getMethod() + " is not supported for this endpoint");
+    }
+
+    /**
+     * Body sent with a Content-Type this endpoint cannot read. That is the
+     * caller getting the request wrong, so it is a 415 — without this it fell
+     * through to the catch-all and reported INTERNAL_ERROR for a client
+     * mistake, the same failure mode as the type-mismatch and missing-param
+     * handlers above.
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiError> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex) {
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+                "Content-Type " + ex.getContentType() + " is not supported by this endpoint");
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

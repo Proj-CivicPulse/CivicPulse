@@ -25,6 +25,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final SecurityErrorHandlers securityErrorHandlers;
     private final AppProperties appProperties;
+    private final InternalTokenAuthorizationManager internalTokenAuthorizationManager;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -79,12 +80,34 @@ public class SecurityConfig {
                         .requestMatchers("/auth/login", "/auth/register",
                                 "/auth/logout", "/auth/refresh").permitAll()
 
+                        // Public municipal reference data: ward names, zones,
+                        // centroids, and the landing page open-incident counts.
+                        // GET only, so any future write endpoint under /wards
+                        // stays default-deny.
+                        .requestMatchers(HttpMethod.GET, "/wards", "/wards/**").permitAll()
+
+                        // Service-to-service. Shared-secret header, and it
+                        // fails closed when the secret is unset — Node holds no
+                        // user session, so this cannot be role-gated.
+                        .requestMatchers("/internal/**")
+                                .access(internalTokenAuthorizationManager)
+
                         // Submitting a complaint is open/anonymous by
                         // decision (docs/endpoints.md); tracking your own
                         // complaints below is not.
                         .requestMatchers(HttpMethod.POST, "/complaints").permitAll()
 
                         .requestMatchers("/complaints/mine").hasRole("CITIZEN")
+
+                        // Officer-only writes and reads over complaint data.
+                        // Without the PATCH rule this path fell through to
+                        // anyRequest().authenticated(), which would let ANY
+                        // signed-in citizen change the status of ANYONE else's
+                        // complaint. ComplaintController repeats it as
+                        // @PreAuthorize; both are deliberate.
+                        .requestMatchers(HttpMethod.PATCH, "/complaints/*").hasRole("OFFICER")
+                        .requestMatchers(HttpMethod.GET, "/complaints").hasRole("OFFICER")
+
                         .requestMatchers("/incidents/**", "/dashboard/**", "/analytics/**")
                                 .hasRole("OFFICER")
 

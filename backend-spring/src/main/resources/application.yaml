@@ -67,6 +67,44 @@ app:
   # itself down on the first request after a quiet period.
   health-timeout-seconds: ${HEALTH_TIMEOUT_SECONDS:10}
 
+  # Ward derivation. "centroid" picks the nearest seeded ward centroid; a
+  # future "postgis" would do real point-in-polygon. Swapping this is the only
+  # change needed — nothing outside WardResolver names an implementation.
+  ward-resolver: ${WARD_RESOLVER:centroid}
+  # Beyond this radius a point resolves to no ward at all, and the caller gets
+  # a 404 instead of a silent mis-filing into whichever ward happened to be
+  # least far away.
+  ward-resolution-max-km: ${WARD_RESOLUTION_MAX_KM:25}
+
+  # Shared secret for /internal/* (Node -> Spring). Blank denies everything:
+  # an unset secret must break the integration, not open it.
+  internal-token: ${INTERNAL_TOKEN:}
+
+  # Reverse geocoding. "none" leaves addresses null and needs no key, which is
+  # the default so a fresh clone runs without a billing account.
+  geocoding:
+    provider: ${GEOCODING_PROVIDER:none}
+    # Server-side only. Never reaches the browser, so unlike a Maps JS key this
+    # can stay secret and be restricted by IP rather than HTTP referrer.
+    api-key: ${GOOGLE_GEOCODING_API_KEY:}
+    # Decimal places the cache key rounds to. 3 is ~111 m; measured against real
+    # data, 4 (~11 m) only achieved a 3% hit rate because reports about one
+    # pothole are not placed within 11 m of each other.
+    cache-key-scale: ${GEOCODING_CACHE_KEY_SCALE:3}
+
+  # Bounds on outbound third-party calls. An untimed client hangs a request
+  # thread when the provider is slow, which is how one dependency takes down
+  # the whole service.
+  http-connect-timeout-ms: ${HTTP_CONNECT_TIMEOUT_MS:3000}
+  http-read-timeout-ms: ${HTTP_READ_TIMEOUT_MS:5000}
+
+  # Placeholder grouping until Phase 2 semantic matching lands. Set strategy to
+  # "none" to leave incident assignment entirely to Node.
+  incident-grouping:
+    strategy: ${INCIDENT_GROUPING_STRATEGY:naive}
+    window-days: ${INCIDENT_GROUPING_WINDOW_DAYS:14}
+    max-distance-km: ${INCIDENT_GROUPING_MAX_KM:1.5}
+
 jwt:
   secret: ${JWT_SECRET}
   # Short-lived access token; the refresh token below buys back the UX.
