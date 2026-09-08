@@ -15,9 +15,10 @@ boundary).
 - [x] **Priority calculation ownership** — **backend-spring**, recomputed
       inline whenever an incident's membership changes. See
       `service-boundaries.md` decision 1.
-- [x] **Incident writes / `incident_id` write-back** — **backend-spring**,
-      synchronously, in one transaction via
-      `POST /internal/incidents/attach`. See decision 2.
+- [x] **Incident writes / `incident_id` write-back** — **backend-spring**, in
+      one transaction via `POST /internal/incidents/attach`. The trigger to Node
+      is **async** with a circuit breaker + naive fallback + reconcile sweep.
+      See decision 2.
 - [x] **Shared-table migrations** — **backend-spring**, via Flyway.
       Node never runs DDL. See decision 3.
 
@@ -75,8 +76,10 @@ boundary).
 - [ ] `POST /incidents/{id}/merge` *(manual merge override)*
 - [ ] `POST /incidents/{incidentId}/complaints/{complaintId}/unlink` *(manual false-merge override)*
 
-> These two are deferred until semantic matching lands (Risk Watchlist #2:
-> automated matching will mis-merge, so officers need a manual correction path).
+> Still deferred. Semantic matching has landed, but the officer-facing override
+> is separate work. The transactional *reattach* it needs already exists
+> internally — `IncidentAttachmentService` moves a complaint between incidents
+> and deletes an emptied one — driven today only by `MatchReconciliationJob`.
 > Client stubs for them were removed — a service method calling an endpoint that
 > returns 404 is worse than no method, because it type-checks. Build the server
 > side and the client together when the need is real.
@@ -97,6 +100,7 @@ All require the `X-Internal-Token` header, and **fail closed** when
 
 - [x] `GET /internal/complaints/{id}`
 - [x] `POST /internal/incidents/attach` — renamed from `/internal/incidents/{id}/complaints`: `incidentId` may be null ("start a new incident") and a null cannot occupy a path segment
+- [x] `POST /internal/incidents/{id}/recompute` — re-derive count/centroid/priority only. Separate from `attach` on purpose: attach records a *decision* (stamps `matching_status`, appends an `incident_match_log` row), and reusing it as a recompute hook would fabricate matching events that never happened
 - [x] `GET /internal/wards/{id}`
 
 ---
@@ -107,7 +111,10 @@ All require the `X-Internal-Token` header, and **fail closed** when
 - [x] `GET /health` — real DB check (`SELECT 1`), `{status:'ok'|'error'}`, 200/503
 
 ### Complaint processing — Phase 2 (core bottleneck)
-- [ ] `POST /complaints/{id}/process` — *route exists, returns 501 `NOT_IMPLEMENTED`*
+- [x] `POST /complaints/{id}/process` — CAS claim → embed (Gemini) → candidate
+      pre-filter → single-linkage similarity → `POST /internal/incidents/attach`.
+      `?force` / `?reembed`. Requires `X-Internal-Token`. Driven by Spring's
+      async trigger and its `MatchReconciliationJob`.
 
 ### Copilot — Phase 6
 - [ ] `POST /copilot/query` — *route exists, body validated, returns 501*

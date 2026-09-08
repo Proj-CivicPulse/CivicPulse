@@ -46,8 +46,9 @@ degrades to a generic "Request failed" there.
 | `METHOD_NOT_ALLOWED` | 405 | |
 | `EMAIL_ALREADY_EXISTS` | 409 | Registration conflict. |
 | `PAYLOAD_TOO_LARGE` | 413 | Node: body over 100 kb. |
-| `RATE_LIMITED` | 429 | Node: general limiter (100 req / 15 min / IP). |
-| `NOT_IMPLEMENTED` | 501 | Node: Phase 2/6/7 stub. |
+| `RATE_LIMITED` | 429 | Node: general limiter (100 req / 15 min / IP). **`GET /health` and `POST /complaints/{id}/process` are exempt** — the latter is service-to-service, gated by `X-Internal-Token`; leaving it inside the IP budget lets a reconcile backlog exhaust the budget and hand Spring 429s it reads as an outage. |
+| `NOT_IMPLEMENTED` | 501 | Node: Phase 6/7 stub. |
+| `EMBEDDING_UPSTREAM_ERROR` / `CORE_UPSTREAM_ERROR` | 502 | Node: the embedding provider, or backend-spring on an `/internal` call, failed or was unreachable. Seen only on `POST /complaints/{id}/process`; it is what trips Spring's matching circuit breaker. |
 | `INTERNAL_ERROR` | 500 | Deliberately opaque. The real cause is logged server-side only. |
 
 **Never** put stack traces, SQL, or internal detail in `message` — in either
@@ -241,16 +242,32 @@ outside 0–10 returns 400.
 ## Spring → Node
 
 ### `POST /complaints/{id}/process` — Phase 2
-Triggered after a complaint is created. Node generates the embedding,
-pre-filters candidates (ward + category + active status), runs similarity,
-and calls back to Spring with its decision.
+
+Triggered **asynchronously** after a complaint commits (`AFTER_COMMIT`, on a
+bounded executor — the citizen's response never waits on it), and again by
+Spring's reconcile sweep. Node claims the complaint (`PROCESSING`), generates
+the embedding, pre-filters candidates (ward + category + active status), runs
+single-linkage similarity, and calls `POST /internal/incidents/attach` back.
+
+**Requires the `X-Internal-Token` header** (same secret and constant-time
+compare as Spring's `/internal/*`; blank `INTERNAL_TOKEN` denies the route).
 
 ```jsonc
 // request: none (the id in the path is the whole input)
-// 202
-{ "complaintId": "123", "incidentId": "45", "created": false, "similarity": 0.87 }
+// query: ?force=true   also claims a MATCHED complaint / a stale PROCESSING one
+//        ?reembed=true  regenerate the vector even if one is stored
+
+// 202 — Node processed it and called attach back
+{ "complaintId": "123", "incidentId": "45", "created": false, "similarity": 0.87, "matcher": "semantic" }
+
+// 200 — the CAS claim failed: another run owns it, or it is terminal and no ?force
+{ "complaintId": "123", "skipped": true }
 ```
-Currently returns **501 `NOT_IMPLEMENTED`**.
+
+`5xx` from this route (embedding provider down, backend-spring unreachable) is
+what trips Spring's circuit breaker → naive fallback. A read timeout does not,
+on its own — Spring re-checks `matching_status` and defers if Node holds the
+claim. See `service-boundaries.md` decision 2.
 
 ---
 
@@ -260,15 +277,33 @@ All under `/internal/*`. Not reachable from the browser.
 
 ### `POST /internal/incidents/attach` — Phase 2
 Node decides the match; **Spring performs the write.** In one transaction
-Spring creates or loads the incident, sets `complaints.incident_id`, updates
-`complaint_count`, and recomputes `priority_score` + `priority_reasons`.
+Spring creates or loads the incident, sets `complaints.incident_id`,
+`matching_status`, `matched_at`, `complaint_count`, recomputes
+`priority_score` + `priority_reasons`, and writes one `incident_match_log` row.
+If the complaint was already on a different incident (a reconcile move) the old
+one is recomputed, and deleted if it is now empty.
 
 ```jsonc
-// request — incidentId null means "start a new incident"
-{ "complaintId": "123", "incidentId": "45", "similarity": 0.87 }
+// request — incidentId null means "start a new incident". Everything below
+// incidentId is score context for the incident_match_log row (Phase 8); all
+// optional, and the naive fallback sends none of it.
+{
+  "complaintId": "123",
+  "incidentId": "45",
+  "topSimilarity": 0.87,
+  "topSiblingComplaintId": "4821",
+  "candidateCount": 3,
+  "threshold": 0.75,
+  "model": "gemini-embedding-001",
+  "embeddingDim": 1536
+}
 // 200
-{ "incidentId": "45", "created": false, "priorityScore": 7.3 }
+{ "incidentId": "45", "created": false, "priorityScore": 7.3, "matchingStatus": "matched" }
 ```
+
+A `NAIVE` decision that arrives after a semantic result has already landed
+(`matching_status` is `matched` or `processing`) is a no-op — Spring returns the
+current state and writes nothing.
 
 **Requires the `X-Internal-Token` header.** The value comes from
 `INTERNAL_TOKEN`; Spring compares it in constant time and **denies every
@@ -279,6 +314,28 @@ Named `/incidents/attach` rather than the sub-collection form
 `/internal/incidents/{id}/complaints` that `endpoints.md` originally listed,
 because `incidentId` may legitimately be null ("start a new incident") and a
 null cannot occupy a path segment.
+
+### `POST /internal/incidents/{id}/recompute` — Phase 2
+
+Re-derives an incident's membership-derived fields — `complaintCount`, centroid,
+`address`, `priorityScore`, `priorityReasons` — **without changing membership**.
+Returns the `Incident` shape below; 404 if the incident is unknown.
+
+```jsonc
+// request: none (the id in the path is the whole input)
+// 200 -> the recomputed Incident
+```
+
+Deliberately separate from `/incidents/attach`. attach records a matching
+*decision*: it stamps `matching_status` and appends an `incident_match_log` row.
+Re-deriving a score is neither of those, and routing it through attach would
+fabricate "semantic match" events that never happened and corrupt the dataset
+Phase 8 measures precision/recall on.
+
+It exists because the **age term of the priority formula is time-dependent**, so
+a stored score drifts with no writes at all (see `PriorityService`). Consumed
+today by `backend-spring/scripts/seed-dev-data.mjs --rescore`; it is also the
+natural hook for the scheduled priority refresh that is still a follow-up.
 
 ### `GET /internal/complaints/{id}` — Phase 2
 Full complaint context for embedding generation and Copilot grounding.
@@ -327,6 +384,7 @@ Keep in sync with `backend-spring/src/main/resources/db/migration/`.
   "lat": 12.9716,
   "long": 77.5946,
   "status": "open",           // open | in_progress | resolved | closed
+  "matchingStatus": "pending", // pending | processing | matched | degraded — Phase 2 pipeline state
   "address": "4th Cross, Jayanagar, Bengaluru",  // null when geocoding is off
   "photoUrl": "https://…",    // optional
   "createdAt": "2026-08-29T10:15:00Z",
@@ -382,6 +440,20 @@ was written outside the service.
 citizen My-reports screen can say "Grouped with N other reports".
 `GET /incidents/{id}` is officer-only, so a citizen has no other route to that
 number; it is an aggregate and discloses nothing else about the incident.
+
+**`matchingStatus` on `Complaint`** is the Phase 2 pipeline state:
+
+| Value | Meaning |
+|---|---|
+| `pending` | created, not yet processed (or a failed run was released) |
+| `processing` | a backend-node run holds the claim right now |
+| `matched` | the semantic matcher assigned it — to a new *or* an existing incident |
+| `degraded` | the naive fallback assigned it while Node was unreachable; the reconcile sweep will upgrade it |
+
+A freshly submitted complaint is always `pending` in the `POST /complaints`
+response — matching runs after the response is sent. The officer dashboard uses
+this to show which incidents are still settling; a citizen-facing rendering is a
+later follow-up.
 
 ### `Ward`
 ```jsonc
@@ -448,6 +520,34 @@ third party being up.
 Default is `GEOCODING_PROVIDER=none`, so a fresh clone runs with no key and no
 billing account.
 
+### Embeddings — server-side, backend-node only
+
+Complaint text → a vector, so pgvector can measure semantic similarity between
+complaints for incident matching (Phase 2).
+
+| | |
+|---|---|
+| Provider | Google Gemini, `gemini-embedding-001` (Generative Language API) |
+| Endpoint | `POST .../v1beta/models/gemini-embedding-001:embedContent?key=…` |
+| Key | `EMBEDDING_API_KEY` — an **AI Studio key**, distinct from `GOOGLE_GEOCODING_API_KEY` |
+| Dimensions | **1536** (`outputDimensionality`); must equal `complaints.embedding vector(1536)` |
+| Task type | `SEMANTIC_SIMILARITY` |
+| Normalisation | L2-normalised **in Node** — Gemini only pre-normalises the full 3072-dim output |
+
+**Multilingual on purpose** — complaint text in this deployment mixes English,
+Hindi, and Kannada, and `gemini-embedding-001` handles that in one model.
+
+Unlike geocoding, this is **not cacheable per location** — every distinct
+complaint is a new call. The stored vector is reused (a reprocess without
+`?reembed=true` skips the call), and the ward + category + status pre-filter
+keeps the *similarity* maths cheap, but the embedding call itself scales with
+complaint volume. Every similarity score is logged to `incident_match_log` for
+the Phase 8 threshold tuning.
+
+**Failure is not fatal to submission** (the trigger is async) but it does block
+that complaint's matching: Node returns `502`, Spring's breaker counts it, the
+naive fallback runs, and the reconcile sweep retries once the provider is back.
+
 ---
 
 ## Open questions
@@ -457,10 +557,13 @@ billing account.
       `INTERNAL_TOKEN` is blank. A browser cannot set a custom header
       cross-origin without a preflight CORS refuses, and the token is never in
       shipped JavaScript. **Still open:** rotation policy.
-- [ ] **Timeout/retry for Spring→Node.** A slow or dead Node currently
-      stalls complaint submission (`AppConfig.restClient` has no timeouts —
-      there is a TODO on the bean). Decide the budget and the fallback
-      before Phase 2 ships.
+- [x] **Timeout/retry for Spring→Node.** Resolved in Phase 2: the trigger is
+      async (`AFTER_COMMIT`, bounded executor), so it never stalls submission.
+      `matchingRestClient` has a 2.5 s read timeout; a `MatchingCircuitBreaker`
+      opens after 3 consecutive connection failures; the fallback is
+      `NaiveIncidentGrouper` (`matching_status = degraded`); `MatchReconciliationJob`
+      re-runs the real pipeline once Node recovers. See `service-boundaries.md`
+      decision 2.
 - [ ] **Refresh-token revocation.** Tokens are stateless, so logout cannot
       invalidate a copied refresh token before it expires. A
       `refresh_tokens` table (jti + revoked_at) is the fix if the team wants

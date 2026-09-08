@@ -10,10 +10,10 @@ CivicPulse's **AI / matching service**. Owns (per
 Everything transactional — auth, users, complaint/officer CRUD, dashboard
 APIs — belongs to `backend-spring`, not here.
 
-> **Status:** Phase 0 scaffold. Only `GET /health` is functional. All
-> AI/matching/Copilot routes are stubs returning `501 NOT_IMPLEMENTED`
-> until their phase (2 / 6 / 7) and the open decisions in
-> `docs/service-boundaries.md` land.
+> **Status:** Phase 2 landed — `POST /complaints/:id/process` runs the real
+> embedding + incident-matching pipeline (see **Routes** below). Copilot
+> (`/copilot/query`) and hotspots (`/hotspots/predict`) are still
+> `501 NOT_IMPLEMENTED` stubs for phases 6 and 7.
 
 ---
 
@@ -65,6 +65,7 @@ properties — the two are not interchangeable.
 | `npm run dev` | `tsx watch src/index.ts` — hot reload |
 | `npm run build` | `tsc` → `dist/` |
 | `npm start` | `node dist/index.js` (run `build` first) |
+| `npm test` | Node's built-in runner over `src/**/*.test.ts` (no framework) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | `oxlint` |
 
@@ -85,6 +86,15 @@ exits the process with a message naming the variable and the rule it broke
 | `FRONTEND_ORIGIN` | **yes** | — | Single CORS origin, no wildcards |
 | `HEALTHCHECK_TIMEOUT_MS` | no | `10000` | Ceiling on the `/health` probe. Sized for a Neon cold start; lower for a local DB. |
 | `LOG_LEVEL` | no | `info` | pino level |
+| `SPRING_INTERNAL_BASE_URL` | no | `http://localhost:8080` | backend-spring, for `/internal/*` calls |
+| `INTERNAL_TOKEN` | **yes** | — | Shared secret, both directions. Must equal backend-spring's `INTERNAL_TOKEN` |
+| `EMBEDDING_API_KEY` | **yes** | — | Gemini / AI Studio key (`aistudio.google.com/apikey`) — not the geocoding key |
+| `EMBEDDING_MODEL` | no | `gemini-embedding-001` | |
+| `EMBEDDING_DIMENSIONS` | no | `1536` | Must equal `complaints.embedding vector(<dim>)` in Spring's V6 |
+| `EMBEDDING_TASK_TYPE` | no | `SEMANTIC_SIMILARITY` | |
+| `EMBEDDING_TIMEOUT_MS` | no | `10000` | |
+| `MATCH_SIMILARITY_THRESHOLD` | no | `0.75` | Cosine cut-off for join-vs-create. Empirical — tune in Phase 8 |
+| `PROCESSING_STALE_SECONDS` | no | `45` | Stale-claim window. Must match Spring's `MATCHING_PROCESSING_STALE_SECONDS` |
 
 ---
 
@@ -99,7 +109,7 @@ definitions.
 | Method & path | Status | Phase |
 |---|---|---|
 | `GET /health` | **live** — real `SELECT 1`; `200 {status:'ok'}` or `503 {status:'error'}` | 0 |
-| `POST /complaints/:id/process` | `501` stub | 2 |
+| `POST /complaints/:id/process` | **live** — `X-Internal-Token`; CAS claim → embed → match → attach. `?force` / `?reembed`. `202` / `200 {skipped}` / `502` | 2 |
 | `POST /copilot/query` | `501` stub (validates body first → `400`) | 6 |
 | `GET /hotspots/predict` | `501` stub | 7 (conditional) |
 
@@ -113,8 +123,9 @@ Every error response matches
 ```
 
 Codes in use: `VALIDATION_ERROR` (400), `INVALID_JSON` (400),
-`PAYLOAD_TOO_LARGE` (413), `UNSUPPORTED_MEDIA_TYPE` (415), `NOT_FOUND` (404),
-`RATE_LIMITED` (429), `NOT_IMPLEMENTED` (501), `INTERNAL_ERROR` (500).
+`UNAUTHORIZED` (401), `PAYLOAD_TOO_LARGE` (413), `UNSUPPORTED_MEDIA_TYPE` (415),
+`NOT_FOUND` (404), `RATE_LIMITED` (429), `NOT_IMPLEMENTED` (501),
+`EMBEDDING_UPSTREAM_ERROR` / `CORE_UPSTREAM_ERROR` (502), `INTERNAL_ERROR` (500).
 Stack traces and internal details are logged server-side only, never sent
 to the client.
 
@@ -126,6 +137,7 @@ to the client.
 src/
 ├── index.ts              server bootstrap + graceful shutdown only
 ├── app.ts                express app assembly (no listen — testable)
+├── test.setup.ts         env defaults, loaded by `npm test` before any module
 ├── config/
 │   ├── env.ts            zod-validated env, fail-fast on startup
 │   └── logger.ts         pino instance
@@ -133,17 +145,31 @@ src/
 │   └── pool.ts           pg Pool + checkDatabase() for /health
 ├── middleware/
 │   ├── errorHandler.ts   HttpError class, 404 handler, central error handler
+│   ├── internalAuth.ts   X-Internal-Token gate (constant-time) for /complaints/:id/process
 │   └── rateLimiter.ts    general per-IP limiter
 ├── routes/
 │   ├── health.route.ts
-│   ├── complaints.route.ts
-│   ├── copilot.route.ts
-│   └── hotspots.route.ts
-└── services/             Phase 2/6 shape only — no logic yet
-    ├── embedding.service.ts
-    ├── matching.service.ts
-    └── copilot.service.ts
+│   ├── complaints.route.ts   Phase 2 — the matching pipeline
+│   ├── copilot.route.ts      Phase 6 stub
+│   └── hotspots.route.ts     Phase 7 stub
+└── services/
+    ├── claim.ts             CAS PROCESSING claim + release (the in-flight guard)
+    ├── spring.client.ts     backend-spring /internal/* client (X-Internal-Token, timeouts)
+    ├── embedding.service.ts  Gemini embedding + L2-normalise + persist/read
+    ├── matching.service.ts   candidate pre-filter + single-linkage match-or-create
+    └── copilot.service.ts    Phase 6 — no logic yet
 ```
+
+Unit tests sit next to what they cover (`*.test.ts`) and run on Node's built-in
+runner via `npm test` — no framework dependency. They mock at the I/O boundary
+(`pool.query`, `fetch`).
+
+One property they cannot prove is the CAS claim's **pre-image-before-write**:
+`claim()` must return the status the row held *before* it was set to
+`PROCESSING`, or `release()` would restore `PROCESSING → PROCESSING` and strand
+the complaint. That depends on real Postgres statement-snapshot semantics (hence
+the `FOR UPDATE` CTE in `services/claim.ts`), so it is verified by the
+slow-Node / kill-Node scenario in the manual run-through, not by a unit test.
 
 ## Security & performance notes
 
@@ -151,8 +177,16 @@ src/
 - CORS locked to `FRONTEND_ORIGIN`, `credentials: true`, never `*`.
 - `express.json({ limit: '100kb' })` caps payload size.
 - `app.set('trust proxy', 1)` so rate limiting / `req.ip` see the real client.
-- Per-IP rate limit (100 / 15 min); `/health` exempt. `POST /copilot/query`
-  gets its own strict limiter in Phase 6.
+- Per-IP rate limit (100 / 15 min). **Exempt:** `/health` (polled constantly by
+  uptime monitors — limiting it would mask real outages) and
+  `POST /complaints/:id/process` (a service-to-service route gated by
+  `internalAuth`, not by IP). That second exemption is load-bearing: a reconcile
+  backlog runs 25 calls a minute, so the public budget would be gone in four
+  minutes and the resulting 429s read by backend-spring as "Node is down",
+  opening its circuit breaker. The service would rate-limit itself into an
+  outage that worsened the harder it tried to recover. Locked by a test in
+  `middleware/rateLimiter.test.ts`. `POST /copilot/query` gets its own strict
+  limiter in Phase 6.
 - Graceful shutdown on `SIGTERM`/`SIGINT`: drain in-flight requests, close
   the pool, 10s force-exit safety net.
 - **All future SQL must be parameterized (`$1, $2`).** Never

@@ -81,9 +81,9 @@ export function errorMessage(error: unknown, context?: string): string {
 }
 
 /**
- * 501 is Node's honest answer for a Phase 2/6/7 stub, and its message already
- * names the phase. Worth distinguishing so the UI can say "not built yet"
- * rather than "something failed".
+ * 501 is Node's honest answer for a Phase 6/7 stub (Copilot, hotspots), and its
+ * message already names the phase. Worth distinguishing so the UI can say
+ * "not built yet" rather than "something failed".
  */
 export function isNotImplemented(error: unknown): boolean {
     return error instanceof ApiError && error.status === 501;

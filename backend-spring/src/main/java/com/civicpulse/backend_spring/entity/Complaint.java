@@ -1,6 +1,7 @@
 package com.civicpulse.backend_spring.entity;
 
 import com.civicpulse.backend_spring.enums.ComplaintStatus;
+import com.civicpulse.backend_spring.enums.MatchingStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,7 +33,9 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_complaints_incident_id", columnList = "incident_id"),
                 @Index(name = "idx_complaints_user_id", columnList = "user_id"),
                 @Index(name = "idx_complaints_status", columnList = "status"),
-                @Index(name = "idx_complaints_created_at", columnList = "created_at")
+                @Index(name = "idx_complaints_created_at", columnList = "created_at"),
+                @Index(name = "idx_complaints_matching_status",
+                        columnList = "matching_status, updated_at")
         }
 )
 @Getter
@@ -104,6 +107,24 @@ public class Complaint {
 
     @Column(name = "photo_url", length = 1024)
     private String photoUrl;
+
+    /**
+     * Where this complaint sits in the Phase 2 matching pipeline. See
+     * {@link MatchingStatus} for who owns which transition.
+     *
+     * <p>The {@code embedding vector(1536)} column that backend-node writes is
+     * deliberately <em>not</em> mapped here: Hibernate {@code ddl-auto=validate}
+     * ignores unmapped columns, and a pgvector type would need a custom
+     * {@code UserType} for a value Spring never reads.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "matching_status", nullable = false)
+    @Builder.Default
+    private MatchingStatus matchingStatus = MatchingStatus.PENDING;
+
+    /** When the complaint reached a terminal matching state ({@code MATCHED}/{@code DEGRADED}). */
+    @Column(name = "matched_at")
+    private LocalDateTime matchedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

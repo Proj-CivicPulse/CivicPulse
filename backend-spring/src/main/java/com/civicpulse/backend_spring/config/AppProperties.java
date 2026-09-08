@@ -63,6 +63,8 @@ public class AppProperties {
 
     private final Geocoding geocoding = new Geocoding();
 
+    private final Matching matching = new Matching();
+
     /**
      * Reverse geocoding, used to attach a street address to coordinates.
      *
@@ -107,8 +109,74 @@ public class AppProperties {
     private long httpReadTimeoutMs = 5000;
 
     /**
-     * Bounds on the placeholder complaint-to-incident grouping that runs until
-     * Phase 2 semantic matching lands.
+     * Phase 2 semantic matching: the async trigger to backend-node, the circuit
+     * breaker that protects the citizen path from a slow/dead Node, and the
+     * reconcile sweep that closes the loop.
+     */
+    @Getter
+    @Setter
+    public static class Matching {
+
+        /** backend-node's base URL. The trigger POSTs {@code /complaints/{id}/process} here. */
+        @NotBlank
+        private String nodeBaseUrl = "http://localhost:3001";
+
+        /**
+         * Read timeout on the trigger call. Deliberately short: the citizen has
+         * already had their response, and a slow Node that has taken the
+         * PROCESSING claim will finish and call back regardless — the worker
+         * should not sit waiting on it.
+         */
+        @Positive
+        private long processTimeoutMs = 2500;
+
+        /**
+         * A PROCESSING claim older than this is stale (Node crashed mid-run) and
+         * the reconcile sweep will offer it again. MUST match backend-node's
+         * PROCESSING_STALE_SECONDS — Node's compare-and-swap is the authority;
+         * this value only pre-filters candidates, so drift merely costs a wasted
+         * {@code skipped} round-trip. Keep it above Node's embedding timeout + slack.
+         */
+        @Positive
+        private long processingStaleSeconds = 45;
+
+        private final CircuitBreaker circuitBreaker = new CircuitBreaker();
+
+        private final Reconciliation reconciliation = new Reconciliation();
+
+        @Getter
+        @Setter
+        public static class CircuitBreaker {
+
+            /** Consecutive connection-level failures before the breaker opens. */
+            @Positive
+            private int failureThreshold = 3;
+
+            /** How long the breaker stays open before allowing a trial call. */
+            @Positive
+            private long openSeconds = 60;
+        }
+
+        @Getter
+        @Setter
+        public static class Reconciliation {
+
+            /** Off switches the scheduled sweep entirely (the context test sets this false). */
+            private boolean enabled = true;
+
+            @Positive
+            private long intervalMs = 60_000;
+
+            /** Complaints re-processed per sweep. */
+            @Positive
+            private int batchSize = 25;
+        }
+    }
+
+    /**
+     * Bounds on the naive complaint-to-incident grouping. Since Phase 2 this is
+     * the <em>fallback</em> matcher — it runs only when backend-node is
+     * unreachable, and tags the complaint {@code degraded}.
      */
     @Getter
     @Setter

@@ -45,7 +45,7 @@ export function createApp(): Express {
         pinoHttp({
             logger,
             autoLogging: { ignore: (req) => req.url === '/health' },
-            // 501 is an expected state for the Phase 2/6/7 stubs, not a
+            // 501 is an expected state for the Phase 6/7 stubs, not a
             // server fault — keep it out of the error stream.
             customLogLevel: (_req, res, err) => {
                 if (err) return 'error';

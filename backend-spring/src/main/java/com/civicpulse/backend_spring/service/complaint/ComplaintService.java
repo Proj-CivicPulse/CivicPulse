@@ -6,31 +6,27 @@ import com.civicpulse.backend_spring.dto.complaint.CreateComplaintRequest;
 import com.civicpulse.backend_spring.dto.complaint.UpdateComplaintRequest;
 import com.civicpulse.backend_spring.entity.Complaint;
 import com.civicpulse.backend_spring.entity.Department;
-import com.civicpulse.backend_spring.entity.Incident;
 import com.civicpulse.backend_spring.entity.User;
 import com.civicpulse.backend_spring.entity.Ward;
 import com.civicpulse.backend_spring.enums.ComplaintStatus;
+import com.civicpulse.backend_spring.event.ComplaintCreatedEvent;
 import com.civicpulse.backend_spring.exception.ResourceNotFoundException;
 import com.civicpulse.backend_spring.exception.ValidationException;
 import com.civicpulse.backend_spring.repository.ComplaintRepository;
 import com.civicpulse.backend_spring.repository.DepartmentRepository;
 import com.civicpulse.backend_spring.repository.UserRepository;
 import com.civicpulse.backend_spring.repository.WardRepository;
-import com.civicpulse.backend_spring.service.incident.IncidentAttachmentService;
-import com.civicpulse.backend_spring.service.incident.NaiveIncidentGrouper;
 import com.civicpulse.backend_spring.service.geocoding.GeocodingService;
 import com.civicpulse.backend_spring.service.ward.WardResolver;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class ComplaintService {
 
     private final ComplaintRepository complaintRepository;
@@ -40,8 +36,7 @@ public class ComplaintService {
     private final WardResolver wardResolver;
     private final GeocodingService geocodingService;
     private final ReferenceNumberService referenceNumberService;
-    private final NaiveIncidentGrouper grouper;
-    private final IncidentAttachmentService attachmentService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * @param userId null for an anonymous submission, which is the settled
@@ -74,22 +69,12 @@ public class ComplaintService {
 
         Complaint saved = complaintRepository.save(complaint);
 
-        // Placeholder grouping until Phase 2. Failing to group must never fail
-        // the submission: the resident's report is recorded either way, and an
-        // unmatched complaint is a routine state the matcher can fix later.
-        if (grouper.isEnabled()) {
-            try {
-                Optional<Incident> match = grouper.findMatch(saved);
-                attachmentService.attach(
-                        saved.getId(), match.map(Incident::getId).orElse(null), null);
-            } catch (RuntimeException ex) {
-                log.error("Grouping failed for complaint {}; it stays unmatched",
-                        saved.getId(), ex);
-            }
-        }
+        // Matching runs in backend-node and must never delay — or fail — the
+        // submission. A listener picks this up AFTER_COMMIT and fires the async
+        // trigger; the complaint is returned here still matching_status=pending.
+        eventPublisher.publishEvent(new ComplaintCreatedEvent(saved.getId()));
 
-        Complaint result = complaintRepository.findById(saved.getId()).orElseThrow();
-        return toDto(result);
+        return toDto(saved);
     }
 
     /**

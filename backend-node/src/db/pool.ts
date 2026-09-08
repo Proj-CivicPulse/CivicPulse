@@ -9,8 +9,9 @@ import { logger } from '../config/logger.ts';
 // refuses plaintext connections, so a URL missing that parameter fails to
 // connect rather than silently downgrading.
 //
-// pgvector needs no special client config: when Phase 2 adds vector columns,
-// queries just cast to/from `vector` in SQL.
+// pgvector needs no special client config. Phase 2's `complaints.embedding`
+// column is read and written through plain SQL casts (`$1::vector`,
+// `embedding::text`), so no type parser or extra dependency is required.
 export const pool = new Pool({
     connectionString: env.DATABASE_URL,
     max: 10,
@@ -44,9 +45,12 @@ const HEALTHCHECK_TIMEOUT_MS = env.HEALTHCHECK_TIMEOUT_MS;
  * parameter-free query; returns false (never throws, never hangs) if the
  * DB is unreachable or unresponsive so the caller can turn that into a 503.
  *
- * NOTE for Phase 2+ query code that will live alongside this: every query
- * MUST use parameterized placeholders — pool.query('... WHERE id = $1', [id]).
- * Never build SQL by string concatenation or template interpolation.
+ * NOTE for the query code that lives alongside this (services/claim.ts,
+ * embedding.service.ts, matching.service.ts): every query MUST use
+ * parameterized placeholders — pool.query('... WHERE id = $1', [id]). Never
+ * build SQL by string concatenation or template interpolation. That includes
+ * the embedding vector, which is bound as a `[a,b,c]` text literal and cast
+ * with `$1::vector`.
  */
 export async function checkDatabase(): Promise<boolean> {
     let timer: ReturnType<typeof setTimeout> | undefined;

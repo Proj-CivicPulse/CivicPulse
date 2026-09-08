@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -128,6 +129,25 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleNoResourceFound(NoResourceFoundException ex) {
         return build(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND,
                 "Cannot " + ex.getHttpMethod() + " /" + ex.getResourcePath());
+    }
+
+    /**
+     * The client hung up before the response could be flushed — most often
+     * backend-node being restarted mid-{@code /internal/incidents/attach}, or a
+     * browser navigating away. Nothing failed on this side and there is no
+     * longer a socket to answer on, so this is a DEBUG line, not an ERROR with
+     * a stack trace.
+     *
+     * Worth handling explicitly: it happens precisely during the Node outages
+     * Phase 2 is built to absorb, and at ERROR it would bury the real failures
+     * in that same window.
+     */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public ResponseEntity<ApiError> handleClientDisconnected(AsyncRequestNotUsableException ex) {
+        log.debug("Client disconnected before the response was written: {}", ex.getMessage());
+        // Nothing can reach the caller; the body is a formality for the framework.
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_ERROR,
+                "An unexpected error occurred");
     }
 
     /**

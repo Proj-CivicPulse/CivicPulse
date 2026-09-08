@@ -26,9 +26,13 @@ public interface IncidentRepository
     long countByWardIdAndStatusIn(Long wardId, Collection<IncidentStatus> statuses);
 
     /**
-     * Candidate incidents for the placeholder grouper: same ward, same
+     * Candidate incidents for the naive fallback grouper: same ward, same
      * category, still actionable, and opened recently enough that a new report
      * plausibly belongs to the same problem.
+     *
+     * <p>The semantic matcher does its own candidate pre-filter in SQL over in
+     * backend-node ({@code matching.service.ts}) — it needs the member
+     * embeddings, which this service never loads.
      */
     List<Incident> findByWardIdAndCategoryAndStatusInAndCreatedAtAfter(
             Long wardId,

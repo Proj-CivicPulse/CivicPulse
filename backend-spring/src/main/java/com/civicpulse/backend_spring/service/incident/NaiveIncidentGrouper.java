@@ -16,23 +16,29 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Placeholder complaint-to-incident grouping: same ward, same category, still
+ * Non-semantic complaint-to-incident grouping: same ward, same category, still
  * active, opened recently, and geographically close.
  *
  * THIS IS NOT SEMANTIC MATCHING, and it is named so nobody mistakes it for it.
- * Phase 2 replaces the decision with embedding similarity computed in Node;
- * what it does not replace is IncidentAttachmentService, which performs the
- * write either way.
  *
- * Why run it at all before Phase 2: without incidents, GET /incidents,
- * /incidents/{id}, /incidents/{id}/complaints, PATCH /incidents/{id}, both
- * dashboard endpoints, the public ward strip, and the entire priority engine
- * have no rows to exercise. Shipping those endpoints with nothing but empty
- * arrays behind them means shipping them unverified.
+ * <p><b>Since Phase 2 this is the resilience fallback, not the matcher.</b> The
+ * real decision is embedding similarity computed in backend-node. This runs only
+ * when {@code ComplaintMatchingService} cannot reach Node — connection refused,
+ * a 5xx, or an open circuit breaker — and the complaint it attaches is tagged
+ * {@code MatchingStatus.DEGRADED}. {@code MatchReconciliationJob} then re-runs
+ * the real pipeline over those and corrects the assignment once Node recovers.
+ * What Phase 2 did not change is {@link IncidentAttachmentService}, which
+ * performs the write either way.
  *
- * It also gives Phase 8 its baseline for free: "semantic matching vs. a naive
- * ward+category control" is exactly the comparison the paper needs, and this
- * is that control.
+ * <p>Demoted rather than deleted, deliberately. Without it, a Node outage means
+ * complaints land nowhere and officers are blind to them until reconciliation
+ * runs; with it, they are visible immediately and merely grouped worse.
+ *
+ * <p>It also gives Phase 8 its baseline for free: "semantic matching vs. a naive
+ * ward+category control" is exactly the comparison the paper needs, and this is
+ * that control. Better still, every time reconciliation moves a naive-grouped
+ * complaint, that is a labelled <em>disagreement</em> between the two — recorded
+ * as a {@code RECONCILED} row in {@code incident_match_log}.
  *
  * KNOWN AND ACCEPTED WEAKNESS: this will produce bad merges. Two unrelated
  * potholes 400 m apart become one incident. The three bounds below (active
@@ -55,12 +61,17 @@ public class NaiveIncidentGrouper {
         return "naive".equalsIgnoreCase(appProperties.getIncidentGrouping().getStrategy());
     }
 
+    /** The fallback's decision: the incident to join (or null to create), and how many candidates it weighed. */
+    public record NaiveMatch(Incident incident, int candidateCount) {
+    }
+
     /**
-     * @return the incident this complaint should join, or empty to start a new one
+     * @return the incident this complaint should join (or {@code null} to start a
+     *         new one), with the candidate count for the {@code incident_match_log} row
      */
-    public Optional<Incident> findMatch(Complaint complaint) {
+    public NaiveMatch findMatch(Complaint complaint) {
         if (!isEnabled() || complaint.getWard() == null) {
-            return Optional.empty();
+            return new NaiveMatch(null, 0);
         }
 
         var config = appProperties.getIncidentGrouping();
@@ -83,7 +94,7 @@ public class NaiveIncidentGrouper {
                 candidates.size(),
                 match.map(Incident::getId).orElse(null));
 
-        return match;
+        return new NaiveMatch(match.orElse(null), candidates.size());
     }
 
     private static boolean withinRadius(Incident incident, Complaint complaint, double maxKm) {

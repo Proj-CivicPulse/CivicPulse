@@ -1,12 +1,18 @@
 package com.civicpulse.backend_spring.service.incident;
 
+import com.civicpulse.backend_spring.dto.Wire;
 import com.civicpulse.backend_spring.dto.internal.AttachResponse;
 import com.civicpulse.backend_spring.entity.Complaint;
 import com.civicpulse.backend_spring.entity.Incident;
+import com.civicpulse.backend_spring.entity.IncidentMatchLog;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
+import com.civicpulse.backend_spring.enums.MatchOutcome;
+import com.civicpulse.backend_spring.enums.Matcher;
+import com.civicpulse.backend_spring.enums.MatchingStatus;
 import com.civicpulse.backend_spring.exception.ResourceNotFoundException;
 import com.civicpulse.backend_spring.exception.ValidationException;
 import com.civicpulse.backend_spring.repository.ComplaintRepository;
+import com.civicpulse.backend_spring.repository.IncidentMatchLogRepository;
 import com.civicpulse.backend_spring.repository.IncidentRepository;
 import com.civicpulse.backend_spring.service.priority.PriorityResult;
 import com.civicpulse.backend_spring.service.geocoding.GeocodingService;
@@ -23,11 +29,9 @@ import java.util.List;
  * The single transactional write that puts a complaint into an incident.
  *
  * Spring performs every incident write (docs/service-boundaries.md decision 2),
- * whoever decided the match. This method is the body of
- * POST /internal/incidents/attach, and Phase 2 changes only WHO supplies
- * {@code incidentId} — not this code. Building it now means Phase 2 is a
- * matching algorithm rather than a matching algorithm plus a transactional
- * write path invented under deadline.
+ * whoever decided the match — the semantic matcher in backend-node, or the
+ * {@link NaiveIncidentGrouper} fallback. {@link MatchDecision} carries who
+ * decided and the score context; this method turns that into rows.
  */
 @Service
 @RequiredArgsConstructor
@@ -36,25 +40,46 @@ public class IncidentAttachmentService {
 
     private final ComplaintRepository complaintRepository;
     private final IncidentRepository incidentRepository;
+    private final IncidentMatchLogRepository matchLogRepository;
     private final PriorityService priorityService;
     private final GeocodingService geocodingService;
 
     /**
-     * @param incidentId null to start a new incident from this complaint
+     * @param decision the matcher's call — {@code incidentId} null means "start a
+     *                 new incident from this complaint"
      */
     @Transactional
-    public AttachResponse attach(Long complaintId, Long incidentId, Double similarity) {
+    public AttachResponse attach(Long complaintId, MatchDecision decision) {
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new ResourceNotFoundException("Complaint not found"));
 
+        // The naive fallback must never clobber a semantic result that has
+        // already landed (MATCHED) or is still in flight (PROCESSING — backend-node
+        // holds the claim). Checked here, inside the write transaction, so it is
+        // immune to the gap between the fallback's own status read and this call.
+        if (decision.matcher() == Matcher.NAIVE
+                && (complaint.getMatchingStatus() == MatchingStatus.MATCHED
+                        || complaint.getMatchingStatus() == MatchingStatus.PROCESSING)) {
+            log.info("Ignoring naive fallback for complaint {}: already {} — semantic wins",
+                    complaintId, complaint.getMatchingStatus());
+            Incident current = complaint.getIncident();
+            return new AttachResponse(
+                    current == null ? null : String.valueOf(current.getId()),
+                    false,
+                    current == null ? null : current.getPriorityScore(),
+                    Wire.enumValue(complaint.getMatchingStatus()));
+        }
+
+        Long previousIncidentId =
+                complaint.getIncident() == null ? null : complaint.getIncident().getId();
+
         boolean created = false;
         Incident incident;
-
-        if (incidentId == null) {
+        if (decision.incidentId() == null) {
             incident = createFrom(complaint);
             created = true;
         } else {
-            incident = incidentRepository.findById(incidentId)
+            incident = incidentRepository.findById(decision.incidentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Incident not found"));
 
             // A cross-ward match is a bug in whoever decided it. Refuse loudly
@@ -67,16 +92,82 @@ public class IncidentAttachmentService {
             }
         }
 
+        boolean moved = previousIncidentId != null && !previousIncidentId.equals(incident.getId());
+
         complaint.setIncident(incident);
+        complaint.setMatchingStatus(decision.matcher() == Matcher.SEMANTIC
+                ? MatchingStatus.MATCHED
+                : MatchingStatus.DEGRADED);
+        complaint.setMatchedAt(LocalDateTime.now());
         complaintRepository.save(complaint);
 
         recompute(incident);
 
-        log.info("Attached complaint {} to incident {} (created={}, similarity={})",
-                complaintId, incident.getId(), created, similarity);
+        if (moved) {
+            // The complaint left previousIncident (a reconcile run correcting a
+            // naive grouping). Recompute it; if it is now empty — a single-complaint
+            // naive incident — delete it so it does not sit in the officer queue
+            // at priority 0.
+            Incident old = incidentRepository.findById(previousIncidentId).orElse(null);
+            if (old != null) {
+                if (complaintRepository.countByIncidentId(old.getId()) == 0) {
+                    incidentRepository.delete(old);
+                    log.info("Removed emptied incident {} after moving complaint {} to {}",
+                            old.getId(), complaintId, incident.getId());
+                } else {
+                    recompute(old);
+                }
+            }
+        }
+
+        MatchOutcome outcome = moved ? MatchOutcome.RECONCILED
+                : created ? MatchOutcome.CREATED
+                : MatchOutcome.MATCHED;
+        matchLogRepository.save(IncidentMatchLog.builder()
+                .complaintId(complaintId)
+                .decision(outcome)
+                // Recorded separately because RECONCILED masks it: a move into a
+                // new incident and a move into an existing one share that value,
+                // and telling them apart is the join-vs-split signal Phase 8 needs.
+                .created(created)
+                .matcher(decision.matcher())
+                .chosenIncidentId(incident.getId())
+                .previousIncidentId(moved ? previousIncidentId : null)
+                .topSiblingComplaintId(decision.topSiblingComplaintId())
+                .topSimilarity(decision.topSimilarity())
+                .candidateCount(decision.candidateCount() == null ? 0 : decision.candidateCount())
+                .threshold(decision.threshold())
+                .model(decision.model())
+                .embeddingDim(decision.embeddingDim())
+                .build());
+
+        log.info("Attached complaint {} to incident {} (outcome={}, matcher={}, similarity={})",
+                complaintId, incident.getId(), outcome, decision.matcher(), decision.topSimilarity());
 
         return new AttachResponse(
-                String.valueOf(incident.getId()), created, incident.getPriorityScore());
+                String.valueOf(incident.getId()), created, incident.getPriorityScore(),
+                Wire.enumValue(complaint.getMatchingStatus()));
+    }
+
+    /**
+     * Recomputes one incident by id, without touching membership.
+     *
+     * Deliberately NOT routed through {@link #attach}: attach records a matching
+     * <em>decision</em> — it stamps {@code matching_status} and writes an
+     * {@code incident_match_log} row for the Phase 8 evaluation. Re-deriving a
+     * score is none of those things, and reusing attach for it would fabricate
+     * "semantic match" rows that never happened and corrupt that dataset.
+     *
+     * <p>Needed because the age term of the priority formula is time-dependent,
+     * so a stored score drifts with no writes at all (see {@code PriorityService}).
+     * Exposed as {@code POST /internal/incidents/{id}/recompute}.
+     */
+    @Transactional
+    public Incident recomputeById(Long incidentId) {
+        Incident incident = incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Incident not found"));
+        recompute(incident);
+        return incident;
     }
 
     /**

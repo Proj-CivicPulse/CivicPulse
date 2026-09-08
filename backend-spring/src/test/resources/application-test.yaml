@@ -34,6 +34,12 @@ app:
   frontend-origin: http://localhost:5173
   cookie-secure: false
   health-timeout-seconds: 10
+  # A fixed value so /internal/* is reachable in slice tests without a real secret.
+  internal-token: test-internal-token
+  matching:
+    # The context test must not fire the scheduled sweep at a real backend-node.
+    reconciliation:
+      enabled: false
 
 jwt:
   secret: test-only-secret-value-not-used-anywhere-real-0123456789

@@ -16,7 +16,8 @@ public class AppConfig {
 
     /**
      * Shared HTTP client for outbound third-party calls — reverse geocoding
-     * today, backend-node complaint processing in Phase 2.
+     * today. The backend-node matching trigger uses its own bean below, because
+     * it wants a much shorter read timeout.
      *
      * TIMEOUTS ARE THE POINT. An untimed client waits as long as the far end
      * takes to answer, so one slow dependency exhausts the request thread pool
@@ -34,5 +35,24 @@ public class AppConfig {
         factory.setReadTimeout(Duration.ofMillis(appProperties.getHttpReadTimeoutMs()));
 
         return RestClient.builder().requestFactory(factory).build();
+    }
+
+    /**
+     * Separate client for the Phase 2 trigger to backend-node, with its own
+     * (shorter) read timeout. The trigger runs on a background worker after the
+     * complaint has committed, so a slow Node must time out fast here rather
+     * than hold the worker — Node keeps the PROCESSING claim and finishes on
+     * its own. See {@code app.matching.process-timeout-ms}.
+     */
+    @Bean
+    public RestClient matchingRestClient() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofMillis(appProperties.getHttpConnectTimeoutMs()));
+        factory.setReadTimeout(Duration.ofMillis(appProperties.getMatching().getProcessTimeoutMs()));
+
+        return RestClient.builder()
+                .baseUrl(appProperties.getMatching().getNodeBaseUrl())
+                .requestFactory(factory)
+                .build();
     }
 }

@@ -55,7 +55,7 @@ civicpulse/
 | Vector search | pgvector | Core requirement for semantic incident matching |
 | Maps | Leaflet + OpenStreetMap | Free, lightweight, sufficient for markers and hotspot display |
 | Auth | JWT | Role-based access control for citizens vs. officers |
-| Embeddings | External embedding API | Converts complaint text into comparable vectors |
+| Embeddings | Google Gemini `gemini-embedding-001` (1536-dim) | Converts complaint text into comparable vectors. Chosen for **multilingual** coverage — complaint text here mixes English, Hindi and Kannada, and one model handles all three |
 | LLM | External LLM API | Powers summaries and the grounded Copilot |
 
 **Deferred until actually needed:** PostGIS (only if ward-boundary lookups
@@ -78,6 +78,15 @@ triggered by sufficient historical data).
   touching shared tables. The cross-service wire format is in
   [`docs/api-contract.md`](docs/api-contract.md).
 
+**The matching handoff is asynchronous.** `POST /complaints` commits and returns
+straight away with `matchingStatus: "pending"` — a citizen never waits on an
+embedding call. Spring then triggers Node in the background; Node embeds,
+matches, and asks Spring to write the result. If Node is slow or down, a circuit
+breaker falls back to naive ward+category grouping (tagged `degraded`) and a
+reconciliation job re-runs the real pipeline once Node recovers. The full
+concurrency model — including the in-flight claim that stops two Node runs
+racing — is decision 2 in `service-boundaries.md`.
+
 ---
 
 ## Getting started
@@ -90,8 +99,11 @@ triggered by sufficient historical data).
 - Python (**latest LTS/stable** — e.g. 3.12) for `ml-hotspots`, if/when Phase 7 is triggered
 - A **[Neon](https://neon.com)** account — the project uses Neon's hosted
   serverless PostgreSQL with `pgvector`. Nothing to install locally.
-- An API key for the embedding provider and LLM provider (see `.env.example`
-  in each service)
+- A **Google AI Studio API key** for embeddings
+  ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)) — free tier
+  is enough for development. This is a *different* key from the optional Google
+  geocoding key, which lives in `backend-spring`. An LLM key is only needed from
+  Phase 6. See `.env.example` in each service.
 
 > **Version policy:** this project uses **LTS versions only** for all
 > runtimes (Java, Node.js, Python). Do not use bleeding-edge/current
@@ -109,23 +121,57 @@ cd CivicPulse
 
 # 2. Spring Boot service (core API). Applies the schema migrations on boot.
 cd backend-spring
-cp .env.example .env   # paste your Neon DB_URL; set JWT_SECRET (32+ chars)
+cp .env.example .env   # Neon DB_URL; JWT_SECRET (32+ chars); INTERNAL_TOKEN
 ./mvnw spring-boot:run # no local Maven install needed
 
 # 3. Node.js AI service
 cd ../backend-node
-cp .env.example .env   # paste your Neon DATABASE_URL
+cp .env.example .env   # Neon DATABASE_URL; the SAME INTERNAL_TOKEN; EMBEDDING_API_KEY
 npm install
 npm run dev
 
 # 4. React frontend
 cd ../frontend
+cp .env.example .env.local   # nothing in it is required to boot
 npm install
-npm run dev
+npm run dev                  # http://localhost:5173
 ```
 
-Each service's own `README.md` (inside its folder) has service-specific
-details once those folders are scaffolded.
+`INTERNAL_TOKEN` must be **identical in both backends** — it authenticates
+service-to-service calls in both directions, and each side fails closed when it
+is blank. Generate one with `openssl rand -hex 32`.
+
+### Seeing something on the screen
+
+A fresh database has wards and departments but no complaints, so the officer
+dashboard is legitimately empty. Two more steps:
+
+```bash
+# Demo data. Run backend-node alongside it for real semantic grouping;
+# without it the naive fallback groups them and tags them "degraded".
+cd backend-spring && node scripts/seed-dev-data.mjs
+```
+
+Then give yourself an officer account. Registration **always** creates a
+citizen — there is no public path to an officer, and no seeded credentials in
+the repo. Sign up normally, then promote yourself in the Neon SQL Editor:
+
+```sql
+UPDATE users SET role='OFFICER' WHERE email='you@example.com';
+```
+
+Log out and back in; the role is baked into the token. Citizens land on
+`/complaints`, officers on `/dashboard`.
+
+One thing that surprises people: a complaint you have just submitted shows
+`matchingStatus: "pending"` with no incident. That is correct — matching runs
+*after* the response so you are never kept waiting on an embedding call. It
+becomes `matched` a second or two later.
+
+Each service's own `README.md` (inside its folder) has service-specific details:
+[`backend-spring`](backend-spring/README.md) ·
+[`backend-node`](backend-node/README.md) ·
+[`frontend`](frontend/README.md).
 
 ---
 
@@ -158,8 +204,8 @@ provisioned the first time you run the Spring service.
 
    Both `.env.example` files spell this out. `sslmode=require` is mandatory —
    Neon refuses plaintext connections.
-4. Start `backend-spring` once (`./mvnw spring-boot:run`). Flyway creates
-   the extension, all five tables, and seeds reference wards/departments.
+4. Start `backend-spring` once (`./mvnw spring-boot:run`). Flyway creates the
+   `pgvector` extension, every table, and seeds reference wards/departments.
 
 ### Working with the database
 
@@ -223,17 +269,32 @@ Following a phased roadmap (see [`docs/roadmap.md`](docs/roadmap.md) for the
 full detail):
 
 - [x] Phase 0 — Foundations. Running skeleton: Neon Postgres + pgvector,
-      Flyway schema for all five tables, JWT auth (cookie-based) in Spring,
-      both services health-checked against the database and reachable through
-      the frontend proxy, service-boundary decisions written down.
-- [ ] Phase 1 — Complaint ingestion
-- [ ] Phase 2 — Embeddings + incident matching
-- [ ] Phase 3 — Explainable priority engine
-- [ ] Phase 4 — Officer dashboard + map
+      Flyway-owned schema, JWT auth (cookie-based) in Spring, both services
+      health-checked against the database and reachable through the frontend
+      proxy, service-boundary decisions written down.
+- [x] Phase 1 — Complaint ingestion. Public anonymous submission, ward derived
+      from coordinates, gap-free reference numbers allocated in-transaction,
+      optional server-side reverse geocoding, officer/citizen read paths.
+- [x] Phase 2 — Embeddings + incident matching. Gemini `gemini-embedding-001`
+      (1536-dim, L2-normalised) into pgvector; ward+category+status candidate
+      pre-filter then single-linkage cosine similarity; async trigger with a
+      circuit breaker, naive fallback, and a reconciliation sweep. Every
+      decision — semantic, naive, and reconcile move — is recorded in
+      `incident_match_log` with its scores, which is the dataset Phase 8
+      evaluates precision/recall/F1 on.
+- [x] Phase 3 — Explainable priority engine. Rule-based score over volume,
+      growth, age and geographic spread, stored with the human-readable
+      reasons, recomputed in the same transaction as any membership change.
+- [x] Phase 4 — Officer dashboard + map. Ward rail → incident queue → incident
+      detail drill-down, Leaflet markers coloured by priority band.
 - [ ] Phase 5 — Trends & analytics
 - [ ] Phase 6 — Officer Copilot
 - [ ] Phase 7 — Predictive hotspots (conditional on data quality)
 - [ ] Phase 8 — Evaluation + paper
+
+Next up is **threshold tuning**: `MATCH_SIMILARITY_THRESHOLD` ships at `0.75`
+as a starting point, and `incident_match_log` now has the raw scores needed to
+choose a better one against labelled data.
 
 ---
 

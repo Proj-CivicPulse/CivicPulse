@@ -51,6 +51,14 @@ public class ComplaintDto {
     private final Double lng;
 
     private final String status;
+
+    /**
+     * Where the complaint sits in the Phase 2 matching pipeline:
+     * {@code pending | processing | matched | degraded}. The citizen My-reports
+     * screen and the officer dashboard both read this; see docs/api-contract.md.
+     */
+    private final String matchingStatus;
+
     /** Human-readable location. Null when geocoding is disabled. */
     private final String address;
     private final String photoUrl;
@@ -72,6 +80,7 @@ public class ComplaintDto {
                 complaint.getLatitude(),
                 complaint.getLongitude(),
                 Wire.enumValue(complaint.getStatus()),
+                Wire.enumValue(complaint.getMatchingStatus()),
                 complaint.getAddress(),
                 complaint.getPhotoUrl(),
                 Wire.timestamp(complaint.getCreatedAt()),

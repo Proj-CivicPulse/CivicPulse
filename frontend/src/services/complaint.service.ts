@@ -4,6 +4,21 @@ import { SPRING_API_PATH } from '../config/constants';
 export type ComplaintStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 
 /**
+ * Where a complaint sits in the Phase 2 incident-matching pipeline. Distinct
+ * from `ComplaintStatus`, which is the civic lifecycle an officer drives.
+ *
+ * - `pending`    — submitted; matching has not run yet. Every freshly created
+ *                  complaint is this, because matching happens after the
+ *                  response is sent.
+ * - `processing` — backend-node is embedding and matching it right now.
+ * - `matched`    — the semantic matcher assigned it, to a new or existing incident.
+ * - `degraded`   — backend-node was unreachable, so the naive ward+category
+ *                  fallback grouped it. Spring's reconciliation job upgrades
+ *                  these to `matched` once Node recovers.
+ */
+export type MatchingStatus = 'pending' | 'processing' | 'matched' | 'degraded';
+
+/**
  * Wire shape per docs/api-contract.md. Ids are strings, enums lowercase, and
  * the DB's latitude/longitude columns arrive as lat/long.
  */
@@ -40,6 +55,16 @@ export interface Complaint {
      */
     address: string | null;
     status: ComplaintStatus;
+    /**
+     * Pipeline state, not civic state — see {@link MatchingStatus}.
+     *
+     * Carried on the wire from Phase 2 so nothing downstream is blocked, but
+     * deliberately not rendered yet. Surfacing "pending"/"degraded" to a citizen
+     * is its own design question, and the similarity threshold is still being
+     * tuned — a UI built against today's semantics would be the first thing to
+     * go stale. Officer-side use lands with the dashboard work.
+     */
+    matchingStatus: MatchingStatus;
     photoUrl?: string;
     createdAt: string;
     updatedAt: string;

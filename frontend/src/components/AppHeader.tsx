@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { APP_NAME } from '@/config/constants';
 import { useAuthStore } from '@/stores/auth.store';
 import Button from '@/components/ui/Button';
@@ -20,14 +20,22 @@ interface Props {
  * the signed-in identity, so the header always answers "who am I here as".
  */
 export default function AppHeader({ nav = [], wide = false }: Props) {
-    const navigate = useNavigate();
     const user = useAuthStore((state) => state.user);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const logout = useAuthStore((state) => state.logout);
 
     function onSignOut() {
         logout();
-        navigate('/');
+        // A full document navigation, deliberately, not navigate('/').
+        //
+        // Two reasons. A client-side navigation races ProtectedRoute: clearing
+        // the session re-renders the page you are still on, its guard redirects
+        // to /login, and that redirect wins — so signing out dropped you on a
+        // sign-in form instead of the front door. And a reload is what actually
+        // empties the React Query cache; without it the previous session's
+        // reports sit in memory for gcTime and are handed straight to whoever
+        // signs in next on this browser.
+        window.location.assign('/');
     }
 
     return (

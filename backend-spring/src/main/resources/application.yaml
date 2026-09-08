@@ -98,8 +98,26 @@ app:
   http-connect-timeout-ms: ${HTTP_CONNECT_TIMEOUT_MS:3000}
   http-read-timeout-ms: ${HTTP_READ_TIMEOUT_MS:5000}
 
-  # Placeholder grouping until Phase 2 semantic matching lands. Set strategy to
-  # "none" to leave incident assignment entirely to Node.
+  # Phase 2 semantic matching. The trigger to backend-node is async and fired
+  # after the complaint commits, so a slow or dead Node never delays the
+  # citizen's response.
+  matching:
+    node-base-url: ${NODE_BASE_URL:http://localhost:3001}
+    process-timeout-ms: ${MATCHING_PROCESS_TIMEOUT_MS:2500}
+    # Must match backend-node's PROCESSING_STALE_SECONDS. Node's compare-and-swap
+    # claim is the authority; this only pre-filters reconcile candidates.
+    processing-stale-seconds: ${MATCHING_PROCESSING_STALE_SECONDS:45}
+    circuit-breaker:
+      failure-threshold: ${MATCHING_CB_FAILURES:3}
+      open-seconds: ${MATCHING_CB_OPEN_SECONDS:60}
+    reconciliation:
+      enabled: ${MATCHING_RECONCILE_ENABLED:true}
+      interval-ms: ${MATCHING_RECONCILE_INTERVAL_MS:60000}
+      batch-size: ${MATCHING_RECONCILE_BATCH:25}
+
+  # The NAIVE FALLBACK matcher (ward + category + window + radius). Runs only
+  # when backend-node is unreachable; tags the complaint "degraded" so the
+  # reconcile sweep upgrades it later. "none" disables the fallback entirely.
   incident-grouping:
     strategy: ${INCIDENT_GROUPING_STRATEGY:naive}
     window-days: ${INCIDENT_GROUPING_WINDOW_DAYS:14}

@@ -13,12 +13,31 @@
  * would mean reimplementing PriorityService in JavaScript, and the copy would
  * drift from the Java the moment either changed.
  *
+ * SINCE PHASE 2, MATCHING IS ASYNCHRONOUS. POST /complaints returns immediately
+ * with incidentId: null and matchingStatus: "pending" — grouping happens after
+ * the response, in backend-node (or via the naive fallback if Node is down). So
+ * this script creates every complaint first, then WAITS for the pipeline to
+ * settle before it can know which incidents formed.
+ *
+ *   - backend-node running + EMBEDDING_API_KEY set  -> real semantic grouping.
+ *     One hotspot may legitimately split into two or three incidents if its
+ *     descriptions fall below MATCH_SIMILARITY_THRESHOLD. That is the matcher
+ *     working, not a bug, and the summary below reports it — it is a cheap read
+ *     on how the threshold is behaving.
+ *   - backend-node down -> the naive fallback groups them and tags them
+ *     `degraded`. The seed still works; the grouping is just the old baseline.
+ *
  * The one thing the API cannot give us is AGE: everything it creates is new, so
  * the age term of the priority formula would be zero for every incident and the
  * whole queue would score the same. So the script backdates created_at in SQL,
- * then replays POST /internal/incidents/attach for each incident, which calls
- * IncidentAttachmentService.recompute() and re-derives the score and reasons
- * against the ages that now exist.
+ * then calls POST /internal/incidents/{id}/recompute for each incident, which
+ * re-derives the score and reasons against the ages that now exist.
+ *
+ * It deliberately does NOT use /internal/incidents/attach for that. attach
+ * records a matching DECISION — it stamps matching_status and appends an
+ * incident_match_log row — so replaying it per incident would fabricate
+ * "semantic match" entries that never happened and corrupt the dataset Phase 8
+ * evaluates precision/recall on.
  *
  * Requires INTERNAL_TOKEN to be set in backend-spring/.env and the app running.
  */
@@ -35,6 +54,14 @@ const require = createRequire(join(springDir, '..', 'backend-node', 'package.jso
 const { Client } = require('pg');
 
 const API = process.env.SEED_API ?? 'http://localhost:8080';
+
+/**
+ * How long to wait for asynchronous matching to finish before giving up.
+ *
+ * A full seed is ~150 complaints, each costing one embedding round trip through
+ * backend-node. Generous on purpose: exceeding it is a warning, not a failure.
+ */
+const SETTLE_TIMEOUT_MS = Number(process.env.SEED_SETTLE_TIMEOUT_MS ?? 300_000);
 
 function envValue(file, key) {
     const match = readFileSync(file, 'utf8').match(new RegExp(`^${key}=(.*)$`, 'm'));
@@ -151,7 +178,9 @@ async function main() {
     const wards = await api('/wards');
     console.log(`Seeding across ${wards.length} wards\n`);
 
-    const incidentAges = new Map(); // incidentId -> ageDays
+    // One entry per hotspot: the complaints it produced, and how old it should
+    // look. Which incident(s) they land in is not known until matching settles.
+    const hotspots = [];
     let created = 0;
 
     for (const ward of wards) {
@@ -162,7 +191,7 @@ async function main() {
             const lat = ward.lat + dLat;
             const long = ward.long + dLon;
 
-            let incidentId = null;
+            const complaintIds = [];
             for (let r = 0; r < reportCount; r++) {
                 const complaint = await api('/complaints', {
                     method: 'POST',
@@ -176,24 +205,64 @@ async function main() {
                     }),
                 });
                 created++;
-                incidentId = complaint.incidentId;
+                complaintIds.push(Number(complaint.id));
             }
 
-            if (incidentId) incidentAges.set(incidentId, ageDays);
-            console.log(
-                `  ${ward.name.padEnd(9)} ${category.padEnd(12)} ` +
-                `${String(reportCount).padStart(2)} reports  ->  incident ${incidentId}`
-            );
+            hotspots.push({ label: `${ward.name.padEnd(9)} ${category.padEnd(12)}`, ageDays, complaintIds });
+            console.log(`  ${hotspots.at(-1).label} ${String(reportCount).padStart(2)} reports submitted`);
         }
     }
 
-    console.log(`\n${created} complaints created, ${incidentAges.size} incidents formed.`);
+    const allIds = hotspots.flatMap((h) => h.complaintIds);
+    console.log(`\n${created} complaints created (all matching_status=pending).`);
+
+    /* ----------------------------------------------- wait for matching */
+
+    const db = new Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    await db.connect();
+
+    await settleMatching(db, allIds);
+
+    /* ----------------------------------------------- resolve incidents */
+
+    // A hotspot can produce more than one incident: the semantic matcher splits
+    // it when two reports about the same problem describe it differently enough
+    // to fall below the threshold. Backdate every incident it produced.
+    const incidentAges = new Map(); // incidentId -> ageDays
+    let fragmented = 0;
+
+    for (const hotspot of hotspots) {
+        const { rows } = await db.query(
+            `SELECT DISTINCT incident_id FROM complaints
+             WHERE id = ANY($1::bigint[]) AND incident_id IS NOT NULL`,
+            [hotspot.complaintIds]
+        );
+        const ids = rows.map((r) => Number(r.incident_id));
+        for (const id of ids) incidentAges.set(id, hotspot.ageDays);
+        if (ids.length > 1) fragmented++;
+        console.log(
+            `  ${hotspot.label} -> ${ids.length === 1 ? `incident ${ids[0]}` : `${ids.length} incidents ${ids.join(', ')}`}`
+        );
+    }
+
+    console.log(`\n${incidentAges.size} incidents formed from ${hotspots.length} hotspots.`);
+    if (fragmented > 0) {
+        console.log(
+            `\n${fragmented} hotspot(s) split across multiple incidents. Usually this is the\n` +
+            `concurrency race, not the threshold: this script submits far faster than the\n` +
+            `matcher drains, so several reports about one problem get embedded in parallel,\n` +
+            `each finds no committed sibling yet, and each starts its own incident.\n` +
+            `A reconcile pass consolidates them — restart with matching enabled and wait for\n` +
+            `MatchReconciliationJob, or re-run those complaints with ?force=true.\n\n` +
+            `To tell the two causes apart, check incident_match_log:\n` +
+            `  rows with candidate_count = 0        -> the race (no sibling was visible yet)\n` +
+            `  rows with top_similarity < threshold -> genuinely dissimilar wording`
+        );
+    }
 
     /* --------------------------------------------------- backdate + rescore */
 
     console.log('\nBackdating so the age term of the priority formula has something to bite on…');
-    const db = new Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
-    await db.connect();
 
     for (const [incidentId, ageDays] of incidentAges) {
         // The incident opened ageDays ago; its reports are spread from then
@@ -218,12 +287,49 @@ async function main() {
 }
 
 /**
+ * Blocks until every complaint this run created has left PENDING/PROCESSING.
+ *
+ * Scoped to our own ids on purpose — a pre-existing backlog from an earlier
+ * failed run must not make this hang forever. On timeout it warns and carries
+ * on: whatever did get grouped is still worth backdating, and Spring's
+ * MatchReconciliationJob will pick up the stragglers on its own schedule.
+ */
+async function settleMatching(db, complaintIds) {
+    const deadline = Date.now() + SETTLE_TIMEOUT_MS;
+    let remaining = complaintIds.length;
+
+    process.stdout.write('Waiting for the matching pipeline to settle');
+    while (Date.now() < deadline) {
+        const { rows } = await db.query(
+            `SELECT count(*)::int AS pending FROM complaints
+             WHERE id = ANY($1::bigint[]) AND matching_status IN ('PENDING', 'PROCESSING')`,
+            [complaintIds]
+        );
+        remaining = rows[0].pending;
+        if (remaining === 0) {
+            console.log(' done.\n');
+            return;
+        }
+        process.stdout.write('.');
+        await sleep(1000);
+    }
+
+    console.log('');
+    console.warn(
+        `\nWARNING: ${remaining} complaint(s) still unmatched after ${SETTLE_TIMEOUT_MS / 1000}s.\n` +
+        `Is backend-node running with EMBEDDING_API_KEY set? Carrying on anyway —\n` +
+        `MatchReconciliationJob will catch them up.\n`
+    );
+}
+
+/**
  * Recompute every incident's score and reasons through PriorityService.
  *
- * Re-attaching a complaint that is already in its incident is idempotent —
- * complaintCount is recounted from the database rather than incremented — so
- * this is the one route to recompute() that does not require inventing an
- * endpoint just for it.
+ * Goes through POST /internal/incidents/{id}/recompute, NOT /incidents/attach.
+ * attach records a matching decision — it stamps matching_status and appends an
+ * incident_match_log row — so replaying it here would invent "semantic match"
+ * events that never happened and corrupt the Phase 8 evaluation dataset.
+ * recompute only re-derives count, centroid, address, score and reasons.
  *
  * Useful beyond seeding: the age term of the formula is time-dependent, so a
  * stored score drifts even when nothing is written. Running this periodically
@@ -232,23 +338,14 @@ async function main() {
 async function rescoreAll() {
     const db = new Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
     await db.connect();
-    // One member per incident is enough; attach recomputes over the whole set.
-    const { rows } = await db.query(
-        `SELECT incident_id, MIN(id) AS complaint_id
-         FROM complaints WHERE incident_id IS NOT NULL
-         GROUP BY incident_id ORDER BY incident_id`
-    );
+    const { rows } = await db.query(`SELECT id FROM incidents ORDER BY id`);
     await db.end();
 
     console.log(`Recomputing priority for ${rows.length} incidents through the real service…`);
     for (const row of rows) {
-        await api('/internal/incidents/attach', {
+        await api(`/internal/incidents/${row.id}/recompute`, {
             method: 'POST',
             headers: { 'X-Internal-Token': INTERNAL_TOKEN },
-            body: JSON.stringify({
-                complaintId: String(row.complaint_id),
-                incidentId: String(row.incident_id),
-            }),
         });
         await sleep(20);
     }
