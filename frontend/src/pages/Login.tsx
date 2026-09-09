@@ -38,11 +38,16 @@ export default function Login() {
         } catch (err) {
             // 401 here means "wrong email or password", not an expired session,
             // so the generic session copy would be actively misleading.
-            setError(
-                err instanceof ApiError && err.status === 401
-                    ? 'That email and password don’t match an account.'
-                    : errorMessage(err)
-            );
+            if (err instanceof ApiError && err.status === 401) {
+                setError('That email and password don’t match an account.');
+            } else if (err instanceof ApiError && err.status === 429) {
+                // The sign-in lockout. Prefer the server's message: it names
+                // the actual wait, where the generic 429 copy in lib/errors.ts
+                // guesses "a minute" and will usually be wrong.
+                setError(err.message);
+            } else {
+                setError(errorMessage(err));
+            }
         } finally {
             setSubmitting(false);
         }
@@ -90,6 +95,10 @@ export default function Login() {
                             {submitting ? 'Signing in…' : 'Sign in'}
                         </Button>
                     </form>
+
+                    <p className={styles.footer}>
+                        <Link to="/forgot-password">Forgot your password?</Link>
+                    </p>
 
                     <p className={styles.footer}>
                         No account? <Link to="/register">Create one</Link> to track your reports.

@@ -46,6 +46,16 @@ public class User {
     @Column(name = "role", nullable = false)
     private UserRole role;
 
+    /**
+     * When the address was confirmed, or null if it never was.
+     *
+     * A timestamp rather than a boolean: "verified" is an event, and knowing
+     * when it happened is what lets a later policy ask for re-confirmation.
+     * Accounts predating V10 were backfilled to their creation time.
+     */
+    @Column(name = "email_verified_at")
+    private LocalDateTime emailVerifiedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

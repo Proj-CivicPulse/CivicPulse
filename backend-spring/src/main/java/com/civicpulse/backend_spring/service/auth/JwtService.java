@@ -20,10 +20,12 @@ import java.util.Optional;
  * never be replayed as an access token (or vice versa) — without that
  * claim, the long-lived refresh token would authenticate any request.
  *
- * Tokens are stateless: there is no server-side revocation list yet, so a
- * stolen refresh token stays valid until it expires. Adding a
- * {@code refresh_tokens} table (jti + revoked_at) is the follow-up if the
- * team wants real logout-everywhere semantics.
+ * Both also carry {@code sid}, the login session they belong to. That is what
+ * makes revocation possible on either token type: refresh tokens are checked
+ * against the {@code refresh_tokens} table (see {@link RefreshTokenService}),
+ * and access tokens against {@link SessionRevocationRegistry}. Refresh tokens
+ * additionally carry a {@code jti} identifying the individual token, so a
+ * rotated one can be recognised if it is ever replayed.
  */
 @Service
 @RequiredArgsConstructor
@@ -34,6 +36,7 @@ public class JwtService {
 
     private static final String CLAIM_TYPE = "typ";
     private static final String CLAIM_ROLE = "role";
+    private static final String CLAIM_SESSION = "sid";
 
     private final JwtProperties jwtProperties;
 
@@ -43,24 +46,33 @@ public class JwtService {
         return Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
     }
 
-    private String generate(Long userId, String role, String type, long ttlMillis) {
+    private String generate(Long userId, String role, String type, String sessionId,
+                            String jti, long ttlMillis) {
         Date now = new Date();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim(CLAIM_ROLE, role)
                 .claim(CLAIM_TYPE, type)
+                .claim(CLAIM_SESSION, sessionId)
                 .issuedAt(now)
-                .expiration(new Date(now.getTime() + ttlMillis))
-                .signWith(getSecretKey())
-                .compact();
+                .expiration(new Date(now.getTime() + ttlMillis));
+
+        if (jti != null) {
+            builder.id(jti);
+        }
+        return builder.signWith(getSecretKey()).compact();
     }
 
-    public String generateAccessToken(Long userId, String role) {
-        return generate(userId, role, TYPE_ACCESS, jwtProperties.getAccessExpiration());
+    public String generateAccessToken(Long userId, String role, String sessionId) {
+        // No jti: access tokens are never looked up individually — they are
+        // revoked by session, and they expire too fast to be worth a row.
+        return generate(userId, role, TYPE_ACCESS, sessionId, null,
+                jwtProperties.getAccessExpiration());
     }
 
-    public String generateRefreshToken(Long userId, String role) {
-        return generate(userId, role, TYPE_REFRESH, jwtProperties.getRefreshExpiration());
+    public String generateRefreshToken(Long userId, String role, String sessionId, String jti) {
+        return generate(userId, role, TYPE_REFRESH, sessionId, jti,
+                jwtProperties.getRefreshExpiration());
     }
 
     /**
@@ -92,5 +104,15 @@ public class JwtService {
 
     public String extractRole(Claims claims) {
         return claims.get(CLAIM_ROLE, String.class);
+    }
+
+    /** Null for a token minted before sessions existed — callers must reject those. */
+    public String extractSessionId(Claims claims) {
+        return claims.get(CLAIM_SESSION, String.class);
+    }
+
+    /** The individual refresh token's id. Null on access tokens. */
+    public String extractTokenId(Claims claims) {
+        return claims.getId();
     }
 }

@@ -1,6 +1,5 @@
 package com.civicpulse.backend_spring.dto.auth;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -13,15 +12,15 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterRequest {
+public class ResetPasswordRequest {
 
     @NotBlank
-    private String name;
+    private String token;
 
-    @NotBlank
-    @Email
-    private String email;
-
+    /**
+     * Same rule as registration, by construction — see {@link PasswordPolicy}
+     * for why this must not be allowed to drift weaker.
+     */
     @NotBlank
     @Size(min = PasswordPolicy.MIN_LENGTH, max = PasswordPolicy.MAX_LENGTH)
     @Pattern(regexp = PasswordPolicy.PATTERN, message = PasswordPolicy.MESSAGE)

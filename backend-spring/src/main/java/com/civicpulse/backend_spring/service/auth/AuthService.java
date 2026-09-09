@@ -8,11 +8,14 @@ import com.civicpulse.backend_spring.exception.EmailAlreadyExistsException;
 import com.civicpulse.backend_spring.exception.InvalidCredentialsException;
 import com.civicpulse.backend_spring.exception.UnauthorizedException;
 import com.civicpulse.backend_spring.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +23,23 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    /**
+     * A real BCrypt hash of a value nobody knows, used to spend the same time
+     * on an unknown email as on a known one (see {@link #authenticate}).
+     *
+     * Built by the configured encoder at startup rather than hardcoded, so it
+     * always carries the same cost factor as the hashes it stands in for — a
+     * stale constant at a lower cost would reintroduce the very timing gap it
+     * exists to close. The input is random per boot: this hash must never
+     * match a password anyone could actually type.
+     */
+    private String dummyPasswordHash;
+
+    @PostConstruct
+    void initDummyPasswordHash() {
+        dummyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
+    }
 
     /**
      * Self-service registration always creates a CITIZEN. Officer accounts
@@ -55,10 +75,18 @@ public class AuthService {
         User user = userRepository.findByEmail(normalizeEmail(request.getEmail()))
                 .orElse(null);
 
-        // Same message and timing-insensitive shape for both failure modes:
-        // distinguishing "unknown email" from "wrong password" lets an
-        // attacker enumerate which addresses are registered.
-        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        // ALWAYS verify a hash, even when there is no such user.
+        //
+        // The identical error message is only half of enumeration resistance.
+        // Short-circuiting on `user == null` would skip BCrypt entirely and
+        // answer in a millisecond, while a real address costs the full ~100 ms
+        // of hashing — a gap so wide it is measurable over the internet, and it
+        // reveals exactly what the shared message is meant to hide. Verifying
+        // against a throwaway hash makes both paths do the same work.
+        String hashToVerify = user == null ? dummyPasswordHash : user.getPasswordHash();
+        boolean passwordMatches = passwordEncoder.matches(request.getPassword(), hashToVerify);
+
+        if (user == null || !passwordMatches) {
             throw new InvalidCredentialsException("Invalid email or password");
         }
 

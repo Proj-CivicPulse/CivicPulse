@@ -2,6 +2,7 @@ package com.civicpulse.backend_spring.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -47,6 +48,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException ex) {
         return build(HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED, ex.getMessage());
+    }
+
+    /**
+     * The login brute-force lockout (LoginRateLimiter).
+     *
+     * Carries Retry-After so the message and the header agree on when to come
+     * back; SecurityConfig exposes that header to the browser via CORS.
+     */
+    @ExceptionHandler(TooManyAttemptsException.class)
+    public ResponseEntity<ApiError> handleTooManyAttempts(TooManyAttemptsException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(new ApiError(ErrorCode.RATE_LIMITED, ex.getMessage()));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

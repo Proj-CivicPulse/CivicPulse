@@ -40,10 +40,34 @@ boundary).
 
 ### Auth — Phase 0
 - [x] `POST /auth/register` *(not originally listed; always creates a citizen)*
-- [x] `POST /auth/login` — sets httpOnly cookies, returns `{user}`
-- [x] `POST /auth/logout` — clears cookies, 204
+- [x] `POST /auth/login` — sets httpOnly cookies, returns `{user}`.
+      Rate limited: 5 failures per email and 50 per IP in 15 min, then a
+      15-minute lockout answered as `429 RATE_LIMITED` with `Retry-After`
+- [x] `POST /auth/logout` — revokes this session, clears cookies, 204
+- [x] `POST /auth/logout-all` — revokes every session for the user, 204.
+      **Requires authentication**, unlike the other four
 - [x] `GET /auth/me` — session restore, 401 when unauthenticated
-- [x] `POST /auth/refresh` — rotates the token pair
+- [x] `POST /auth/refresh` — rotates the token pair. The presented refresh
+      token is single-use; replaying one after rotation is treated as theft
+      and revokes the whole session (401)
+- [x] `POST /auth/verify-email` — `{token}` from the verification email, 204.
+      Public: the holder is usually signed out and the token is the credential
+- [x] `POST /auth/resend-verification` — 204. **Requires authentication**; the
+      address comes from the session, so it cannot be aimed at another inbox
+- [x] `POST /auth/forgot-password` — `{email}`, **always 204** whether or not
+      the address has an account (no enumeration). Rate limited
+- [x] `POST /auth/reset-password` — `{token, password}`, 204. Revokes every
+      session for the user and clears cookies
+
+Verification is **recorded, not enforced**: `user.emailVerified` is exposed on
+the user but nothing server-side gates on it. Filing a complaint is already
+open and anonymous, so a hard gate would push people to the anonymous path and
+turn any mail failure into a locked account.
+
+**There is no OTP.** Both email flows are single-use *links*, never codes typed
+into a form, and registration completes in one step with no interstitial
+screen. Login checks email and password hash only. Email delivery is stubbed by
+default (`EMAIL_PROVIDER=log`), so auth has no runtime email dependency.
 
 ### Officers — Phase 0/1
 - [ ] `GET /officers`

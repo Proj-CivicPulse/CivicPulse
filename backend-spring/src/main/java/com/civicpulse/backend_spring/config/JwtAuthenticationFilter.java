@@ -2,6 +2,7 @@ package com.civicpulse.backend_spring.config;
 
 import com.civicpulse.backend_spring.service.auth.AuthCookieFactory;
 import com.civicpulse.backend_spring.service.auth.JwtService;
+import com.civicpulse.backend_spring.service.auth.SessionRevocationRegistry;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -42,6 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final SessionRevocationRegistry revocationRegistry;
 
     private Optional<String> extractToken(HttpServletRequest request) {
         Optional<String> fromCookie = AuthCookieFactory.readCookie(request, AuthCookieFactory.ACCESS_COOKIE);
@@ -78,6 +80,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Long userId = jwtService.extractUserId(claims);
             String role = jwtService.extractRole(claims);
             if (role == null || role.isBlank()) {
+                return;
+            }
+
+            // Every token issued since V9 carries its session. A null one is a
+            // pre-session token that survived a deploy; refusing it costs its
+            // holder one re-login and keeps "every live token is revocable" a
+            // property with no exceptions.
+            String sessionId = jwtService.extractSessionId(claims);
+            if (sessionId == null || sessionId.isBlank()) {
+                return;
+            }
+
+            // Signed and unexpired is not enough: the session may have been
+            // signed out since this token was minted. Without this check a
+            // sign-out would not take effect until the access token expired.
+            if (revocationRegistry.isRevoked(sessionId)) {
                 return;
             }
 

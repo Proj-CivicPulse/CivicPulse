@@ -50,6 +50,19 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # Whether to trust X-Forwarded-For / X-Forwarded-Proto for the client's
+  # address. Affects the per-IP login budget (app.auth.max-attempts-per-ip).
+  #
+  # "none" (default) is the SAFE value: without a proxy in front, trusting
+  # these headers would let any caller spoof a fresh IP per request and walk
+  # straight around the limit.
+  #
+  # Set to "framework" ONLY when this service sits behind a reverse proxy you
+  # control that overwrites the header (nginx, a cloud load balancer). Leaving
+  # it "none" there is not a security hole — it just collapses every user into
+  # the proxy's single address, so the per-IP budget throttles everyone at
+  # once. The per-email budget is unaffected either way.
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
   error:
     # Never leak stack traces or internal messages to clients — errors are
     # rendered by GlobalExceptionHandler in the shared contract shape.
@@ -123,9 +136,52 @@ app:
     window-days: ${INCIDENT_GROUPING_WINDOW_DAYS:14}
     max-distance-km: ${INCIDENT_GROUPING_MAX_KM:1.5}
 
+  # Login brute-force budgets. Two independent counters: a tight per-account
+  # one that stops password guessing, and a loose per-IP one that catches
+  # spraying across many accounts without locking out a shared office NAT.
+  auth:
+    max-attempts-per-email: ${AUTH_MAX_ATTEMPTS_PER_EMAIL:5}
+    max-attempts-per-ip: ${AUTH_MAX_ATTEMPTS_PER_IP:50}
+    attempt-window-seconds: ${AUTH_ATTEMPT_WINDOW_SECONDS:900}
+    lockout-seconds: ${AUTH_LOCKOUT_SECONDS:900}
+    max-tracked-keys: ${AUTH_MAX_TRACKED_KEYS:100000}
+    # Grace for a genuine two-tab refresh race before a replayed refresh token
+    # is treated as theft and the session is killed.
+    refresh-reuse-grace-seconds: ${AUTH_REFRESH_REUSE_GRACE_SECONDS:30}
+    # Budgets for the endpoints that SEND mail (verification resend, password
+    # reset). Every request counts, not just failures: the send is the abuse.
+    email-requests-per-address: ${AUTH_EMAIL_REQUESTS_PER_ADDRESS:3}
+    email-requests-per-ip: ${AUTH_EMAIL_REQUESTS_PER_IP:10}
+    email-request-window-seconds: ${AUTH_EMAIL_REQUEST_WINDOW_SECONDS:3600}
+
+  # Transactional email, used only by verification and password reset.
+  # "log" (default) prints the message — including the link — to the console
+  # instead of delivering it, so both flows work end to end on a fresh clone
+  # with no account and no key. "resend" turns on real delivery.
+  email:
+    provider: ${EMAIL_PROVIDER:log}
+    # Server-side only, never reaches the browser.
+    api-key: ${RESEND_API_KEY:}
+    # Must be on a domain verified with Resend. Their onboarding@resend.dev
+    # sender works for testing without verifying anything.
+    from-address: ${EMAIL_FROM_ADDRESS:CivicPulse <onboarding@resend.dev>}
+    # Where emailed links point — the FRONTEND, since a human clicks them.
+    link-base-url: ${EMAIL_LINK_BASE_URL:http://localhost:5173}
+    # Long: expiry only costs a confused user another request, and the token
+    # grants nothing beyond "this address is real".
+    verification-ttl-hours: ${EMAIL_VERIFICATION_TTL_HOURS:24}
+    # Short: this token IS the account until used.
+    reset-ttl-minutes: ${EMAIL_RESET_TTL_MINUTES:60}
+
 jwt:
   secret: ${JWT_SECRET}
   # Short-lived access token; the refresh token below buys back the UX.
+  #
+  # 15 minutes is also the ceiling on how long a role change made directly in
+  # SQL takes to reach a signed-in user: authorization reads the role from the
+  # token, and only a refresh re-reads it from the database. Revoking a whole
+  # session is immediate (SessionRevocationRegistry); changing what a session
+  # is allowed to do is not.
   access-expiration: ${JWT_ACCESS_EXPIRATION:900000}      # 15 minutes
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days
 

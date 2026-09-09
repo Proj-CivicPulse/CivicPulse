@@ -30,11 +30,18 @@ public class UserDto {
     private final String name;
     private final String role;
 
+    /**
+     * Whether the address has been confirmed. Exposed so the UI can prompt;
+     * it does not gate anything server-side (see EmailVerificationService).
+     */
+    private final boolean emailVerified;
+
     public static UserDto from(User user) {
         return new UserDto(
                 String.valueOf(user.getId()),
                 user.getName(),
-                user.getRole().name().toLowerCase()
+                user.getRole().name().toLowerCase(),
+                user.getEmailVerifiedAt() != null
         );
     }
 }

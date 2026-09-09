@@ -21,6 +21,12 @@ public final class ErrorCode {
     public static final String PAYLOAD_TOO_LARGE = "PAYLOAD_TOO_LARGE";
     /** Already emitted by backend-node; Spring now shares the same code. */
     public static final String UNSUPPORTED_MEDIA_TYPE = "UNSUPPORTED_MEDIA_TYPE";
+    /**
+     * Also backend-node's code for its per-IP budget (middleware/rateLimiter.ts).
+     * Spring emits it for the login lockout, so a client branches on one code
+     * whichever service throttled it.
+     */
+    public static final String RATE_LIMITED = "RATE_LIMITED";
     public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
 
     private ErrorCode() {

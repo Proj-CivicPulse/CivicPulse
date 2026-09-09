@@ -65,6 +65,139 @@ public class AppProperties {
 
     private final Matching matching = new Matching();
 
+    private final Auth auth = new Auth();
+
+    private final Email email = new Email();
+
+    /**
+     * Transactional email, used only by the verification and password-reset
+     * flows. Defaults to "log" so a fresh clone runs both end to end with no
+     * account and no key — the same principle as {@code geocoding.provider=none}.
+     */
+    @Getter
+    @Setter
+    public static class Email {
+
+        /** "resend" for real delivery, "log" to print the message instead. */
+        private String provider = "log";
+
+        /** Resend API key. Server-side only; never reaches the browser. */
+        private String apiKey = "";
+
+        /**
+         * The From address. Must be on a domain verified with the provider —
+         * an unverified sender is the usual cause of a 4xx from Resend.
+         */
+        private String fromAddress = "CivicPulse <onboarding@resend.dev>";
+
+        /**
+         * Base URL the emailed links point at — the FRONTEND, not this service,
+         * since a human clicks them and lands on a page.
+         *
+         * Separate from frontendOrigin (which is a CORS allowlist entry) because
+         * they are answers to different questions and can legitimately differ,
+         * e.g. behind a path-prefixed proxy.
+         */
+        @NotBlank
+        private String linkBaseUrl = "http://localhost:5173";
+
+        /**
+         * Verification link lifetime. Long, because the cost of expiry is a
+         * confused user requesting another one, and the token grants only
+         * "this address is real" — not access to anything.
+         */
+        @Positive
+        private long verificationTtlHours = 24;
+
+        /**
+         * Reset link lifetime. Deliberately short: this token IS the account
+         * until it is used, so the window in which a forwarded or intercepted
+         * message is dangerous should be as small as usability allows.
+         */
+        @Positive
+        private long resetTtlMinutes = 60;
+    }
+
+    /**
+     * Login brute-force budgets and refresh-token rotation tolerance.
+     * See LoginRateLimiter and RefreshTokenService for the reasoning behind
+     * each default.
+     */
+    @Getter
+    @Setter
+    public static class Auth {
+
+        /**
+         * Failed sign-ins allowed against one email address before it is locked.
+         *
+         * Deliberately tight. A person who has genuinely forgotten their
+         * password does not make five attempts and then a sixth that works —
+         * they stop and reset it. An attacker needs thousands, so anything in
+         * this range costs them everything and costs a real user nothing.
+         */
+        @Positive
+        private int maxAttemptsPerEmail = 5;
+
+        /**
+         * Failed sign-ins allowed from one IP across ALL accounts, which is what
+         * catches password spraying (one common password, many accounts — never
+         * enough failures on any single account to trip the limit above).
+         *
+         * Much looser than the per-email budget because an office, a campus, or
+         * a mobile carrier NAT puts a great many legitimate users behind one
+         * address, and locking that out is a self-inflicted outage.
+         */
+        @Positive
+        private int maxAttemptsPerIp = 50;
+
+        /** Failures older than this stop counting toward either budget. */
+        @Positive
+        private long attemptWindowSeconds = 900;
+
+        /** How long a key stays locked once its budget is exhausted. */
+        @Positive
+        private long lockoutSeconds = 900;
+
+        /**
+         * Ceiling on tracked login keys. Email keys are attacker-chosen strings,
+         * so the table needs a bound or a flood of invented addresses becomes a
+         * memory-exhaustion attack against the limiter itself.
+         */
+        @Positive
+        private int maxTrackedKeys = 100_000;
+
+        /**
+         * How long an already-rotated refresh token is still accepted as a
+         * concurrent-refresh race rather than a replayed theft.
+         *
+         * Two browser tabs holding the same cookie can refresh at the same
+         * instant; without a small window one of them would trigger reuse
+         * detection and sign the user out of everything for no reason.
+         */
+        @Positive
+        private long refreshReuseGraceSeconds = 30;
+
+        /**
+         * Emails one address may trigger per window (verification resends,
+         * password-reset requests).
+         *
+         * These endpoints send mail to an address the CALLER names, which makes
+         * them an email-bombing tool pointed at someone else's inbox — and,
+         * unthrottled, a way to burn the sending domain's reputation. Low,
+         * because nobody legitimately needs a fourth reset link in an hour.
+         */
+        @Positive
+        private int emailRequestsPerAddress = 3;
+
+        /** The same budget per IP, which is what stops a walk through many addresses. */
+        @Positive
+        private int emailRequestsPerIp = 10;
+
+        /** Window and lockout for both email budgets above. */
+        @Positive
+        private long emailRequestWindowSeconds = 3600;
+    }
+
     /**
      * Reverse geocoding, used to attach a street address to coordinates.
      *

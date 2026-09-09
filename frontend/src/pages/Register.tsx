@@ -4,6 +4,7 @@ import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { ApiError } from '@/services/api';
 import { errorMessage } from '@/lib/errors';
+import { PASSWORD_HELPER, passwordProblem } from '@/lib/password';
 import { homePathForRole } from '@/lib/routes';
 import AppHeader from '@/components/AppHeader';
 import Button from '@/components/ui/Button';
@@ -14,22 +15,9 @@ import styles from './Auth.module.css';
  * Registration always creates a citizen — officer accounts are provisioned
  * deliberately, by hand, so there is no role choice to offer here.
  *
- * The password rules below mirror RegisterRequest's @Pattern exactly, including
- * the special-character set. Validating client-side turns a 400 round-trip into
- * inline guidance the user can act on while typing.
+ * The password rule lives in lib/password.ts, shared with the reset page and
+ * mirroring RegisterRequest's @Pattern.
  */
-const SPECIAL_CHARS = '@#$%^&+=!';
-
-function passwordProblem(password: string): string | null {
-    if (password.length < 8) return 'Use at least 8 characters.';
-    if (password.length > 100) return 'Use 100 characters or fewer.';
-    if (!/[a-z]/.test(password)) return 'Include a lowercase letter.';
-    if (!/[A-Z]/.test(password)) return 'Include an uppercase letter.';
-    if (!/\d/.test(password)) return 'Include a number.';
-    if (!/[@#$%^&+=!]/.test(password)) return `Include one of ${SPECIAL_CHARS}`;
-    return null;
-}
-
 export default function Register() {
     const navigate = useNavigate();
     const login = useAuthStore((state) => state.login);
@@ -117,7 +105,7 @@ export default function Register() {
                             required
                             value={password}
                             error={pwError ?? undefined}
-                            helper={`At least 8 characters, with an uppercase and a lowercase letter, a number, and one of ${SPECIAL_CHARS}`}
+                            helper={PASSWORD_HELPER}
                             onChange={(e) => setPassword(e.target.value)}
                             onBlur={() => setTouchedPassword(true)}
                         />

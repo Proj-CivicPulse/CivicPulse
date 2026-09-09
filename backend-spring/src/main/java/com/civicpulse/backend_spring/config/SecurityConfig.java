@@ -47,6 +47,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of(appProperties.getFrontendOrigin()));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        // Without this the browser hides Retry-After from JS, so a rate-limited
+        // client could not tell the user when to try again from the header.
+        configuration.setExposedHeaders(List.of("Retry-After"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
@@ -77,8 +80,24 @@ public class SecurityConfig {
 
                         // Login, register, logout, and refresh are how a
                         // caller *gets* credentials, so they cannot require them.
+                        //
+                        // NOT /auth/logout-all: revoking every session for a
+                        // user must be something only that user can ask for, so
+                        // it falls through to anyRequest().authenticated().
+                        // These are exact-path matchers, so it is not swept in
+                        // by the "/auth/logout" entry.
+                        //
+                        // The three recovery routes are public for the same
+                        // reason: whoever is verifying an address or resetting
+                        // a forgotten password is by definition not signed in,
+                        // and the emailed single-use token IS the credential.
+                        // NOT /auth/resend-verification — that one takes the
+                        // address from the session precisely so it cannot be
+                        // aimed at somebody else's inbox.
                         .requestMatchers("/auth/login", "/auth/register",
-                                "/auth/logout", "/auth/refresh").permitAll()
+                                "/auth/logout", "/auth/refresh",
+                                "/auth/verify-email", "/auth/forgot-password",
+                                "/auth/reset-password").permitAll()
 
                         // Public municipal reference data: ward names, zones,
                         // centroids, and the landing page open-incident counts.

@@ -115,6 +115,22 @@ locally, absent in production where the platform injects real env vars.
 | `GOOGLE_GEOCODING_API_KEY` | for geocoding | *(blank)* | **Server-side only.** Never reaches the browser, so restrict it by **IP address**, not HTTP referrer. |
 | `HTTP_CONNECT_TIMEOUT_MS` | no | `3000` | Bound on outbound third-party calls. |
 | `HTTP_READ_TIMEOUT_MS` | no | `5000` | As above. An untimed client pins a request thread when the provider is slow. |
+| `FORWARD_HEADERS_STRATEGY` | no | `none` | Whether to trust `X-Forwarded-For` for the client address, which the per-IP login budget keys on. `none` is **safe by default**: with no proxy in front, trusting it would let anyone spoof a fresh IP per request and walk around the limit. Set to `framework` **only** behind a reverse proxy you control. |
+| `AUTH_MAX_ATTEMPTS_PER_EMAIL` | no | `5` | Failed sign-ins per address before a lockout. Tight — a real person does not fail five times and then succeed. |
+| `AUTH_MAX_ATTEMPTS_PER_IP` | no | `50` | Failed sign-ins per IP across **all** accounts; this is what catches password spraying. Loose, because an office or carrier NAT puts many innocent users on one address. |
+| `AUTH_ATTEMPT_WINDOW_SECONDS` | no | `900` | Failures older than this stop counting. |
+| `AUTH_LOCKOUT_SECONDS` | no | `900` | How long a key stays locked once its budget is spent. |
+| `AUTH_MAX_TRACKED_KEYS` | no | `100000` | Ceiling on tracked rate-limit keys. Email keys are attacker-chosen strings, so the table needs a bound or a flood of invented addresses exhausts memory. |
+| `AUTH_REFRESH_REUSE_GRACE_SECONDS` | no | `30` | How long a rotated refresh token is still accepted as a genuine two-tab race rather than a replayed theft. |
+| `AUTH_EMAIL_REQUESTS_PER_ADDRESS` | no | `3` | Mail-sending requests per address per window. Every request counts, not just failures — the send *is* the abuse. |
+| `AUTH_EMAIL_REQUESTS_PER_IP` | no | `10` | As above, per IP. |
+| `AUTH_EMAIL_REQUEST_WINDOW_SECONDS` | no | `3600` | Window and lockout for both email budgets. |
+| `EMAIL_PROVIDER` | no | `log` | **`log` is the default and needs no account or key** — the message and its link are printed to the console, so verification and password reset work end to end on a fresh clone. `resend` turns on real delivery. **Never `log` in production**: it would put live reset links in your log aggregator. |
+| `RESEND_API_KEY` | for `resend` | *(blank)* | Server-side only. Unused while `EMAIL_PROVIDER=log`. |
+| `EMAIL_FROM_ADDRESS` | no | `CivicPulse <onboarding@resend.dev>` | Must be on a domain verified with Resend, or their shared test sender (which only delivers to the account owner's address). |
+| `EMAIL_LINK_BASE_URL` | no | `http://localhost:5173` | Where emailed links point — the **frontend**, not this service. Must match how the app is actually reached or every link 404s. |
+| `EMAIL_VERIFICATION_TTL_HOURS` | no | `24` | Long: expiry only costs a confused user another request. |
+| `EMAIL_RESET_TTL_MINUTES` | no | `60` | Short: that token *is* the account until it is used. |
 
 ---
 
@@ -129,10 +145,15 @@ reverse proxy — it must never appear in a `@RequestMapping`.
 |---|---|---|
 | `GET /health` | public | **live** — real `SELECT 1`; `200 {status:'ok'}` / `503 {status:'error'}` |
 | `POST /auth/register` | public | **live** — always creates a citizen |
-| `POST /auth/login` | public | **live** — sets cookies, returns `{user}` |
+| `POST /auth/login` | public | **live** — sets cookies, returns `{user}`; rate limited (429) |
 | `GET /auth/me` | cookie | **live** — session restore |
-| `POST /auth/refresh` | refresh cookie | **live** — rotates the pair |
-| `POST /auth/logout` | public | **live** — clears cookies, 204 |
+| `POST /auth/refresh` | refresh cookie | **live** — rotates the pair, single-use |
+| `POST /auth/logout` | public | **live** — revokes this session, clears cookies, 204 |
+| `POST /auth/logout-all` | cookie | **live** — revokes every session for the user, 204 |
+| `POST /auth/verify-email` | public | **live** — redeems a verification link, 204 |
+| `POST /auth/resend-verification` | cookie | **live** — address taken from the session, 204 |
+| `POST /auth/forgot-password` | public | **live** — **always 204**; never says whether the account exists |
+| `POST /auth/reset-password` | public | **live** — 204, revokes every session |
 | `GET /wards`, `GET /wards/{id}` | public | **live** — municipal reference data |
 | `GET /wards/resolve?lat=&long=` | public | **live** — derives a ward from coordinates; 404 beyond 25 km |
 | `GET /wards/summary` | **public** | **live** — landing-page strip. **Counts, never rows** |
@@ -168,6 +189,98 @@ re-enable them if any cookie ever becomes `SameSite=None`.
 
 An `Authorization: Bearer` header is also accepted, for service-to-service
 calls and for curl/Postman, neither of which has a cookie jar.
+
+**Sessions are tracked server-side.** Every token carries `sid` (the login
+session) and every refresh token a `jti` (that individual token), with a row
+per issued refresh token in `refresh_tokens`. That buys three things a purely
+stateless scheme cannot have:
+
+- **Real sign-out.** Logout revokes the session rather than only clearing the
+  browser's cookies, so a token copied elsewhere dies immediately instead of
+  living out its remaining 7 days.
+- **Reuse detection.** Refresh tokens are single-use. Presenting one that has
+  already been rotated means the legitimate client cannot be the one holding
+  it, so the whole session is revoked. A ~30 s grace window keeps an honest
+  two-tab refresh race from tripping it.
+- **Sign out everywhere** (`POST /auth/logout-all`), the control to reach for
+  when an account may be compromised.
+
+Access tokens are checked against an **in-memory** blocklist
+(`SessionRevocationRegistry`) rather than a per-request database read, so a
+revoked session stops working within seconds instead of at the next expiry.
+⚠️ That map is per-JVM: **this is correct for one instance only.** Run two
+replicas and a sign-out on one leaves the other's access tokens live for up to
+their remaining lifetime — the refresh side is still enforced everywhere, so
+the gap is bounded by `jwt.access-expiration`, not open-ended. Scaling out
+means backing it with Redis or accepting that bound deliberately.
+`LoginRateLimiter` carries the same caveat: N replicas allow N times the budget.
+
+**Login is rate limited** — 5 failures per email and 50 per IP in 15 minutes,
+then a 15-minute lockout returned as `429 RATE_LIMITED` with `Retry-After`.
+BCrypt only makes a *stolen hash* expensive to attack; it does nothing about
+guessing over HTTP, which is what this covers. Behind a reverse proxy, set
+`FORWARD_HEADERS_STRATEGY=framework` or every user shares the proxy's address
+in the per-IP budget.
+
+### Email verification and password reset
+
+> **Read this before changing anything here.**
+>
+> - **There is no OTP.** No codes are generated, stored, or entered anywhere.
+>   Both flows are **links** — the user clicks a URL, never types a number.
+> - **Verification gates nothing.** Registration, login, and complaint
+>   submission do not check it. `AuthService.authenticate` compares email and
+>   password hash and nothing else. A brand-new, unverified account can sign in
+>   and file reports immediately.
+> - **Email sending is stubbed.** `EMAIL_PROVIDER` defaults to `log`, so
+>   `LoggingEmailSender` prints the message and its link to the console and
+>   `ResendEmailSender` is never even instantiated. **No provider is configured
+>   and none is needed** — both flows work end to end on a fresh clone.
+>
+> Auth therefore has **zero runtime dependency on email**. If someone asks you
+> to "remove the OTP gate" so users can register and sign in without
+> verification, that is already the behaviour; there is nothing to remove.
+
+Both flows mail a single-use secret and store only its **SHA-256** — never the
+token itself. A reset token *is* the account until it is spent, so a readable
+copy of `auth_tokens` would otherwise be account takeover for every pending
+reset. (SHA-256 rather than BCrypt is right here precisely because it is wrong
+for passwords: the token is 256 bits from a CSPRNG, so there is no dictionary
+for a slow KDF to defend against.)
+
+Issuing a link retires the user's previous one of the same purpose, so an older
+message left in an inbox stops being a way in. Redemption checks the token's
+**purpose**, so a verification link — much easier to obtain — cannot be spent on
+a reset. Every failure gives one message, because "expired" rather than "never
+existed" would confirm to a stranger that a token they hold was genuine.
+
+`POST /auth/forgot-password` **always answers 204**, and the send is
+asynchronous so response time does not leak the answer either. Completing a
+reset revokes every session (`PASSWORD_RESET`): people reset precisely because
+someone else may be signed in, and leaving that session alive would defeat it.
+
+**Verification is recorded, not enforced.** `user.emailVerified` is exposed for
+the UI to nudge with; nothing server-side gates on it. Filing a complaint is
+already open and anonymous, so making an account *harder* to use than no account
+would push people to the anonymous path — and a hard gate turns any mail failure
+into a permanently locked account. Tightening it later is a policy change in
+`EmailVerificationService`, not a redesign.
+
+Delivery goes through `EmailSender`, chosen by `app.email.provider` exactly as
+the geocoding provider is. It defaults to **`log`**, which prints the message and
+its link to the console — so both flows are exercisable end to end on a fresh
+clone with no Resend account. Never run `log` in production: it would put live
+reset links in the log aggregator. Set `EMAIL_PROVIDER=resend` and
+`RESEND_API_KEY` for real delivery.
+
+Resend is called from **Spring, not backend-node**, despite Node being the
+TypeScript service Resend publishes an SDK for: auth belongs to this service,
+and a round trip through Node would split one flow across two deployables and
+put a second service on the critical path for issuing a credential. The SDK is a
+thin wrapper over a single JSON POST.
+
+What this deliberately does **not** cover: MFA, and rate limiting on
+registration itself — so account spam is still possible.
 
 Full details and error codes: [`docs/api-contract.md`](../docs/api-contract.md).
 
@@ -290,20 +403,32 @@ src/main/java/com/civicpulse/backend_spring/
 │   ├── Wire.java    the wire contract in one place: string ids, lowercase
 │   │                enums, ISO-8601 UTC timestamps with a trailing Z
 │   └── {auth,ward,department,complaint,incident,dashboard,internal}/
-├── entity/          JPA entities (must match the migrations), incl. IncidentMatchLog
-├── enums/           UserRole, ComplaintStatus, IncidentStatus,
-│                    MatchingStatus, Matcher, MatchOutcome
+├── entity/          JPA entities (must match the migrations), incl. IncidentMatchLog,
+│                    RefreshToken (one row per issued refresh token) and
+│                    AuthToken (emailed verification/reset secrets, hashed)
+├── enums/           UserRole, ComplaintStatus, IncidentStatus, MatchingStatus,
+│                    Matcher, MatchOutcome, RevocationReason, AuthTokenPurpose
 ├── event/           ComplaintCreatedEvent
 ├── exception/       ApiError (shared wire shape), ErrorCode,
-│                    GlobalExceptionHandler, ValidationException
+│                    GlobalExceptionHandler, ValidationException,
+│                    TooManyAttemptsException (the login lockout, 429)
 ├── job/             MatchReconciliationJob — @Scheduled sweep over
 │                    pending/degraded/stale-processing complaints
+│                    AuthCleanupJob — hourly prune of expired refresh tokens
+│                    and the two in-memory auth maps
 ├── listener/        ComplaintCreatedListener — AFTER_COMMIT, fires the async trigger
 ├── repository/      Spring Data JPA repositories
 │   ├── projection/  interface projections for grouped counts
 │   └── spec/        IncidentSpecifications — composable optional filters
 ├── service/
-│   ├── auth/        AuthService, JwtService, AuthCookieFactory
+│   ├── auth/        AuthService, JwtService, AuthCookieFactory,
+│   │                RefreshTokenService (rotation + reuse detection),
+│   │                SessionRevocationRegistry (in-memory, single-instance),
+│   │                AuthRateLimiter (sign-in + email-send budgets),
+│   │                AuthTokenService (hashed single-use emailed secrets),
+│   │                EmailVerificationService, PasswordResetService
+│   ├── email/       EmailSender + Resend/Logging implementations,
+│   │                AuthEmailComposer (async, builds the two messages)
 │   ├── complaint/   ComplaintService, ReferenceNumberService
 │   ├── dashboard/   DashboardService
 │   ├── incident/    IncidentService, IncidentAttachmentService, MatchDecision,

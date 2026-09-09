@@ -42,6 +42,9 @@ const MyComplaints = lazyWithChunkRecovery(() => import('./pages/MyComplaints'))
 const IncidentDashboard = lazyWithChunkRecovery(() => import('./pages/IncidentDashboard'));
 const Login = lazyWithChunkRecovery(() => import('./pages/Login'));
 const Register = lazyWithChunkRecovery(() => import('./pages/Register'));
+const VerifyEmail = lazyWithChunkRecovery(() => import('./pages/VerifyEmail'));
+const ForgotPassword = lazyWithChunkRecovery(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazyWithChunkRecovery(() => import('./pages/ResetPassword'));
 const NotFound = lazyWithChunkRecovery(() => import('./pages/NotFound'));
 
 export default function App() {
@@ -112,6 +115,25 @@ export default function App() {
                             element={
                                 <PublicRoute>
                                     <Register />
+                                </PublicRoute>
+                            }
+                        />
+
+                        {/* Landing pages for emailed links. Deliberately NOT
+                            wrapped in PublicRoute: registration signs you in
+                            immediately, so verifying while already
+                            authenticated is the normal case, and someone
+                            resetting a password may well be signed in on this
+                            device already. PublicRoute would redirect both
+                            away from the page they were sent to. */}
+                        <Route path="/verify-email" element={<VerifyEmail />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
+
+                        <Route
+                            path="/forgot-password"
+                            element={
+                                <PublicRoute>
+                                    <ForgotPassword />
                                 </PublicRoute>
                             }
                         />

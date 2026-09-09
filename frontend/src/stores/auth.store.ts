@@ -8,6 +8,12 @@ export interface AuthUser {
     id: string;
     name: string;
     role: UserRole;
+    /**
+     * Whether the address has been confirmed. Recorded, not enforced — the
+     * server gates nothing on it (see EmailVerificationService), so this is
+     * here for the UI to nudge with, not to lock anything.
+     */
+    emailVerified: boolean;
 }
 
 interface AuthState {

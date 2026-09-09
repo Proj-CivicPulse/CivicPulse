@@ -141,6 +141,15 @@ npm run dev                  # http://localhost:5173
 service-to-service calls in both directions, and each side fails closed when it
 is blank. Generate one with `openssl rand -hex 32`.
 
+**No email provider is needed to run this.** Sign-up and sign-in have no
+dependency on email at all: registration signs you straight in, and nothing —
+not login, not complaint submission — is gated on a verified address. There is
+no OTP anywhere in the project. Email verification and password reset do exist,
+but they send **links**, and `EMAIL_PROVIDER` defaults to `log`, which prints
+the message and its link to the Spring console instead of delivering it. Both
+flows are therefore fully usable on a fresh clone with no account and no API
+key. See [backend-spring/README.md](backend-spring/README.md#email-verification-and-password-reset).
+
 ### Seeing something on the screen
 
 A fresh database has wards and departments but no complaints, so the officer
