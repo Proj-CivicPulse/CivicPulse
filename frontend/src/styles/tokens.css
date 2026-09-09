@@ -181,6 +181,28 @@
      */
     --shadow-overlay: 0 4px 16px rgb(20 33 31 / 12%);
 
+    /* ------------------------------------------------------------ layering */
+
+    /*
+     * Every z-index in the app comes from here. Four values, in the order
+     * things actually stack — a scale exists so a new overlay is placed by
+     * naming its layer rather than by guessing a number bigger than the last
+     * one someone guessed.
+     *
+     * --z-contained is the important one and the least obvious. Leaflet ships
+     * its own internal scale (panes 200–700, controls 1000) and its container
+     * is `position: relative` with no z-index, which does NOT open a stacking
+     * context — so those values escape and compete with application chrome.
+     * Setting z-index on the container traps them: inside a stacking context
+     * Leaflet's layers keep their order relative to each other, but the whole
+     * map collapses to one level in the page. Without it the tile layer alone
+     * outranks every menu in this file.
+     */
+    --z-contained: 0;   /* third-party widget whose internal stack must not escape */
+    --z-sticky: 1;      /* sticky table header, within its own scroll region */
+    --z-drawer: 20;     /* officer console detail panel and its mobile sheet */
+    --z-popover: 50;    /* menus anchored to a control — above content, below nothing */
+
     /* Officer console geometry, referenced by the dashboard grid. */
     --rail-w: 240px;
     --detail-w: 360px;

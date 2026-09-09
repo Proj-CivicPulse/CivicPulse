@@ -2,6 +2,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { APP_NAME } from '@/config/constants';
 import { useAuthStore } from '@/stores/auth.store';
 import Button from '@/components/ui/Button';
+import UserMenu from '@/components/UserMenu';
 import styles from './AppHeader.module.css';
 
 export interface NavItem {
@@ -18,25 +19,15 @@ interface Props {
 /**
  * 56px, one bottom rule, no shadow. Session-aware: the sign-in action becomes
  * the signed-in identity, so the header always answers "who am I here as".
+ *
+ * That identity is a monogram opening a menu (UserMenu), which also owns
+ * sign-out. The header itself stays purely wayfinding — account actions live
+ * behind one control rather than spending header width on a destructive
+ * button nobody presses more than once a session.
  */
 export default function AppHeader({ nav = [], wide = false }: Props) {
     const user = useAuthStore((state) => state.user);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-    const logout = useAuthStore((state) => state.logout);
-
-    function onSignOut() {
-        logout();
-        // A full document navigation, deliberately, not navigate('/').
-        //
-        // Two reasons. A client-side navigation races ProtectedRoute: clearing
-        // the session re-renders the page you are still on, its guard redirects
-        // to /login, and that redirect wins — so signing out dropped you on a
-        // sign-in form instead of the front door. And a reload is what actually
-        // empties the React Query cache; without it the previous session's
-        // reports sit in memory for gcTime and are handed straight to whoever
-        // signs in next on this browser.
-        window.location.assign('/');
-    }
 
     return (
         <header className={styles.header}>
@@ -61,12 +52,7 @@ export default function AppHeader({ nav = [], wide = false }: Props) {
 
                 <div className={styles.actions}>
                     {isAuthenticated && user ? (
-                        <>
-                            <span className={styles.identity}>{user.name}</span>
-                            <Button variant="secondary" size="compact" onClick={onSignOut}>
-                                Sign out
-                            </Button>
-                        </>
+                        <UserMenu user={user} />
                     ) : (
                         <Button variant="secondary" size="compact" to="/login">
                             Sign in

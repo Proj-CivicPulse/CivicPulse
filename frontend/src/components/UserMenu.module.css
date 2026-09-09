@@ -1,0 +1,222 @@
+.wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/*
+ * The trigger carries no border or fill at rest. In a header whose only
+ * structural device is a hairline rule, a bordered control here would read as
+ * a second button competing with the nav — the monogram is enough of an
+ * affordance on its own.
+ */
+.trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 36px;
+    padding-inline: var(--space-1) var(--space-2);
+    border: 1px solid transparent;
+    border-radius: var(--r-sharp);
+    background: none;
+    font: var(--t-ui);
+    color: var(--ink);
+    cursor: pointer;
+    transition: background-color var(--motion-fast) var(--ease),
+                border-color var(--motion-fast) var(--ease);
+}
+
+.trigger:hover {
+    background: var(--surface-sunk);
+    border-color: var(--rule);
+}
+
+.trigger[aria-expanded='true'] {
+    background: var(--surface-sunk);
+    border-color: var(--rule-strong);
+}
+
+/*
+ * A circle, which is the one place this interface rounds anything fully.
+ * Identity is the exception worth making: a 3px-radius square monogram reads
+ * as a status chip, and this must not be mistaken for data.
+ */
+.monogram {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--seal-wash);
+    color: var(--seal);
+    font: var(--t-micro);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    /* Optical: uppercase initials sit high in the box without this. */
+    padding-top: 1px;
+}
+
+.triggerName {
+    max-width: 14ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chevron,
+.chevronOpen {
+    flex-shrink: 0;
+    color: var(--ink-faint);
+    transition: transform var(--motion-base) var(--ease);
+}
+
+.chevronOpen {
+    transform: rotate(180deg);
+}
+
+/* ---------------------------------------------------------------- the panel */
+
+/*
+ * The one sanctioned shadow. Everything else in this interface is separated by
+ * a rule, but an overlay genuinely floats above the page and needs to say so —
+ * which is exactly what --shadow-overlay exists for.
+ */
+.menu {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    z-index: var(--z-popover);
+    min-width: 224px;
+    padding-block: var(--space-2);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-panel);
+    box-shadow: var(--shadow-overlay);
+    animation: menuIn var(--motion-base) var(--ease);
+}
+
+/*
+ * 4px, not a slide from further out. The panel is anchored to the control that
+ * opened it, so a long travel would imply it came from somewhere else.
+ * Duration is a token, so prefers-reduced-motion zeroes it globally.
+ */
+@keyframes menuIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+
+.identity {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-2) var(--space-4) var(--space-3);
+}
+
+.identityName {
+    font: var(--t-ui);
+    color: var(--ink);
+    /* Long names wrap here rather than truncate: the panel is where the full
+       answer to "who am I?" lives, so an ellipsis would defeat its purpose. */
+    overflow-wrap: anywhere;
+}
+
+.identityRole {
+    font: var(--t-micro);
+    color: var(--ink-faint);
+}
+
+.divider {
+    height: 1px;
+    background: var(--rule);
+    margin-block: var(--space-1);
+}
+
+.item,
+.itemSignOut {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-2) var(--space-4);
+    border: none;
+    background: none;
+    font: var(--t-ui);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--motion-fast) var(--ease);
+}
+
+.item {
+    color: var(--ink);
+}
+
+.item:hover,
+.item:focus-visible {
+    background: var(--seal-wash);
+}
+
+/*
+ * Sign out is not styled as a danger action. It is reversible in ten seconds
+ * and a red row would put the loudest colour on this screen next to a routine
+ * control — the divider above it already separates it from navigation.
+ */
+.itemSignOut {
+    color: var(--ink-muted);
+}
+
+.itemSignOut:hover,
+.itemSignOut:focus-visible {
+    background: var(--surface-sunk);
+    color: var(--ink);
+}
+
+/* The global :focus-visible ring is drawn outside the element; inside a padded
+   panel it would clip against the border. Inset it instead. */
+.item:focus-visible,
+.itemSignOut:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+    border-radius: var(--r-none);
+}
+
+.srOnly {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/*
+ * Below 640px the name collapses to the monogram alone. Nothing is lost —
+ * unlike the header this replaced, which hid the identity outright at this
+ * width, the full name and role are always in the panel.
+ */
+@media (max-width: 640px) {
+    .triggerName,
+    .chevron,
+    .chevronOpen {
+        display: none;
+    }
+
+    .trigger {
+        padding-inline: var(--space-1);
+        gap: 0;
+    }
+}
+
+/* Coarse pointers get the 44px target the rest of the system uses. */
+@media (pointer: coarse) {
+    .item,
+    .itemSignOut {
+        padding-block: var(--space-3);
+    }
+}

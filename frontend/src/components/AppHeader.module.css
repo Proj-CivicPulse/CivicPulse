@@ -65,16 +65,13 @@
     margin-left: auto;
 }
 
-.identity {
-    font: var(--t-micro);
-    color: var(--ink-muted);
-    white-space: nowrap;
-}
-
 /*
- * At 360px the nav labels and the identity would push the sign-out control off
- * screen. Drop the secondary affordances rather than wrapping the bar to two
- * rows — the wordmark and the session action are what must survive.
+ * At 360px the nav labels would push the session control off screen. Drop them
+ * rather than wrapping the bar to two rows — the wordmark and the session
+ * action are what must survive.
+ *
+ * The identity no longer needs hiding here: UserMenu collapses itself to a
+ * monogram at this width, and the name it used to drop is in the panel.
  */
 @media (max-width: 640px) {
     .inner,
@@ -84,10 +81,6 @@
     }
 
     .nav {
-        display: none;
-    }
-
-    .identity {
         display: none;
     }
 }

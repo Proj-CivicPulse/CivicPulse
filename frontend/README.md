@@ -72,8 +72,21 @@ is empty and correct. To get something worth looking at:
 |---|---|
 | `npm run dev` | Vite dev server on :5173, HMR |
 | `npm run build` | `tsc -b` then `vite build` → `dist/` |
+| `npm run typecheck` | `tsc -b` alone — types without the bundle |
 | `npm run preview` | Serve the built bundle |
 | `npm run lint` | `oxlint` |
+
+> **Type-check with `npm run typecheck`, never with `tsc --noEmit`.**
+>
+> `tsconfig.json` is a *solution* file — `"files": []` plus references to
+> `tsconfig.app.json` and `tsconfig.node.json`. So `tsc --noEmit` resolves the
+> root config, finds no files, checks **nothing**, and exits 0. It looks like a
+> clean type-check and is worthless; `tsc --noEmit --listFiles` prints zero
+> lines, which is the tell.
+>
+> Only `tsc -b` walks the references and applies the real settings — `strict`,
+> `noUnusedLocals`, and `noUncheckedIndexedAccess`, which is the one most
+> likely to catch you (every indexed read is `T | undefined`).
 
 ---
 
@@ -105,7 +118,17 @@ Vite reads `.env.local` (gitignored) in preference to `.env`.
 | `/complaints` | `citizen` | My reports |
 | `/dashboard` | `officer` | Incident queue, ward rail, map, incident detail |
 | `/login`, `/register` | signed-out only | `PublicRoute` bounces a signed-in user to their home |
+| `/forgot-password` | signed-out only | Request a reset link. Always confirms, never says whether the account exists |
+| `/verify-email?token=` | **any** | Landing page for the verification email |
+| `/reset-password?token=` | **any** | Set a new password; signs every session out |
 | `*` | public | Not found |
+
+The two token routes are deliberately **not** wrapped in `PublicRoute`.
+Registration signs you in immediately, so verifying while already
+authenticated is the normal case — and someone resetting a password may well
+be signed in on that device already, since "somebody else might be signed in"
+is the usual reason to reset. `PublicRoute` would redirect both away from the
+page they were sent to.
 
 `homePathForRole()` in `lib/routes.ts` is the single answer to "where does this
 role belong" — Login, Register and both guards share it so a third role cannot
@@ -126,6 +149,18 @@ in JS-reachable storage, so an XSS bug cannot exfiltrate a session.
 `stores/auth.store.ts` holds only the decoded user, restored on boot via
 `GET /auth/me`. A 401 there means "signed out", not "error".
 
+**Registration is one step, and there is no OTP screen.** `Register.tsx`
+collects name, email and password, then signs the user straight in and routes
+them home — nothing sits between submitting the form and being logged in.
+
+`user.emailVerified` exists on the store, but it is **display state only**: no
+route guard, no page, and nothing on the server gates on it. `ProtectedRoute`
+checks role, never verification. `VerifyEmail.tsx` is the landing page for a
+link in an email, not a step in signup — an unverified account works exactly
+like a verified one. Email sending is stubbed backend-side
+(`EMAIL_PROVIDER=log`), so the link is printed to the Spring console rather
+than delivered.
+
 ---
 
 ## Layout
@@ -140,9 +175,12 @@ src/
 │   │                     PriorityChip, StatusChip, Skeleton, EmptyState
 │   ├── dashboard/        WardRail, IncidentDetail
 │   ├── landing/          Hero, HowItWorks, WardStrip, WhyDifferent, ...
+│   ├── AppHeader         wordmark, primary nav, session control
+│   ├── UserMenu          signed-in identity as a monogram + account menu
 │   └── ProtectedRoute / PublicRoute / ErrorBoundary / RouteFallback
 ├── pages/                Landing, SubmitComplaint, MyComplaints,
-│                         IncidentDashboard, Login, Register, NotFound
+│                         IncidentDashboard, Login, Register, VerifyEmail,
+│                         ForgotPassword, ResetPassword, NotFound
 ├── services/             one module per backend resource; api.ts is the
 │                         only place fetch is called
 ├── stores/auth.store.ts  zustand session

@@ -121,7 +121,7 @@
         right: var(--space-3);
         bottom: var(--space-3);
         width: var(--detail-w);
-        z-index: 10;
+        z-index: var(--z-drawer);
         box-shadow: var(--shadow-overlay);
     }
 }
@@ -155,7 +155,7 @@
     .detail {
         position: fixed;
         inset: 0;
-        z-index: 20;
+        z-index: var(--z-drawer);
         border: 0;
         border-radius: var(--r-none);
         box-shadow: var(--shadow-overlay);

@@ -1,6 +1,17 @@
+/*
+ * z-index is load-bearing, not decoration. `position: relative` alone does not
+ * open a stacking context, so without this Leaflet's own scale — panes at
+ * 200–700, controls at 1000 — escapes into the page and outranks application
+ * chrome. The header's account menu opened *behind the map* on the officer
+ * console because of exactly this.
+ *
+ * Setting it here collapses the entire map to one layer in the page while
+ * leaving Leaflet's internal ordering untouched inside it. Do not remove.
+ */
 .inline,
 .fill {
     position: relative;
+    z-index: var(--z-contained);
     overflow: hidden;
     border: 1px solid var(--rule);
     border-radius: var(--r-panel);
