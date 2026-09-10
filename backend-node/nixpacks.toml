@@ -21,4 +21,11 @@ cmds = ["npm ci --include=dev"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npm start"
+# node directly, NOT "npm start". As the container's PID 1, npm sits between
+# the platform and the app: Railway's SIGTERM is reported by npm as a failed
+# command ("npm error signal SIGTERM") and the graceful shutdown in
+# src/index.ts never completes, so the Postgres pool is never closed and the
+# connections linger until Neon times them out. Running node directly makes it
+# PID 1, so it receives SIGTERM itself, drains in-flight requests, closes the
+# pool, and exits 0.
+cmd = "node dist/index.js"
