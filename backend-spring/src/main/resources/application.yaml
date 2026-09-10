@@ -44,12 +44,28 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # Flyway takes a SESSION-level advisory lock for the duration of a
+    # migration run. PgBouncer in transaction-pooling mode (Neon's `-pooler`
+    # host) does not keep one client on one server session, so that lock
+    # cannot be relied on there. Point DB_MIGRATION_URL at Neon's DIRECT
+    # host (the one WITHOUT `-pooler`) while `spring.datasource.url` above
+    # uses the pooler for normal traffic.
+    #
+    # Falls back to DB_URL when unset, which is correct for local dev and for
+    # any deployment that is not going through a pooler.
+    url: ${DB_MIGRATION_URL:${DB_URL}}
+    user: ${DB_MIGRATION_USERNAME:${DB_USERNAME}}
+    password: ${DB_MIGRATION_PASSWORD:${DB_PASSWORD}}
     # Deliberately off: an unversioned database should fail loudly rather
     # than have Flyway assume its current state is V1.
     baseline-on-migrate: false
 
 server:
-  port: ${SERVER_PORT:8080}
+  # PaaS platforms (Railway, Render, Heroku) assign a port dynamically and
+  # inject it as PORT. SERVER_PORT stays supported for local use and takes
+  # second place; binding the wrong one makes the platform's health check
+  # fail with no obvious cause.
+  port: ${PORT:${SERVER_PORT:8080}}
   # Whether to trust X-Forwarded-For / X-Forwarded-Proto for the client's
   # address. Affects the per-IP login budget (app.auth.max-attempts-per-ip).
   #
@@ -70,8 +86,10 @@ server:
     include-message: never
 
 app:
-  # Single allowed browser origin for CORS. No wildcards — credentials are
-  # allowed, and "*" with credentials is both invalid and unsafe.
+  # Allowed browser origins for CORS, comma-separated. Each entry may contain
+  # a "*" wildcard so one value covers Vercel's per-deploy preview URLs
+  # (https://myapp-*.vercel.app). A BARE "*" is rejected at startup —
+  # credentials are allowed, and "*" with credentials is invalid and unsafe.
   frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
   # Marks auth cookies Secure. Must be true anywhere served over HTTPS.
   cookie-secure: ${COOKIE_SECURE:false}

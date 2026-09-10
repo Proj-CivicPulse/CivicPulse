@@ -1,12 +1,15 @@
 package com.civicpulse.backend_spring.config;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
+
+import java.util.List;
 
 /**
  * Non-secret application settings. Validated at startup so a
@@ -19,9 +22,22 @@ import org.springframework.validation.annotation.Validated;
 @Setter
 public class AppProperties {
 
-    /** The one browser origin allowed by CORS. Never a wildcard. */
-    @NotBlank
-    private String frontendOrigin;
+    /**
+     * Browser origins allowed by CORS. Bound from a comma-separated
+     * FRONTEND_ORIGIN, so one variable covers the production frontend plus any
+     * preview deployments.
+     *
+     * Each entry may contain a "*" wildcard and is applied via
+     * {@code setAllowedOriginPatterns} — that is what makes Vercel's
+     * per-deploy preview URLs (https://myapp-*.vercel.app) usable, since they
+     * change on every commit and cannot be listed exhaustively.
+     *
+     * A BARE "*" is rejected at startup in SecurityConfig: credentials are
+     * allowed here, and blanket-wildcard + credentials is exactly the
+     * combination the CORS spec forbids.
+     */
+    @NotEmpty
+    private List<String> frontendOrigin;
 
     /** Whether auth cookies carry the Secure flag. Must be true over HTTPS. */
     private boolean cookieSecure = false;

@@ -1,0 +1,26 @@
+# Keep the build context small and, more importantly, keep secrets and local
+# build output from ever entering an image layer.
+
+# Local secrets. The platform injects real env vars; application.yaml's
+# `optional:file:.env[.properties]` import tolerates the file being absent.
+.env
+.env.*
+!.env.example
+
+# Local build output — the image builds its own inside the container. Copying
+# a host-built target/ in would also poison the dependency-cache layer.
+target/
+
+# Not needed at build time.
+README.md
+HELP.md
+scripts/
+.gitignore
+.gitattributes
+
+# Editor / OS noise
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

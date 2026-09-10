@@ -33,9 +33,15 @@ public class SecurityConfig {
     }
 
     /**
-     * Exactly one allowed origin, from configuration — never a wildcard.
-     * {@code allowCredentials} is required for the httpOnly auth cookie, and
-     * the CORS spec forbids pairing it with "*".
+     * Allowed origins come from configuration (FRONTEND_ORIGIN, comma-separated)
+     * — never a blanket wildcard. {@code allowCredentials} is required for the
+     * httpOnly auth cookie, and the CORS spec forbids pairing it with "*".
+     *
+     * Uses {@code setAllowedOriginPatterns} rather than {@code setAllowedOrigins}
+     * so an entry may contain a "*" segment, e.g. https://myapp-*.vercel.app.
+     * Vercel mints a new preview URL per commit, so an exact-match list cannot
+     * cover them. A pattern is still an allowlist — it matches a specific host
+     * shape — which is categorically different from the bare "*" rejected below.
      *
      * In local dev the frontend actually reaches this service through the
      * Vite proxy (same-origin), so CORS is not exercised; this exists for
@@ -43,8 +49,20 @@ public class SecurityConfig {
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        List<String> origins = appProperties.getFrontendOrigin();
+
+        // Fail fast and loudly. "*" here would be silently downgraded by the
+        // browser once credentials are involved, producing a CORS failure that
+        // looks like a server bug rather than a configuration mistake.
+        if (origins.stream().anyMatch(origin -> "*".equals(origin.trim()))) {
+            throw new IllegalStateException(
+                    "FRONTEND_ORIGIN must not contain a bare \"*\": credentials are enabled, "
+                            + "and the CORS spec forbids that combination. List the origins "
+                            + "explicitly, or use a host pattern such as https://myapp-*.vercel.app.");
+        }
+
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(appProperties.getFrontendOrigin()));
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         // Without this the browser hides Retry-After from JS, so a rate-limited
