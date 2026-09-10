@@ -13,6 +13,27 @@ import { copilotRoute } from './routes/copilot.route.ts';
 import { hotspotsRoute } from './routes/hotspots.route.ts';
 
 /**
+ * Compiles one FRONTEND_ORIGIN entry into an anchored matcher.
+ *
+ * Split on "*" and escape each literal segment, so only "*" carries meaning —
+ * it becomes ".*", matching how Spring's setAllowedOriginPatterns behaves, so
+ * a single FRONTEND_ORIGIN value means the same thing in both services.
+ *
+ * Anchoring at both ends is what keeps a pattern an allowlist: with
+ * "https://myapp-*.vercel.app", an origin merely CONTAINING that text
+ * (https://myapp-x.vercel.app.attacker.example) does not match.
+ */
+function compileOriginPattern(pattern: string): RegExp {
+    const escaped = pattern
+        .split('*')
+        .map((segment) => segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('.*');
+    return new RegExp(`^${escaped}$`);
+}
+
+const allowedOriginPatterns = env.FRONTEND_ORIGIN.map(compileOriginPattern);
+
+/**
  * Builds the Express app with all middleware and routes wired up, but does
  * NOT start listening — that's index.ts's job. Keeping construction
  * separate makes the app importable by tests without opening a port.
@@ -31,9 +52,21 @@ export function createApp(): Express {
     // with nothing to protect.
     app.use(helmet({ contentSecurityPolicy: false }));
 
-    // Exactly one allowed browser origin, from env. Never '*' — credentials
-    // are allowed, and '*' + credentials is both invalid and unsafe.
-    app.use(cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
+    // Allowed browser origins from env (comma-separated, wildcards permitted
+    // per entry). Never a bare '*' — credentials are allowed, and '*' +
+    // credentials is both invalid and unsafe; env.ts rejects it at startup.
+    app.use(
+        cors({
+            origin: (origin, callback) => {
+                // No Origin header: same-origin, curl, or backend-spring's
+                // server-to-server call to /complaints/:id/process. CORS does
+                // not apply, so there is nothing to allow or deny.
+                if (origin === undefined) return callback(null, true);
+                callback(null, allowedOriginPatterns.some((pattern) => pattern.test(origin)));
+            },
+            credentials: true,
+        }),
+    );
 
     // Bound the request body. 100kb comfortably covers complaint text and
     // Copilot queries while cutting off oversized-payload abuse.

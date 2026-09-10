@@ -24,7 +24,32 @@ const EnvSchema = z.object({
         .refine((v) => v.startsWith('postgres://') || v.startsWith('postgresql://'), {
             message: 'must be a postgres:// or postgresql:// connection string',
         }),
-    FRONTEND_ORIGIN: z.string().min(1, 'is required').refine(isUrl, { message: 'must be a valid URL' }),
+    // Comma-separated list of allowed browser origins, so one variable covers
+    // the production frontend plus any preview deployments. Each entry may
+    // contain a "*" wildcard (https://myapp-*.vercel.app) because Vercel mints
+    // a new preview URL per commit and they cannot be listed exhaustively.
+    //
+    // A BARE "*" is rejected: credentials are enabled on this API, and the CORS
+    // spec forbids that combination. A host pattern is still an allowlist.
+    FRONTEND_ORIGIN: z
+        .string()
+        .min(1, 'is required')
+        .transform((v) =>
+            v
+                .split(',')
+                .map((origin) => origin.trim())
+                .filter((origin) => origin.length > 0),
+        )
+        .refine((origins) => origins.length > 0, {
+            message: 'must list at least one origin',
+        })
+        .refine((origins) => !origins.includes('*'), {
+            message:
+                'must not contain a bare "*" — credentials are enabled. List origins explicitly, or use a host pattern such as https://myapp-*.vercel.app',
+        })
+        .refine((origins) => origins.every(isUrl), {
+            message: 'every comma-separated entry must be a valid origin URL',
+        }),
     LOG_LEVEL: z
         .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
         .default('info'),

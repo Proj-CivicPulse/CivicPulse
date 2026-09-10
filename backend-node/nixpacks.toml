@@ -1,0 +1,24 @@
+# Railway build plan for backend-node.
+#
+# Nixpacks would auto-detect this service correctly EXCEPT for one thing:
+# `typescript` is a devDependency, and a plain `npm ci` with NODE_ENV=production
+# in the environment installs production dependencies only — so `tsc` is
+# missing and the build fails with "tsc: not found". Since NODE_ENV=production
+# is exactly what this service should run with, the install is pinned to
+# include dev dependencies here rather than depending on a dashboard variable
+# being remembered.
+
+[phases.setup]
+# Match the `engines.node` floor in package.json. Left to the default, a
+# Nixpacks version bump could silently move this service to another major.
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm ci --include=dev"]
+
+[phases.build]
+# tsc -> dist/, per tsconfig.json's outDir.
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm start"
