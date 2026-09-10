@@ -4,11 +4,32 @@
 
 export const APP_NAME: string = import.meta.env.VITE_APP_NAME ?? 'CivicPulse';
 
-// Relative paths, proxied by Vite in dev (see vite.config.ts) and by the
-// production reverse proxy later. Frontend code should never hardcode a
-// host/port — that keeps dev and prod requests identical.
-export const SPRING_API_PATH = '/api/core';
-export const NODE_API_PATH = '/api/ai';
+// Base for every API call: either a relative path proxied by Vite, or an
+// absolute origin.
+//
+// DEV (`vite dev`): VITE_API_*_URL are unset, so these stay the relative
+// '/api/core' and '/api/ai' prefixes and the dev-server proxy in
+// vite.config.ts rewrites and forwards them. Nothing about local development
+// changes.
+//
+// PROD (Vercel): there is no proxy — the bundle is static files on a CDN and
+// each backend is on its own Railway domain — so set VITE_API_CORE_URL and
+// VITE_API_AI_URL to those origins. Vite inlines them at BUILD time, which
+// means changing either in the Vercel dashboard requires a redeploy, not just
+// a page reload.
+//
+// Callers always pass a leading-slash path ('/auth/login'), so a trailing
+// slash on the env value is stripped to avoid a '//auth/login' request.
+const stripTrailingSlash = (url: string): string => url.replace(/\/+$/, '');
+
+const apiBase = (envUrl: string | undefined, proxyPath: string): string =>
+    envUrl && envUrl.length > 0 ? stripTrailingSlash(envUrl) : proxyPath;
+
+export const SPRING_API_PATH: string = apiBase(
+    import.meta.env.VITE_API_CORE_URL,
+    '/api/core',
+);
+export const NODE_API_PATH: string = apiBase(import.meta.env.VITE_API_AI_URL, '/api/ai');
 
 export const REQUEST_TIMEOUT_MS: number = Number(
     import.meta.env.VITE_REQUEST_TIMEOUT_MS ?? 10000
