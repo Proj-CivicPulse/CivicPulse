@@ -77,6 +77,20 @@
     color: var(--ink-muted);
 }
 
+/*
+ * The same line while matching is still in flight -- pending, processing, or a
+ * provisional grouping from the naive fallback.
+ *
+ * Deliberately one step fainter than .grouped rather than a colour of its own:
+ * nothing is wrong from the resident's side, so a warning tone would be a lie.
+ * The weight difference, plus the wording, is what marks it as not-yet-final.
+ */
+.groupedUnsettled {
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-faint);
+}
+
 .rowMeta {
     display: flex;
     align-items: center;

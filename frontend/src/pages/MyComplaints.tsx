@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { complaintService } from '@/services/complaint.service';
 import { queryKeys } from '@/lib/queryKeys';
 import { describeError } from '@/lib/errors';
-import { formatGroupedWith, truncate } from '@/lib/format';
+import { formatMatchingSummary, truncate } from '@/lib/format';
 import { formatRelative } from '@/lib/datetime';
 import AppHeader from '@/components/AppHeader';
 import Button from '@/components/ui/Button';
@@ -24,6 +24,20 @@ export default function MyComplaints() {
     const { data, isPending, isError, error, refetch } = useQuery({
         queryKey: queryKeys.complaints.mine(),
         queryFn: () => complaintService.mine(),
+        /*
+         * "Checking for similar reports" must not sit there forever. Matching
+         * settles in seconds, and a degraded grouping is repaired by the
+         * reconcile sweep within about a minute, so poll only while something
+         * is still in flight and stop once every report has settled.
+         *
+         * refetchIntervalInBackground stays at its default (false), so this
+         * pauses with an unfocused tab rather than polling all day behind a
+         * matcher that is genuinely down.
+         */
+        refetchInterval: (query) =>
+            query.state.data?.some((complaint) => complaint.matchingStatus !== 'matched')
+                ? 5_000
+                : false,
     });
 
     return (
@@ -62,10 +76,10 @@ export default function MyComplaints() {
                     ) : (
                         <ul className={styles.list}>
                             {data.map((complaint) => {
-                                const grouped =
-                                    complaint.incidentComplaintCount !== null
-                                        ? formatGroupedWith(complaint.incidentComplaintCount)
-                                        : null;
+                                const matching = formatMatchingSummary(
+                                    complaint.matchingStatus,
+                                    complaint.incidentComplaintCount,
+                                );
 
                                 return (
                                     <li key={complaint.id} className={styles.row}>
@@ -85,9 +99,21 @@ export default function MyComplaints() {
                                              * The single most important thing a
                                              * resident learns here: their report
                                              * did not vanish into a queue of one.
+                                             *
+                                             * Rendered fainter until matching has
+                                             * settled, so a provisional grouping
+                                             * never carries a final one's weight.
                                              */}
-                                            {grouped !== null && (
-                                                <p className={styles.grouped}>{grouped}</p>
+                                            {matching !== null && (
+                                                <p
+                                                    className={
+                                                        matching.settled
+                                                            ? styles.grouped
+                                                            : styles.groupedUnsettled
+                                                    }
+                                                >
+                                                    {matching.text}
+                                                </p>
                                             )}
                                         </div>
 

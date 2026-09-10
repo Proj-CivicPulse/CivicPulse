@@ -58,11 +58,15 @@ export interface Complaint {
     /**
      * Pipeline state, not civic state — see {@link MatchingStatus}.
      *
-     * Carried on the wire from Phase 2 so nothing downstream is blocked, but
-     * deliberately not rendered yet. Surfacing "pending"/"degraded" to a citizen
-     * is its own design question, and the similarity threshold is still being
-     * tuned — a UI built against today's semantics would be the first thing to
-     * go stale. Officer-side use lands with the dashboard work.
+     * Rendered on the My reports screen via `formatMatchingSummary`, but only
+     * as readiness, never as mechanism: a resident is told whether the grouping
+     * is still being worked out, not which matcher produced it or what it
+     * scored. That keeps the copy independent of the similarity threshold,
+     * which is still being tuned — anything that exposed a score or named the
+     * strategy would be the first thing to go stale.
+     *
+     * Officer-side use, where the mechanism does matter, lands with the
+     * dashboard work.
      */
     matchingStatus: MatchingStatus;
     photoUrl?: string;
