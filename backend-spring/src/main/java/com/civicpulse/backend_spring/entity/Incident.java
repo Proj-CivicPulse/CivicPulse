@@ -34,7 +34,9 @@ import java.util.List;
         indexes = {
                 @Index(name = "idx_incidents_matching", columnList = "ward_id, category, status"),
                 @Index(name = "idx_incidents_status", columnList = "status"),
-                @Index(name = "idx_incidents_priority_score", columnList = "priority_score")
+                @Index(name = "idx_incidents_priority_score", columnList = "priority_score"),
+                @Index(name = "idx_incidents_priority_computed_at",
+                        columnList = "status, priority_computed_at")
         }
 )
 @Getter
@@ -65,8 +67,16 @@ public class Incident {
     @Column(name = "summary", columnDefinition = "TEXT")
     private String summary;
 
+    /**
+     * Canonical category code, inherited from the complaint that opened the
+     * incident — which was itself normalised through the registry.
+     */
     @Column(name = "category", nullable = false)
     private String category;
+
+    /** The opening complaint's raw category, carried through for audit. */
+    @Column(name = "source_category")
+    private String sourceCategory;
 
     @Column(name = "priority_score", nullable = false)
     @Builder.Default
@@ -76,6 +86,18 @@ public class Incident {
     @Column(name = "priority_reasons", nullable = false, columnDefinition = "jsonb")
     @Builder.Default
     private List<String> priorityReasons = new ArrayList<>();
+
+    /**
+     * When priorityScore was last derived.
+     *
+     * The age term of the formula is time-dependent, so a stored score goes
+     * stale with no write at all. This is what lets PriorityRefreshJob tell a
+     * current score from a drifted one — {@code updatedAt} cannot, because any
+     * write bumps it. Null means "never recomputed since the column existed",
+     * which the sweep treats as the oldest possible.
+     */
+    @Column(name = "priority_computed_at")
+    private LocalDateTime priorityComputedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

@@ -9,11 +9,13 @@ const STATUSES: readonly IncidentStatus[] = ['open', 'in_progress', 'resolved', 
 
 interface Props {
     wards: readonly Ward[];
-    /** Derived from the loaded incidents — there is no categories endpoint. */
+    /** Canonical codes present in the loaded incidents — the facets worth offering. */
     categories: readonly string[];
+    /** Code -> display name, resolved against the category registry. */
+    categoryLabel: (code: string) => string;
 }
 
-export default function WardRail({ wards, categories }: Props) {
+export default function WardRail({ wards, categories, categoryLabel }: Props) {
     const selectedWardId = useDashboardStore((s) => s.selectedWardId);
     const statusFilter = useDashboardStore((s) => s.statusFilter);
     const bandFilter = useDashboardStore((s) => s.bandFilter);
@@ -113,7 +115,7 @@ export default function WardRail({ wards, categories }: Props) {
                                     setCategoryFilter(categoryFilter === category ? null : category)
                                 }
                             >
-                                {humanizeEnum(category)}
+                                {categoryLabel(category)}
                             </button>
                         ))}
                     </div>

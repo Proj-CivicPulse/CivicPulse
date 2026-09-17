@@ -12,7 +12,18 @@
  * mitigation is threshold tuning + the officer override, both already planned.
  *
  * Candidate filtering (ward + category + active status) runs first, in SQL, so
- * the vector maths only ever touches a handful of rows.
+ * the vector maths only ever touches a handful of rows. Since the category
+ * registry those categories are canonical codes, so equivalent spellings share
+ * one candidate pool instead of fragmenting into several.
+ *
+ * NOTE WHAT IS NOT CONSTRAINED HERE: distance and time. Two complaints at
+ * opposite ends of a ward can match, and an incident open for months is as
+ * eligible as one opened this morning. That is a decision, not an oversight --
+ * ward and status already bound the search, and a mistuned radius splits one
+ * real incident into several. The Java fallback has its own 14-day / 1.5 km
+ * bounds because it has no similarity signal to work with; the two are
+ * intentionally NOT aligned. docs/matching-contract.md states all of this, and
+ * lists what would have to be measured before any of it changes.
  *
  * Spring performs the write; this service only decides. See
  * docs/service-boundaries.md.

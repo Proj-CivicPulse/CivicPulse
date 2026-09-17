@@ -84,8 +84,36 @@ public class Complaint {
     @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    /**
+     * The CANONICAL category code, resolved through the registry on the way in
+     * ({@code CategoryService.require}). Never the raw string a caller sent —
+     * every filter downstream compares this with exact equality.
+     */
     @Column(name = "category", nullable = false)
     private String category;
+
+    /**
+     * What the caller actually sent, before normalisation. Kept so a mapping
+     * decision is auditable and reversible; null on rows predating the registry,
+     * where {@code category} WAS the raw value.
+     */
+    @Column(name = "source_category")
+    private String sourceCategory;
+
+    /**
+     * The external feed this complaint arrived from, or null for the ordinary
+     * case: a person filling in the public form.
+     */
+    @Column(name = "source", length = 64)
+    private String source;
+
+    /**
+     * The feed's own identifier for this report. Unique per source, which is
+     * what makes re-ingesting the same file a no-op rather than a duplicate.
+     * Kept because our id is one we invented and the source has never seen.
+     */
+    @Column(name = "source_record_id", length = 128)
+    private String sourceRecordId;
 
     @Column(name = "latitude", nullable = false)
     private Double latitude;

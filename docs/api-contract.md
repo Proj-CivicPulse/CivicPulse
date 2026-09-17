@@ -147,12 +147,43 @@ Every path below is prefix-free on the backend; the browser calls
 | GET | `/wards/{id}` | public | `Ward`, 404 if unknown |
 | GET | `/wards/resolve?lat=&long=` | public | `Ward` |
 | GET | `/wards/summary` | public | `WardSummary[]` |
+| GET | `/categories` | public | `Category[]` |
 | GET | `/departments` | authenticated | `{id, name}[]` |
 | GET | `/departments/{id}` | authenticated | `{id, name}` |
 
 `GET /wards` is public because a resident submitting anonymously needs the
 ward picker when resolution fails. Only `GET` is open — a future write
 endpoint under `/wards` stays default-deny.
+
+#### `GET /categories`
+The canonical category registry. Public for the same reason `GET /wards` is:
+the submit form renders the picker before anyone has signed in.
+
+```jsonc
+// 200, Cache-Control: public, max-age=3600
+[
+  { "code": "pothole", "name": "Pothole / road damage", "displayName": "Pothole or damaged road" },
+  { "code": "garbage", "name": "Solid waste",           "displayName": "Garbage not collected" }
+]
+```
+
+Active categories only, in submit-form order. **`code` is the only value a
+client may submit**, and `displayName` is the only one it should render —
+keeping them separate is what lets a label be reworded without invalidating
+every stored complaint.
+
+`POST /complaints` now **rejects a category the registry cannot resolve**
+(`400 VALIDATION_ERROR`, message naming the accepted codes). That is a
+deliberate change from the previous free-form `VARCHAR`: category is an
+exact-equality key for the Phase 2 candidate pre-filter, the naive fallback and
+the dashboard breakdown, so an unrecognised value files a report that no
+aggregate will ever find. Aliases mean this is rarely hit — `Garbage`,
+`solid waste` and `Uncollected Garbage` all resolve to `garbage` — but an
+invented value is refused rather than stored.
+
+**Aliases are deliberately not exposed.** They are an ingestion concern, and
+publishing them would invite clients to submit one directly and then depend on
+a mapping that exists to be revised.
 
 #### `GET /wards/resolve`
 Derives the ward from a coordinate pair, so the submit form can show that the
@@ -337,6 +368,57 @@ a stored score drifts with no writes at all (see `PriorityService`). Consumed
 today by `backend-spring/scripts/seed-dev-data.mjs --rescore`; it is also the
 natural hook for the scheduled priority refresh that is still a follow-up.
 
+### `POST /internal/ingest/{source}` — bulk external ingestion
+
+The only way externally-sourced complaints enter the system. Shared-secret
+header like the rest of `/internal/*`.
+
+```jsonc
+// request — an array, max 10,000
+[{
+  "sourceRecordId": "BBMP-2026-0001",  // required: the feed's own id
+  "description": "Large pothole outside the school gate",
+  "category": "Road Damage",            // any spelling the registry resolves
+  "wardCode": "196",                    // optional: our code, the KGIS code, or the LGD code
+  "lat": "12.9250",
+  "lng": "77.5938",
+  "reportedAt": "2026-09-10T08:30:00Z",
+  "status": "REGISTERED",               // the feed's vocabulary; normalised
+  "title": null,
+  "photoUrl": null
+}]
+
+// 200 — ALWAYS 200 when the batch itself was usable
+{ "batchId": "12", "source": "bbmp", "received": 7,
+  "accepted": 2, "rejected": 4, "unchanged": 1 }
+```
+
+**Every field arrives as a string and nothing is bound-validated.** A feed
+sending `"lat": "twelve"` must not fail Jackson before the pipeline sees it —
+that would give a 400 and no record of which upstream row caused it, and one bad
+row would reject a batch of ten thousand good ones.
+
+**200 even when every record was rejected.** The batch was received, examined
+and recorded: that is a successful run that found bad data, not a failed
+request. A 4xx would tell the caller's scheduler to retry, and retrying a file
+full of malformed rows produces the same malformed rows. 400 is reserved for the
+request being unusable — empty, over 10,000 records, or a malformed source name.
+
+**`unchanged` is the number to watch.** On a daily re-delivery it should be most
+of the batch; that is idempotency working. If it drops to zero the feed has
+started re-issuing identifiers and every run is about to create duplicates.
+
+Rejected records keep their raw payload and machine-readable reasons. The
+report:
+
+```sql
+SELECT field, code, occurrences, example_payload FROM ingestion_rejections
+WHERE source = 'bbmp' ORDER BY occurrences DESC;
+```
+
+Full behaviour — validation rules, normalisation, idempotency — in
+`docs/service-boundaries.md` and the `IngestionValidator` javadoc.
+
 ### `GET /internal/complaints/{id}` — Phase 2
 Full complaint context for embedding generation and Copilot grounding.
 Returns the `Complaint` shape below.
@@ -410,10 +492,20 @@ Keep in sync with `backend-spring/src/main/resources/db/migration/`.
   "lat": 12.9716,
   "long": 77.5946,
   "aiRecommendation": null,   // written by Node in Phase 6; null until then
+  "priorityComputedAt": "…",  // when the score was last DERIVED; null if never
   "createdAt": "…",
   "updatedAt": "…"
 }
 ```
+
+**`priorityComputedAt` is not `updatedAt`.** The priority formula has a
+time-dependent term (age, saturating at 14 days), so a stored score drifts with
+no write at all. `updatedAt` moves on any write — a status change, a department
+assignment — and so cannot say whether the *score* is current. This can, and a
+ranked queue is entitled to say how old its ranking is. `PriorityRefreshJob`
+sweeps open incidents on it (`app.priority.refresh.*`); resolved and closed
+incidents are left alone, because their score records how urgent the problem was
+while it was live.
 
 **`priorityBand` is computed server-side** from `priorityScore`:
 
@@ -454,6 +546,23 @@ A freshly submitted complaint is always `pending` in the `POST /complaints`
 response — matching runs after the response is sent. The officer dashboard uses
 this to show which incidents are still settling; a citizen-facing rendering is a
 later follow-up.
+
+### `Category`
+```jsonc
+{
+  "code": "pothole",                       // stable identifier — the value clients submit
+  "name": "Pothole / road damage",         // officer-facing canonical name
+  "displayName": "Pothole or damaged road" // resident-facing label — the only one to render
+}
+```
+
+`code` never changes once seeded: it is the literal value stored in
+`complaints.category` and `incidents.category`, and therefore what every
+exact-equality filter compares. `name` and `displayName` are labels and may be
+reworded freely.
+
+The raw string a caller sent is preserved server-side in
+`complaints.source_category` for audit, and is not exposed on the wire.
 
 ### `Ward`
 ```jsonc

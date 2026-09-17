@@ -21,12 +21,38 @@ boundary).
       See decision 2.
 - [x] **Shared-table migrations** — **backend-spring**, via Flyway.
       Node never runs DDL. See decision 3.
+- [x] **Category vocabulary ownership** — **backend-spring**, in the
+      `categories` / `category_aliases` registry (migration V11). `category` is
+      normalised to a canonical code on write and an unknown value is rejected;
+      the frontend reads `GET /categories` instead of carrying its own list.
+      Aliases are what make `Garbage`, `solid waste` and `Uncollected Garbage`
+      one category rather than three that can never merge.
+- [x] **External ingestion** — **a validating gate at `/internal/ingest/{source}`**,
+      never direct writes. Raw payload persisted before validation, all
+      rejection reasons collected per record, categories and wards normalised
+      through the same services the public path uses, idempotent on
+      `(source, sourceRecordId)`, one transaction per record so one bad row
+      cannot roll back the batch. See `api-contract.md`.
+- [x] **Ward universe** — **243 BBMP wards, 2022 delimitation** (KSRSAC via
+      DataMeet), imported by V13 with real boundaries; `PostGisWardResolver`
+      does point-in-polygon and is the default. See `ward-data.md`.
+- [x] **Priority refresh policy** — **scheduled sweep**, `PriorityRefreshJob`
+      over open incidents whose `priority_computed_at` has gone stale
+      (`app.priority.refresh.*`). The age term is time-dependent, so recompute
+      on membership change alone let a quiet incident stop ageing. Resolved and
+      closed incidents are not swept.
 
 ### ⚠️ Still open
 
-- [ ] **Photo upload mechanism** — direct-to-storage upload (client sends a
-      `photoUrl` string) vs. a multipart upload endpoint on Spring. Current
-      frontend scaffold (`complaint.service.ts`) assumes the former.
+- [x] **Photo upload mechanism** — **direct-to-storage with a
+      SERVER-ISSUED upload URL**: intent → direct PUT → confirm. Neither
+      original option was right. Multipart through Spring holds a request thread
+      for the length of every upload; a caller-supplied `photoUrl` (what the DTO
+      accepts today) lets anyone store any URL against a complaint and render it
+      in an officer's dashboard. `CreateComplaintRequest.photoUrl` must be
+      removed when this ships. Full contract, validation rules, storage
+      lifecycle and access rules: `photo-upload-contract.md`. NOT yet
+      implemented — the submit form still says so.
 - [x] **Auth between services** — resolved: `/internal/*` requires the
       `X-Internal-Token` header, compared in constant time, failing closed when
       `INTERNAL_TOKEN` is blank. Rotation policy is still open.
@@ -76,6 +102,11 @@ default (`EMAIL_PROVIDER=log`), so auth has no runtime email dependency.
 - [ ] `PUT /officers/{id}`
 - [ ] `DELETE /officers/{id}`
 
+### Categories — reference data
+- [x] `GET /categories` — **public**; the canonical registry the submit form
+      reads. Active categories only, `code` is what clients submit. See
+      `api-contract.md`.
+
 ### Wards & Departments — Phase 0 (reference data)
 - [x] `GET /wards` — public
 - [x] `GET /wards/{id}` — public
@@ -90,7 +121,8 @@ default (`EMAIL_PROVIDER=log`), so auth has no runtime email dependency.
 - [x] `GET /complaints/{id}` — citizen reads only their own, 404 (not 403) otherwise
 - [x] `GET /complaints/mine` — citizen
 - [x] `PATCH /complaints/{id}` — **officer only**; previously fell through to `anyRequest().authenticated()`
-- [ ] `POST /complaints/{id}/photo` *(only if multipart upload is chosen — see open decisions)*
+- [ ] `POST /complaints/{id}/photo-intent` *(not built — contract decided, see `photo-upload-contract.md`)*
+- [ ] `POST /complaints/{id}/photo` *(not built — confirms an upload by object key, never a caller-supplied URL)*
 
 ### Incidents — Phase 2/3
 - [x] `GET /incidents` — `?wardId&category&status&minPriority`, priority desc
@@ -116,6 +148,10 @@ default (`EMAIL_PROVIDER=log`), so auth has no runtime email dependency.
 - [ ] `GET /analytics/trends`
 - [ ] `GET /analytics/stale-incidents`
 - [ ] `GET /analytics/rising-categories`
+
+### Ingestion — external feeds (see `api-contract.md`)
+- [x] `POST /internal/ingest/{source}` — shared-secret; bulk, validating,
+      idempotent. Always 200 with a report when the batch itself is usable.
 
 ### Internal — called by Node (see `api-contract.md`)
 

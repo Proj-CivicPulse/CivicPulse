@@ -98,13 +98,15 @@ app:
   # itself down on the first request after a quiet period.
   health-timeout-seconds: ${HEALTH_TIMEOUT_SECONDS:10}
 
-  # Ward derivation. "centroid" picks the nearest seeded ward centroid; a
-  # future "postgis" would do real point-in-polygon. Swapping this is the only
-  # change needed — nothing outside WardResolver names an implementation.
-  ward-resolver: ${WARD_RESOLVER:centroid}
-  # Beyond this radius a point resolves to no ward at all, and the caller gets
-  # a 404 instead of a silent mis-filing into whichever ward happened to be
-  # least far away.
+  # Ward derivation. "postgis" does real point-in-polygon against the BBMP ward
+  # boundaries imported in V13, and is the default. "centroid" is the older
+  # nearest-centroid approximation, kept for a database without PostGIS or ward
+  # data that arrived without geometry. Swapping this is the only change needed
+  # — nothing outside WardResolver names an implementation.
+  ward-resolver: ${WARD_RESOLVER:postgis}
+  # ONLY used by the "centroid" resolver — point-in-polygon has no radius.
+  # Beyond this a point resolves to no ward at all, and the caller gets a 404
+  # instead of a silent mis-filing into whichever ward was least far away.
   ward-resolution-max-km: ${WARD_RESOLUTION_MAX_KM:25}
 
   # Shared secret for /internal/* (Node -> Spring). Blank denies everything:
@@ -145,6 +147,19 @@ app:
       enabled: ${MATCHING_RECONCILE_ENABLED:true}
       interval-ms: ${MATCHING_RECONCILE_INTERVAL_MS:60000}
       batch-size: ${MATCHING_RECONCILE_BATCH:25}
+
+  # Keeping stored priority scores honest as incidents age. The age term of the
+  # formula is time-dependent, so a score drifts with no write at all; this
+  # sweep recomputes open incidents whose score has gone stale. It changes no
+  # membership and writes no match-log rows.
+  priority:
+    refresh:
+      enabled: ${PRIORITY_REFRESH_ENABLED:true}
+      interval-ms: ${PRIORITY_REFRESH_INTERVAL_MS:300000}
+      # A day is the smallest step the 14-day age term can express, so
+      # recomputing much more often than this reproduces the same number.
+      stale-after-minutes: ${PRIORITY_REFRESH_STALE_MINUTES:360}
+      batch-size: ${PRIORITY_REFRESH_BATCH:100}
 
   # The NAIVE FALLBACK matcher (ward + category + window + radius). Runs only
   # when backend-node is unreachable; tags the complaint "degraded" so the

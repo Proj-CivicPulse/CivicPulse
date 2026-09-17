@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { complaintService } from '@/services/complaint.service';
+import { categoryService, FALLBACK_CATEGORIES } from '@/services/category.service';
 import { wardService } from '@/services/ward.service';
 import { queryKeys } from '@/lib/queryKeys';
 import { errorMessage } from '@/lib/errors';
@@ -11,21 +12,6 @@ import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
 import MapView from '@/components/ui/MapView';
 import styles from './SubmitComplaint.module.css';
-
-/**
- * Client-side list. There is no categories endpoint in the contract, and
- * `complaints.category` is a free-form VARCHAR, so this is the frontend's own
- * vocabulary until the backend owns one. Values are what the server stores;
- * labels are what a resident would say.
- */
-const CATEGORIES = [
-    { value: 'pothole', label: 'Pothole or damaged road' },
-    { value: 'streetlight', label: 'Street light out' },
-    { value: 'garbage', label: 'Garbage not collected' },
-    { value: 'water', label: 'Water supply or leak' },
-    { value: 'drainage', label: 'Blocked drain or waterlogging' },
-    { value: 'other', label: 'Something else' },
-] as const;
 
 const DESCRIPTION_MAX = 5000;
 const FALLBACK: [number, number] = [12.9716, 77.5946];
@@ -75,6 +61,21 @@ export default function SubmitComplaint() {
         retry: false,
         staleTime: 5 * 60_000,
     });
+
+    // The vocabulary is the backend's, not this form's. Submitting a code the
+    // registry does not know is now a 400, so carrying a second copy here would
+    // drift straight into rejected submissions.
+    const categoriesQuery = useQuery({
+        queryKey: queryKeys.categories.list(),
+        queryFn: () => categoryService.list(),
+        // Reference data, and the server already sets a long cache header.
+        staleTime: 60 * 60_000,
+    });
+
+    // Reporting must not depend on reference data loading. A resident whose
+    // /categories call failed still gets a usable picker — every fallback code
+    // resolves server-side, so their report is accepted exactly the same way.
+    const categories = categoriesQuery.data ?? FALLBACK_CATEGORIES;
 
     // Only needed when resolution fails (a pin outside every ward), so it stays
     // unfetched on the happy path.
@@ -201,9 +202,9 @@ export default function SubmitComplaint() {
                             onChange={(e) => setCategory(e.target.value)}
                         >
                             <option value="">Choose one…</option>
-                            {CATEGORIES.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
+                            {categories.map((option) => (
+                                <option key={option.code} value={option.code}>
+                                    {option.displayName}
                                 </option>
                             ))}
                         </Field>
@@ -306,7 +307,7 @@ export default function SubmitComplaint() {
                             <div className={styles.derivedRow}>
                                 <dt className={styles.derivedLabel}>Problem</dt>
                                 <dd className={styles.derivedValue}>
-                                    {CATEGORIES.find((c) => c.value === category)?.label ?? '—'}
+                                    {categories.find((c) => c.code === category)?.displayName ?? '—'}
                                 </dd>
                             </div>
                             <div className={styles.derivedRow}>

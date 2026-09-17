@@ -33,9 +33,18 @@ public class WardService {
     private final IncidentRepository incidentRepository;
     private final WardResolver wardResolver;
 
+    /**
+     * The wards a caller may choose from.
+     *
+     * <p>ACTIVE ONLY. Retired wards — the four V2 placeholders that V13 stood
+     * down when the real BBMP boundaries landed — are still readable by id,
+     * because complaints reference them and a resident's report must not become
+     * unreadable, but offering them in a picker would let a new report be filed
+     * into a ward that does not exist.
+     */
     @Transactional(readOnly = true)
     public List<WardDto> list() {
-        return wardRepository.findAllByOrderByIdAsc().stream().map(WardDto::from).toList();
+        return wardRepository.findByActiveTrueOrderByIdAsc().stream().map(WardDto::from).toList();
     }
 
     @Transactional(readOnly = true)
@@ -74,7 +83,7 @@ public class WardService {
             openByWard.put(row.getWardId(), row.getOpenCount());
         }
 
-        return wardRepository.findAllByOrderByIdAsc().stream()
+        return wardRepository.findByActiveTrueOrderByIdAsc().stream()
                 .map(ward -> new WardSummaryDto(
                         String.valueOf(ward.getId()),
                         ward.getName(),

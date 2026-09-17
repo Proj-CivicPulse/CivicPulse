@@ -50,15 +50,21 @@ public class AppProperties {
     private long healthTimeoutSeconds = 10;
 
     /**
-     * Which WardResolver implementation to use. "centroid" is nearest-seeded-
-     * centroid; a future "postgis" would do point-in-polygon against real
-     * boundaries. Selected by @ConditionalOnProperty, so no caller names an
-     * implementation.
+     * Which WardResolver implementation to use.
+     *
+     * "postgis" (the default since V13 imported real BBMP boundaries) does
+     * point-in-polygon against ward geometry. "centroid" is the older
+     * nearest-centroid approximation, kept for a database without PostGIS or
+     * ward data that arrived without geometry. Selected by
+     * @ConditionalOnProperty, so no caller names an implementation.
      */
-    private String wardResolver = "centroid";
+    private String wardResolver = "postgis";
 
     /**
      * How far a point may be from a ward centroid and still resolve to it.
+     *
+     * ONLY applies to the "centroid" resolver. Point-in-polygon has no radius:
+     * a point is either inside a ward or it is not.
      *
      * Bengaluru municipal area is roughly a 15 km radius, so 25 km covers the
      * metro with slop while firmly rejecting a submission from another city.
@@ -80,6 +86,61 @@ public class AppProperties {
     private final Geocoding geocoding = new Geocoding();
 
     private final Matching matching = new Matching();
+
+    private final Priority priority = new Priority();
+
+    /**
+     * Keeping stored priority scores honest as time passes.
+     *
+     * <p>The formula's age term is time-dependent, so a score drifts with no
+     * write at all — an incident that stops attracting reports also stops
+     * ageing, which silently disables the fairness term the age weight exists
+     * to provide. Recompute on membership change alone cannot fix that; a
+     * sweep can.
+     */
+    @Getter
+    @Setter
+    public static class Priority {
+
+        private final Refresh refresh = new Refresh();
+
+        @Getter
+        @Setter
+        public static class Refresh {
+
+            /** Off switches the sweep entirely (the context test sets this false). */
+            private boolean enabled = true;
+
+            /**
+             * How often the sweep runs. Frequent and small rather than nightly
+             * and large: the work is a recompute over an incident's own
+             * members, so spreading it keeps each run trivial and means a
+             * restart never lands mid-way through a long batch.
+             */
+            @Positive
+            private long intervalMs = 300_000;
+
+            /**
+             * A score older than this is treated as drifted.
+             *
+             * <p>Sized against what the formula can actually express: the age
+             * term saturates at 14 days, so one day is the smallest step that
+             * moves a score at all (1/14th of the 0.20 age weight — about 0.14
+             * of a point, enough to cross a band edge). Recomputing more often
+             * than that would burn writes to produce the same number.
+             */
+            @Positive
+            private long staleAfterMinutes = 6 * 60;
+
+            /**
+             * Incidents rescored per run. Bounded so the sweep cannot turn into
+             * a long transaction or a write storm on a large backlog — it
+             * simply takes several runs to work through it, oldest first.
+             */
+            @Positive
+            private int batchSize = 100;
+        }
+    }
 
     private final Auth auth = new Auth();
 

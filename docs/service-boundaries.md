@@ -35,6 +35,21 @@ incident's membership changes (see decision 2), so the score and its
 `priority_reasons` are always written in the same transaction as the change
 that caused them.
 
+**Membership change is not the only trigger.** The formula's age term is
+time-dependent, so a stored score drifts away from the correct one with no write
+at all — meaning an incident that stopped attracting reports also stopped
+ageing, which quietly disabled the fairness the 20% age weight exists to
+provide. `PriorityRefreshJob` sweeps open incidents whose `priority_computed_at`
+has gone stale (`app.priority.refresh.*`, default: every 5 minutes, anything
+older than 6 hours, 100 at a time) and recomputes them, oldest first.
+
+That sweep goes through `IncidentAttachmentService.recomputeById`, **never**
+through `attach`. Re-deriving a score is not a matching decision: routing it
+through attach would stamp `matching_status` and write `incident_match_log` rows
+for events that never happened, corrupting the Phase 8 dataset. Resolved and
+closed incidents are not swept — their score records how urgent the problem was
+while it was live, and nothing reads it as a queue position any more.
+
 **Consequence:** the explainability strings (`incidents.priority_reasons`,
 `jsonb`) are produced by Spring. That is the project's headline
 explainability claim — keep the reason text human-readable, not codes.
@@ -173,3 +188,90 @@ history, one place to look.
 ---
 
 _Update this file if a decision changes, and link the PR that implements it._
+
+---
+
+## 4. How does external data become a complaint?
+
+- **Tension:** an external feed is bulk, arrives in someone else's vocabulary
+  with its own identifiers, and arrives AGAIN tomorrow containing today's rows.
+  The public `POST /complaints` path validates as it writes, one record at a
+  time, and has none of that.
+- **Decision:** **a validating gate**, `POST /internal/ingest/{source}`. It is
+  the only way externally-sourced data enters `complaints`.
+- **Owner:** `backend-spring` — it already owns every write.
+
+**Rationale.** Without a boundary, bad external data does not fail loudly: it
+lands in `complaints` and contaminates matching (ward and category are exact
+pre-filters), the dashboard, and every priority score derived from them. By the
+time anyone notices there is no record of what arrived or what was changed on
+the way in.
+
+The order is **raw first, decide second, write third**:
+
+1. The payload is persisted VERBATIM before anything inspects it. The record
+   somebody needs to look at is exactly the one that failed.
+2. Validation collects EVERY reason, not the first. A record with six problems
+   reports six, because stopping at the first makes fixing a feed a
+   six-round-trip conversation.
+3. Identity is checked before writing. Byte-identical content writes nothing;
+   changed content updates in place. That is what makes re-running a file safe.
+4. Accepted records fire the same `ComplaintCreatedEvent` the public path fires,
+   so they match through the identical pipeline. An ingestion-only grouping path
+   would be a second matcher to keep in step with the first.
+
+**Two consequences worth knowing:**
+
+- **Each record commits in its own transaction** (`IngestionRecordProcessor` is
+  a separate bean precisely so `REQUIRES_NEW` is not defeated by self-invocation).
+  A ten-thousand-row batch must not be all-or-nothing.
+- **`created_at` carries the UPSTREAM report time**, written by a native update
+  after insert because `@CreationTimestamp` generates and discards whatever the
+  caller set. Without that, a six-month backlog imported on a Tuesday looks like
+  it all arrived on Tuesday: every incident gets a zero age and a maximal
+  24-hour growth score, and the whole officer queue inverts on import day.
+
+Normalisation reuses `CategoryService` and `WardResolver` rather than
+reimplementing either. A second, ingestion-only set of rules would drift from
+the first, and the drift would be invisible.
+
+### KNOWN LIMITATION: report time and row-creation time share one column
+
+`complaints.created_at` is **overwritten** with the upstream report time. There
+is no separate `reported_at` column, so one column now answers two different
+questions depending on how the row arrived:
+
+| Row origin | `created_at` means |
+|---|---|
+| Public submit form | when the row was created here, which *is* when it was reported |
+| External feed | when it was reported UPSTREAM — the import moment is not on the complaint at all |
+
+The import moment is not lost: `ingestion_records.created_at` holds it, joined to
+the complaint by `complaint_id`. So nothing is unrecoverable — it is one join
+away rather than one column away.
+
+**Why it was done this way.** Every consumer of `created_at` — the priority
+formula's age and growth terms, "N new complaints in the last 24 hours", the My
+Reports ordering — wants the REPORT time. A separate `reported_at` would have
+meant auditing and changing each of those, and a consumer missed in that sweep
+would have silently kept using the wrong one.
+
+**The concrete cost, and it is not hypothetical.**
+`ComplaintRepository.findReconcileCandidates` orders by `createdAt asc`. An
+imported backlog with backdated timestamps therefore lands at the FRONT of the
+reconcile queue, ahead of complaints a resident filed this morning. At the
+default 25 records per 60-second sweep, importing 10,000 backdated complaints
+would delay semantic matching of new citizen submissions by roughly seven hours.
+They stay visible the whole time — the naive fallback still groups them — but
+they stay `DEGRADED` until the backlog drains.
+
+**Before the first real import**, do one of:
+
+1. Add `reported_at`, populate it from `created_at` for every existing row, point
+   `PriorityService` and the "last 24 hours" counters at it, and stop
+   overwriting `created_at`. This is the correct model.
+2. Or, far cheaper: order the reconcile sweep by `id asc` instead of
+   `createdAt asc`. Arrival order is what that queue actually wants, and id is
+   arrival order. This removes the starvation without touching the schema.
+
+Option 2 is the recommended first move; option 1 is the right eventual shape.

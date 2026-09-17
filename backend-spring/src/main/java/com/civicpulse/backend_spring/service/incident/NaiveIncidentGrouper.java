@@ -21,6 +21,10 @@ import java.util.Optional;
  *
  * THIS IS NOT SEMANTIC MATCHING, and it is named so nobody mistakes it for it.
  *
+ * <p>Its bounds differ from the semantic matcher's on purpose: the time window
+ * and radius below exist precisely BECAUSE there is no similarity signal here.
+ * Do not "align" the two. See docs/matching-contract.md.
+ *
  * <p><b>Since Phase 2 this is the resilience fallback, not the matcher.</b> The
  * real decision is embedding similarity computed in backend-node. This runs only
  * when {@code ComplaintMatchingService} cannot reach Node — connection refused,

@@ -40,6 +40,11 @@ app:
     # The context test must not fire the scheduled sweep at a real backend-node.
     reconciliation:
       enabled: false
+  priority:
+    # Likewise: the context test must not start rewriting priority scores in
+    # whatever database it was pointed at.
+    refresh:
+      enabled: false
 
 jwt:
   secret: test-only-secret-value-not-used-anywhere-real-0123456789

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { incidentService, type Incident } from '@/services/incident.service';
+import { categoryService } from '@/services/category.service';
 import { wardService } from '@/services/ward.service';
 import { queryKeys } from '@/lib/queryKeys';
 import { describeError } from '@/lib/errors';
@@ -64,13 +65,31 @@ export default function IncidentDashboard() {
 
     const incidents = useMemo(() => incidentsQuery.data ?? [], [incidentsQuery.data]);
 
-    // Category options come from what actually loaded. There is no categories
-    // endpoint in the contract, and a hardcoded list here would show filters
-    // that match nothing.
+    // Which categories to OFFER as filters still comes from what actually
+    // loaded — listing every registered category would show filters that match
+    // nothing. What they are CALLED comes from the registry.
     const categories = useMemo(
         () => [...new Set(incidents.map((i) => i.category))].sort(),
         [incidents]
     );
+
+    const categoriesQuery = useQuery({
+        queryKey: queryKeys.categories.list(),
+        queryFn: () => categoryService.list(),
+        staleTime: 60 * 60_000,
+    });
+
+    /**
+     * Canonical code -> the officer-facing name in the registry.
+     *
+     * Falls back to humanizing the code itself, which is what an incident
+     * carrying a value the registry does not know (a row the V11 backfill left
+     * alone) needs — it is still real data and still belongs on screen.
+     */
+    const categoryLabel = useMemo(() => {
+        const names = new Map((categoriesQuery.data ?? []).map((c) => [c.code, c.name]));
+        return (code: string) => names.get(code) ?? humanizeEnum(code);
+    }, [categoriesQuery.data]);
 
     // Band has no server-side equivalent — the API takes minPriority, a number,
     // not a band — so it is applied here rather than faked as a query param.
@@ -96,9 +115,11 @@ export default function IncidentDashboard() {
                     lat: i.lat,
                     long: i.long,
                     band: i.priorityBand,
-                    label: i.title ?? humanizeEnum(i.category),
+                    label: i.title ?? categoryLabel(i.category),
                 })),
-        [filtered]
+        // categoryLabel belongs here: it changes exactly once, when /categories
+        // resolves, and that is precisely when these labels must be rebuilt.
+        [filtered, categoryLabel]
     );
 
     const selected = filtered.find((i) => i.id === selectedIncidentId) ?? null;
@@ -108,7 +129,7 @@ export default function IncidentDashboard() {
             {
                 key: 'title',
                 header: 'Incident',
-                cell: (row) => truncate(row.title ?? humanizeEnum(row.category), 44),
+                cell: (row) => truncate(row.title ?? categoryLabel(row.category), 44),
                 sortValue: (row) => row.title ?? row.category,
             },
             {
@@ -145,7 +166,10 @@ export default function IncidentDashboard() {
                 width: '80px',
             },
         ],
-        []
+        // categoryLabel is the only value these cells close over. It changes
+        // once, when /categories resolves; without it here the table would keep
+        // rendering raw codes for the life of the page.
+        [categoryLabel]
     );
 
     const errorCopy = incidentsQuery.isError
@@ -163,7 +187,11 @@ export default function IncidentDashboard() {
                             <Skeleton count={5} variant="row" label="Loading wards" />
                         </div>
                     ) : (
-                        <WardRail wards={wardsQuery.data ?? []} categories={categories} />
+                        <WardRail
+                            wards={wardsQuery.data ?? []}
+                            categories={categories}
+                            categoryLabel={categoryLabel}
+                        />
                     )}
                 </aside>
 
@@ -232,7 +260,11 @@ export default function IncidentDashboard() {
 
                 {selected && (
                     <aside className={styles.detail} aria-label="Incident details">
-                        <IncidentDetail incident={selected} onClose={() => selectIncident(null)} />
+                        <IncidentDetail
+                            incident={selected}
+                            categoryLabel={categoryLabel}
+                            onClose={() => selectIncident(null)}
+                        />
                     </aside>
                 )}
             </div>

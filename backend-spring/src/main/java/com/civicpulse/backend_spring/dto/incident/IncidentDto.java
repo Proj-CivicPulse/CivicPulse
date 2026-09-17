@@ -52,6 +52,15 @@ public class IncidentDto {
      */
     private final String aiRecommendation;
 
+    /**
+     * When priorityScore was last derived — not when the incident last changed.
+     *
+     * Shipped because a ranked queue whose ranking may have drifted should be
+     * able to say how old it is. Null on incidents that have not been
+     * recomputed since the column was added.
+     */
+    private final String priorityComputedAt;
+
     private final String createdAt;
     private final String updatedAt;
 
@@ -74,6 +83,7 @@ public class IncidentDto {
                 incident.getLatitude(),
                 incident.getLongitude(),
                 incident.getAiRecommendation(),
+                Wire.timestamp(incident.getPriorityComputedAt()),
                 Wire.timestamp(incident.getCreatedAt()),
                 Wire.timestamp(incident.getUpdatedAt())
         );

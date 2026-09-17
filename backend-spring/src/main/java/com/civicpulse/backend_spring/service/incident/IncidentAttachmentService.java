@@ -195,9 +195,15 @@ public class IncidentAttachmentService {
                     .ifPresent(incident::setAddress);
         }
 
-        PriorityResult priority = priorityService.compute(incident, members, LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        PriorityResult priority = priorityService.compute(incident, members, now);
         incident.setPriorityScore(priority.score());
         incident.setPriorityReasons(priority.reasons());
+        // Stamped with the instant the score was DERIVED, which updatedAt
+        // cannot stand in for — any write bumps that, so a status change alone
+        // would mark a drifted score fresh and PriorityRefreshJob would skip
+        // it forever.
+        incident.setPriorityComputedAt(now);
 
         incidentRepository.save(incident);
     }
@@ -206,6 +212,7 @@ public class IncidentAttachmentService {
         Incident incident = Incident.builder()
                 .ward(complaint.getWard())
                 .category(complaint.getCategory())
+                .sourceCategory(complaint.getSourceCategory())
                 .title(complaint.getTitle())
                 .status(IncidentStatus.OPEN)
                 .latitude(complaint.getLatitude())

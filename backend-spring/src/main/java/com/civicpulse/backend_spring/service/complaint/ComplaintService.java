@@ -4,6 +4,7 @@ import com.civicpulse.backend_spring.dto.Wire;
 import com.civicpulse.backend_spring.dto.complaint.ComplaintDto;
 import com.civicpulse.backend_spring.dto.complaint.CreateComplaintRequest;
 import com.civicpulse.backend_spring.dto.complaint.UpdateComplaintRequest;
+import com.civicpulse.backend_spring.entity.Category;
 import com.civicpulse.backend_spring.entity.Complaint;
 import com.civicpulse.backend_spring.entity.Department;
 import com.civicpulse.backend_spring.entity.User;
@@ -16,6 +17,7 @@ import com.civicpulse.backend_spring.repository.ComplaintRepository;
 import com.civicpulse.backend_spring.repository.DepartmentRepository;
 import com.civicpulse.backend_spring.repository.UserRepository;
 import com.civicpulse.backend_spring.repository.WardRepository;
+import com.civicpulse.backend_spring.service.category.CategoryService;
 import com.civicpulse.backend_spring.service.geocoding.GeocodingService;
 import com.civicpulse.backend_spring.service.ward.WardResolver;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ public class ComplaintService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final WardResolver wardResolver;
+    private final CategoryService categoryService;
     private final GeocodingService geocodingService;
     private final ReferenceNumberService referenceNumberService;
     private final ApplicationEventPublisher eventPublisher;
@@ -47,12 +50,22 @@ public class ComplaintService {
     public ComplaintDto create(CreateComplaintRequest request, Long userId) {
         Ward ward = resolveWard(request);
 
+        // Normalise BEFORE the write, never at query time. Category is an
+        // exact-equality key everywhere downstream — backend-node's candidate
+        // pre-filter, the naive fallback, the dashboard breakdown — so
+        // "Garbage" and "solid waste" arriving as distinct strings means two
+        // incidents that can never merge. Unknown values are refused here
+        // rather than stored, because a category nothing else recognises files
+        // the report where no aggregate will ever find it.
+        Category category = categoryService.require(request.getCategory());
+
         Complaint complaint = Complaint.builder()
                 .user(userId == null ? null : userRepository.findById(userId).orElse(null))
                 .ward(ward)
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .category(request.getCategory())
+                .category(category.getCode())
+                .sourceCategory(request.getCategory())
                 .latitude(request.getLat())
                 .longitude(request.getLng())
                 .photoUrl(request.getPhotoUrl())
@@ -103,10 +116,13 @@ public class ComplaintService {
 
     @Transactional(readOnly = true)
     public List<ComplaintDto> list(Long wardId, String category, ComplaintStatus status) {
+        // Canonicalised so any accepted spelling selects the stored code.
+        String categoryFilter = categoryService.canonicaliseFilter(category);
+
         return complaintRepository.findAll().stream()
                 .filter(c -> wardId == null
                         || (c.getWard() != null && wardId.equals(c.getWard().getId())))
-                .filter(c -> category == null || category.equals(c.getCategory()))
+                .filter(c -> categoryFilter == null || categoryFilter.equals(c.getCategory()))
                 .filter(c -> status == null || status == c.getStatus())
                 .map(this::toDto)
                 .toList();

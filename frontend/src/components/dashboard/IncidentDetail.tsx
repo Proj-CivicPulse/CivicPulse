@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { incidentService, type Incident } from '@/services/incident.service';
 import { queryKeys } from '@/lib/queryKeys';
 import { describeError } from '@/lib/errors';
-import { formatCount, formatCoordinates, humanizeEnum, truncate } from '@/lib/format';
+import { formatCount, formatCoordinates, truncate } from '@/lib/format';
 import { daysSince, formatRelative } from '@/lib/datetime';
 import Button from '@/components/ui/Button';
 import PriorityChip from '@/components/ui/PriorityChip';
@@ -13,11 +13,13 @@ import styles from './IncidentDetail.module.css';
 
 interface Props {
     incident: Incident;
+    /** Code -> display name, resolved against the category registry. */
+    categoryLabel: (code: string) => string;
     /** Rendered only in the drawer/sheet layouts below 1280px. */
     onClose?: () => void;
 }
 
-export default function IncidentDetail({ incident, onClose }: Props) {
+export default function IncidentDetail({ incident, categoryLabel, onClose }: Props) {
     const complaintsQuery = useQuery({
         queryKey: queryKeys.incidents.complaints(incident.id),
         queryFn: () => incidentService.getComplaints(incident.id),
@@ -32,7 +34,7 @@ export default function IncidentDetail({ incident, onClose }: Props) {
             <div className={styles.header}>
                 <div className={styles.headerTop}>
                     <h2 className={styles.title}>
-                        {incident.title ?? humanizeEnum(incident.category)}
+                        {incident.title ?? categoryLabel(incident.category)}
                     </h2>
                     {onClose && (
                         <Button
@@ -92,7 +94,7 @@ export default function IncidentDetail({ incident, onClose }: Props) {
                 </div>
                 <div className={styles.fact}>
                     <dt className={styles.factLabel}>Category</dt>
-                    <dd className={styles.factValue}>{humanizeEnum(incident.category)}</dd>
+                    <dd className={styles.factValue}>{categoryLabel(incident.category)}</dd>
                 </div>
                 <div className={styles.fact}>
                     <dt className={styles.factLabel}>Age</dt>

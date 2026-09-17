@@ -31,6 +31,11 @@ export const queryKeys = {
         resolve: (lat: number, long: number) => ['wards', 'resolve', lat, long] as const,
     },
 
+    categories: {
+        all: () => ['categories'] as const,
+        list: () => ['categories', 'list'] as const,
+    },
+
     departments: {
         all: () => ['departments'] as const,
         list: () => ['departments', 'list'] as const,

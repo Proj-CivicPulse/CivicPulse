@@ -13,6 +13,7 @@ import com.civicpulse.backend_spring.repository.ComplaintRepository;
 import com.civicpulse.backend_spring.repository.DepartmentRepository;
 import com.civicpulse.backend_spring.repository.IncidentRepository;
 import com.civicpulse.backend_spring.repository.spec.IncidentSpecifications;
+import com.civicpulse.backend_spring.service.category.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -28,6 +29,7 @@ public class IncidentService {
     private final IncidentRepository incidentRepository;
     private final ComplaintRepository complaintRepository;
     private final DepartmentRepository departmentRepository;
+    private final CategoryService categoryService;
 
     /**
      * Default ordering is the queue's whole purpose: most urgent first, with
@@ -41,7 +43,10 @@ public class IncidentService {
 
         Specification<Incident> spec = Specification.allOf(
                 IncidentSpecifications.hasWard(wardId),
-                IncidentSpecifications.hasCategory(category),
+                // Canonicalised so ?category=Garbage and ?category=solid%20waste
+                // both select the rows stored as 'garbage'. Unresolvable values
+                // pass through untouched — see CategoryService.canonicaliseFilter.
+                IncidentSpecifications.hasCategory(categoryService.canonicaliseFilter(category)),
                 IncidentSpecifications.hasStatus(status),
                 IncidentSpecifications.minPriority(minPriority));
 

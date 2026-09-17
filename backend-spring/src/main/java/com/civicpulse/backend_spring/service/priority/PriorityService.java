@@ -41,10 +41,18 @@ import java.util.List;
  * learned. That is exactly the rule-based-vs-naive-baseline comparison Phase 8
  * already plans to run.
  *
- * KNOWN STALENESS: ageDays is time-dependent, so a stored score drifts even
- * with no write. Recompute happens on membership change only (attach, merge,
- * unlink) per decision 1. A nightly scheduled refresh over open incidents is
- * what would make the age term fully honest, and is tracked as a follow-up.
+ * STALENESS, and what now handles it: ageDays is time-dependent, so a stored
+ * score drifts even with no write. Recompute on membership change alone
+ * (attach, merge, unlink) therefore let a quiet incident stop ageing — the
+ * fairness term above silently not working. {@code PriorityRefreshJob} closes
+ * that: it sweeps open incidents whose {@code priority_computed_at} has gone
+ * stale and recomputes them. It never touches membership or the match log.
+ *
+ * <p>STILL OPEN, and a calibration question rather than a bug: every member
+ * complaint counts toward volume, growth and spread regardless of its own
+ * status. An incident with ten reports, eight of them individually resolved,
+ * scores as ten. Changing that changes what the weights mean, so it belongs to
+ * the Phase 8 calibration pass with real data — not to a unilateral edit here.
  */
 @Service
 public class PriorityService {

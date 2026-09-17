@@ -1,7 +1,9 @@
 import styles from './HowItWorks.module.css';
 
 const STEPS = [
-    'A resident reports a problem — what it is, where it is, and a photo.',
+    // No photo: upload is still an open decision (docs/endpoints.md), and the
+    // submit form says so. The landing page must not promise ahead of it.
+    'A resident reports a problem — what it is and where it is. No account needed.',
     'CivicPulse matches it against related reports and groups them into one incident.',
     'Your ward officer sees it ranked against everything else in the ward, with the reasons for that ranking spelled out.',
 ];

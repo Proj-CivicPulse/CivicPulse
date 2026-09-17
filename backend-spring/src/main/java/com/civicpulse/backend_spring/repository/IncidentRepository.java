@@ -3,6 +3,7 @@ package com.civicpulse.backend_spring.repository;
 import com.civicpulse.backend_spring.entity.Incident;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
 import com.civicpulse.backend_spring.repository.projection.WardOpenCountRow;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -39,6 +40,30 @@ public interface IncidentRepository
             String category,
             Collection<IncidentStatus> statuses,
             LocalDateTime since);
+
+    /**
+     * Incidents whose stored priority may have drifted: still actionable, and
+     * either never recomputed or last recomputed before {@code staleBefore}.
+     *
+     * <p>Ordered oldest-first with NULLS FIRST, so rows that predate
+     * {@code priority_computed_at} are cleared before anything else and the
+     * sweep makes steady progress instead of revisiting one batch forever.
+     *
+     * <p>Resolved and closed incidents are deliberately absent. Their score is
+     * a record of how urgent the problem was while it was live; continuing to
+     * age it would rewrite that record, and nothing reads it as a queue
+     * position any more.
+     */
+    @Query("""
+            select i from Incident i
+            where i.status in :statuses
+              and (i.priorityComputedAt is null or i.priorityComputedAt < :staleBefore)
+            order by i.priorityComputedAt asc nulls first
+            """)
+    List<Incident> findStalePriority(
+            @Param("statuses") Collection<IncidentStatus> statuses,
+            @Param("staleBefore") LocalDateTime staleBefore,
+            Pageable pageable);
 
     /**
      * One grouped query for the whole ward strip. Wards with no open incidents

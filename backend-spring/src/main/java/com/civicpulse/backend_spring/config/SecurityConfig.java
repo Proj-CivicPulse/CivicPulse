@@ -123,6 +123,12 @@ public class SecurityConfig {
                         // stays default-deny.
                         .requestMatchers(HttpMethod.GET, "/wards", "/wards/**").permitAll()
 
+                        // The canonical category registry, read by the submit
+                        // form before anyone has signed in. Same reasoning and
+                        // same GET-only shape as /wards: it publishes the
+                        // city's vocabulary and nothing derived from a report.
+                        .requestMatchers(HttpMethod.GET, "/categories").permitAll()
+
                         // Service-to-service. Shared-secret header, and it
                         // fails closed when the secret is unset — Node holds no
                         // user session, so this cannot be role-gated.

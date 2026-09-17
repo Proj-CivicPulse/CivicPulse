@@ -8,10 +8,11 @@ complaints into **grouped, prioritized, explainable incidents** for city
 officers — using semantic matching (embeddings + pgvector) instead of naive
 keyword or category grouping.
 
-Citizens submit complaints (category, location, description, photo).
-CivicPulse automatically matches related complaints into a single
-**Incident**, computes a transparent priority score, and gives officers a
-dashboard + AI Copilot to act on what matters most.
+Citizens submit complaints (category, location, description). CivicPulse
+automatically matches related complaints into a single **Incident**, computes a
+transparent priority score, and gives officers a dashboard to act on what
+matters most. Photo upload and the officer Copilot are planned, not shipped —
+see the phase list at the end.
 
 ---
 
@@ -23,13 +24,19 @@ citizens, in different words. Without semantic grouping, officers see noise
 instead of incidents. CivicPulse:
 
 - **Matches** semantically similar complaints into incidents using vector
-  embeddings, not just category/ward filters
+  embeddings. Ward, category and status are hard pre-filters: meaning decides
+  the match *within* a category, never across one — see
+  [docs/matching-contract.md](docs/matching-contract.md)
+- **Knows where things are.** 243 real BBMP ward boundaries with PostGIS
+  point-in-polygon, not nearest-centroid guesswork — see
+  [docs/ward-data.md](docs/ward-data.md)
 - **Prioritizes** incidents with a rule-based, explainable formula — every
   priority score comes with human-readable reasons, not a black box
 - **Surfaces** trends and hotspots so officers can act proactively, not just
-  reactively
-- **Answers questions** via a grounded Copilot that only responds from
+  reactively *(Phase 5/7)*
+- **Answers questions** via a grounded Copilot that will respond only from
   CivicPulse's own retrieved data — no hallucinated city information
+  *(Phase 6; the endpoint currently returns 501)*
 
 ---
 
@@ -58,10 +65,16 @@ civicpulse/
 | Embeddings | Google Gemini `gemini-embedding-001` (1536-dim) | Converts complaint text into comparable vectors. Chosen for **multilingual** coverage — complaint text here mixes English, Hindi and Kannada, and one model handles all three |
 | LLM | External LLM API | Powers summaries and the grounded Copilot |
 
-**Deferred until actually needed:** PostGIS (only if ward-boundary lookups
-become a real blocker), real-time WebSocket updates (polling is sufficient
-for MVP), Python/scikit-learn predictive hotspots (only if Phase 7 is
-triggered by sufficient historical data).
+**Promoted from deferred:** PostGIS. It was held back until ward-boundary
+lookups became a real blocker — and they did: nearest-centroid assignment
+disagreed with containment near every irregular ward boundary, and ward is a
+hard constraint on matching, so a wrong ward silently prevents related reports
+from grouping. V13 imports 243 real BBMP boundaries and
+`PostGisWardResolver` is now the default.
+
+**Still deferred until actually needed:** real-time WebSocket updates (polling
+is sufficient for MVP), Python/scikit-learn predictive hotspots (only if Phase 7
+is triggered by sufficient historical data).
 
 ### Service boundaries
 
@@ -282,8 +295,12 @@ full detail):
       health-checked against the database and reachable through the frontend
       proxy, service-boundary decisions written down.
 - [x] Phase 1 — Complaint ingestion. Public anonymous submission, ward derived
-      from coordinates, gap-free reference numbers allocated in-transaction,
-      optional server-side reverse geocoding, officer/citizen read paths.
+      from coordinates by real point-in-polygon against the 243 imported BBMP
+      wards, gap-free reference numbers allocated in-transaction, optional
+      server-side reverse geocoding, officer/citizen read paths, a canonical
+      category registry with aliases so equivalent labels cannot fragment into
+      incidents that never merge, and a validating gate for bulk external feeds
+      (raw preserved, every rejection reasoned, idempotent on re-run).
 - [x] Phase 2 — Embeddings + incident matching. Gemini `gemini-embedding-001`
       (1536-dim, L2-normalised) into pgvector; ward+category+status candidate
       pre-filter then single-linkage cosine similarity; async trigger with a
@@ -293,7 +310,9 @@ full detail):
       evaluates precision/recall/F1 on.
 - [x] Phase 3 — Explainable priority engine. Rule-based score over volume,
       growth, age and geographic spread, stored with the human-readable
-      reasons, recomputed in the same transaction as any membership change.
+      reasons, recomputed in the same transaction as any membership change —
+      plus a scheduled sweep that keeps the time-dependent age term honest for
+      incidents that have gone quiet.
 - [x] Phase 4 — Officer dashboard + map. Ward rail → incident queue → incident
       detail drill-down, Leaflet markers coloured by priority band.
 - [ ] Phase 5 — Trends & analytics

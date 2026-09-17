@@ -84,6 +84,29 @@ if (!DATABASE_URL) throw new Error('DATABASE_URL missing from backend-node/.env'
  */
 const CATEGORIES = ['pothole', 'streetlight', 'garbage', 'water', 'drainage', 'other'];
 
+/**
+ * Alternative SPELLINGS the submit form would never send, rotated through
+ * alongside the canonical code.
+ *
+ * This is the fixture for the category registry (migration V11). Before it
+ * existed, a hotspot seeded as 'Garbage' and 'solid waste' became two incidents
+ * that could never merge, because every consumer compares category with exact
+ * equality. Now every one of these resolves to the same canonical code, so the
+ * hotspot stays one candidate pool — and the seed proves it rather than
+ * asserting it, because a regression here shows up as a hotspot that splits.
+ *
+ * Every value listed is a real alias row. An unlisted spelling is rejected with
+ * a 400 by design, which is also worth seeing once.
+ */
+const CATEGORY_SPELLINGS = {
+    pothole: ['pothole', 'Road Damage', 'road-damage', 'POTHOLES'],
+    streetlight: ['streetlight', 'Street Light', 'street_light', 'Street Lighting'],
+    garbage: ['garbage', 'Solid Waste', 'Uncollected Garbage', 'trash'],
+    water: ['water', 'Water Supply', 'water-leak', 'burst pipe'],
+    drainage: ['drainage', 'Blocked Drain', 'water logging', 'SEWAGE'],
+    other: ['other', 'Miscellaneous', 'general', 'Something Else'],
+};
+
 const DESCRIPTIONS = {
     pothole: [
         'Large pothole in the middle of the road, cars are swerving into oncoming traffic to avoid it.',
@@ -197,7 +220,11 @@ async function main() {
                     method: 'POST',
                     body: JSON.stringify({
                         description: pick(DESCRIPTIONS[category], r),
-                        category,
+                        // Deliberately NOT the canonical code every time: each
+                        // report in a hotspot uses a different accepted
+                        // spelling, so the registry's normalisation is on the
+                        // path every run rather than only in unit tests.
+                        category: pick(CATEGORY_SPELLINGS[category], r),
                         // wardId omitted on purpose: this exercises the real
                         // coordinate-to-ward derivation rather than bypassing it.
                         lat: lat + jitter(),
