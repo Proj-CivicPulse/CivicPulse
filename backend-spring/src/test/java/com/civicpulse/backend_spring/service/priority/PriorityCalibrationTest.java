@@ -456,7 +456,10 @@ class PriorityCalibrationTest {
                     ? now.minusHours(1 + (i % 20))
                     : now.minusDays(Math.max(1, ageDays - (i % Math.max(1, (int) ageDays + 1))));
 
-            Complaint.ComplaintBuilder b = Complaint.builder().createdAt(createdAt);
+            // reportedAt is the axis the formula reads; createdAt matches it
+            // because this corpus models website submissions.
+            Complaint.ComplaintBuilder b =
+                    Complaint.builder().reportedAt(createdAt).createdAt(createdAt);
             if (!missingCoordinates) {
                 b.latitude(12.9716).longitude(77.5946 + (i == members - 1 ? offsetDegrees : 0));
             }

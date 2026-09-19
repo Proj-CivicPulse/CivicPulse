@@ -198,9 +198,18 @@ public class PriorityService {
         return max;
     }
 
+    /**
+     * Members REPORTED since a given instant.
+     *
+     * <p>By {@code reportedAt}, never {@code createdAt}. For imported complaints
+     * those differ by however long the upstream backlog was, and counting by row
+     * creation would score a six-month backlog imported this morning as six
+     * months of reports arriving in one day — a maximal growth term on every
+     * incident it formed.
+     */
     private static long countSince(List<Complaint> complaints, LocalDateTime since) {
         return complaints.stream()
-                .filter(c -> c.getCreatedAt() != null && c.getCreatedAt().isAfter(since))
+                .filter(c -> c.getReportedAt() != null && c.getReportedAt().isAfter(since))
                 .count();
     }
 

@@ -242,6 +242,12 @@ derives it from `lat`/`long`; when neither yields a ward the request is
 rejected rather than guessed at. The reference number is allocated inside the
 creating transaction, so a rollback returns the number instead of burning it.
 
+`POST /complaints` does **not** accept `photoUrl`. It used to, and stored it
+verbatim — which let any caller put an arbitrary URL on a complaint that an
+officer's dashboard would later render. `photoUrl` remains on the RESPONSE
+shape, because that column is where the server-issued upload flow in
+`photo-upload-contract.md` will write an object key it minted itself.
+
 `GET /complaints/{id}` returns **404, not 403**, when a citizen asks for someone
 else complaint. A 403 would confirm the id exists and turn sequential ids into
 an enumeration oracle.
@@ -468,8 +474,9 @@ Keep in sync with `backend-spring/src/main/resources/db/migration/`.
   "status": "open",           // open | in_progress | resolved | closed
   "matchingStatus": "pending", // pending | processing | matched | degraded — Phase 2 pipeline state
   "address": "4th Cross, Jayanagar, Bengaluru",  // null when geocoding is off
-  "photoUrl": "https://…",    // optional
-  "createdAt": "2026-08-29T10:15:00Z",
+  "photoUrl": null,           // read-only; never accepted on create — see below
+  "reportedAt": "2026-08-29T10:15:00Z",  // when it was REPORTED; see note below
+  "createdAt": "2026-08-29T10:15:00Z",   // when the row was created here
   "updatedAt": "2026-08-29T10:15:00Z"
 }
 ```
@@ -532,6 +539,18 @@ was written outside the service.
 citizen My-reports screen can say "Grouped with N other reports".
 `GET /incidents/{id}` is officer-only, so a citizen has no other route to that
 number; it is an aggregate and discloses nothing else about the incident.
+
+**`reportedAt` vs `createdAt` on `Complaint`.** They answer different
+questions and are equal only for a complaint filed through this site:
+
+| Field | Means |
+|---|---|
+| `reportedAt` | when the problem was reported — the upstream timestamp for an imported complaint, which can be months older than the row |
+| `createdAt` | when CivicPulse created the row. Never rewritten, so it is arrival order |
+
+Render "reported N days ago" from `reportedAt`. Anything reasoning about the
+order things reached us wants `createdAt`. The priority formula's
+time-dependent terms read `reportedAt`; the reconcile queue orders by `id`.
 
 **`matchingStatus` on `Complaint`** is the Phase 2 pipeline state:
 
@@ -677,7 +696,11 @@ naive fallback runs, and the reconcile sweep retries once the provider is back.
       invalidate a copied refresh token before it expires. A
       `refresh_tokens` table (jti + revoked_at) is the fix if the team wants
       real logout-everywhere.
-- [ ] **Photo upload.** Direct-to-storage (client sends `photoUrl`, what the
-      frontend scaffold assumes) vs. a multipart endpoint on Spring.
+- [x] **Photo upload.** **Decided: direct-to-storage with a SERVER-ISSUED
+      upload URL** (intent -> direct PUT -> confirm). Neither original option
+      was right: multipart holds a request thread for the length of every
+      upload, and a caller-supplied `photoUrl` lets anyone put arbitrary content
+      in front of an officer — that field has been removed from
+      `POST /complaints`. Not implemented; see `photo-upload-contract.md`.
 
 _Living document — update it in the same PR as any cross-service change._

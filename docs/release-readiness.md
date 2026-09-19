@@ -1,6 +1,7 @@
 # Release Readiness Audit
 
-**Audited:** 2026-09-17 · **Target:** backend-spring, backend-node, frontend
+**Audited:** 2026-09-17 · **Re-audited after remediation:** 2026-09-19
+**Target:** backend-spring, backend-node, frontend
 **Verdict:** **GO — and deploy urgently.** Production is already degraded
 because the database schema shipped ahead of the application code. Deploying is
 the remedy, not the risk. See BLOCKER-1.
@@ -95,8 +96,8 @@ Statuses are used strictly:
 - **Status:** RESOLVED
 - **Files:** `V15__ingestion_gate.sql`; `dto/ingest/ExternalComplaint.java`, `IngestionReport.java`; `service/ingest/RejectionReason.java`, `IngestionValidator.java`, `IngestionRecordProcessor.java`, `IngestionService.java`; `controller/IngestionController.java`; `entity/IngestionBatch.java`, `IngestionRecord.java`; `enums/IngestionOutcome.java`; `repository/IngestionBatchRepository.java`, `IngestionRecordRepository.java`, `ComplaintRepository.java`; `entity/Complaint.java`; `scripts/verify-ingestion.mjs`
 - **Proof:** `./mvnw test -Dtest='IngestionValidatorTest,IngestionServiceTest'` → 29 pass. `node scripts/verify-ingestion.mjs` against the running app → **ALL CHECKS PASSED**.
-- **Residual risk:** **See ISSUE-01-of-the-verification-list below (`created_at` conflation).** Also: no feed is configured, so this subsystem is unexercised by any real publisher.
-- **Blocks deploy:** NO (no feed configured). **YES before the first real import.**
+- **Residual risk:** No feed is configured, so this subsystem is unexercised by any real publisher. The `created_at` conflation that made a first import dangerous is fixed (§3); the remaining unknown is how a real publisher's data behaves, which only a real publisher can answer.
+- **Blocks deploy:** NO
 
 ### ISSUE-11 — External / internal ward ID governance
 - **Status:** RESOLVED
@@ -146,21 +147,21 @@ Statuses are used strictly:
 
 | # | Check | Result | Evidence |
 |---|---|---|---|
-| 1 | Upstream report time stored **separately** from `@CreationTimestamp` | ❌ **NO** | No `reported_at` column exists. `created_at` is **overwritten** via `ComplaintRepository.backdateCreatedAt`. See §3. |
+| 1 | Upstream report time stored **separately** from `@CreationTimestamp` | ✅ **YES** *(fixed 2026-09-19)* | V16 adds `complaints.reported_at`, NOT NULL, backfilled exactly. `created_at` is no longer rewritten and `backdateCreatedAt` is gone. `ReconcileOrderingTest.theTwoTimestampsStayIndependent` |
 | 2 | Imported complaints preserve original report time | ✅ YES | `verify-ingestion.mjs`: `created_at` = `2026-09-10 08:30:00`, not the import moment |
 | 3 | V14/V15 compatible with the **currently deployed** app | ⚠️ **V14/V15 yes — V13 NO** | V14/V15 are purely additive. V13 broke the deployed app: see **BLOCKER-1** |
 | 4 | `WARD_RESOLVER=postgis` read at runtime | ✅ YES | `WardResolverSelectionTest` (5 tests) + live discriminating probe |
 | 5 | `PostGisWardResolver` performs `ST_Contains` | ✅ YES | `WardRepository.findContaining` native query; live probe returned containment answers |
 | 6 | Centroid resolver only as explicit fallback | ✅ YES | `@ConditionalOnProperty(havingValue="centroid")`, no `matchIfMissing`; test asserts the bean is **absent** under postgis |
 | 7 | All 243 BBMP wards imported | ✅ YES | `verify-ward-import.mjs`: 243, codes 1–243 no gaps, all unique |
-| 8 | Invalid geometries repaired, area change reported | ✅ YES (with caveat) | 5 repaired, **0.0000%** change; migration aborts above 0.5%. Caveat: reported as a migration-time `RAISE NOTICE`, **not persisted** — re-reading it later means re-reading deploy logs |
+| 8 | Invalid geometries repaired, area change reported | ✅ YES *(caveat closed 2026-09-19)* | 5 repaired, **0.0000%** change; migration aborts above 0.5%. Now **persisted**: V17 creates `dataset_validations` and records 5 checks for the ward import; the generator writes its own rows on any future re-import |
 | 9 | GeoJSON extra-ring interpretation correct | ✅ YES | Wards 1/34/206 kept 2 parts, ward 105 kept **4**, ward 6 kept its enclave as a hole |
 | 10 | Missing LGD codes stay null and are reported | ✅ YES | 45 null, surfaced by `ward_external_ids WHERE lgd_unmapped` |
 | 11 | Ingestion idempotent on `source` + `sourceRecordId` | ✅ YES | Re-running the identical batch: `accepted: 0`, table did not grow |
 | 12 | Each record in its **own** transaction | ✅ YES | `IngestionServiceTest.oneThrowingRecordDoesNotStopTheBatch` — record 5 of 10 throws, all 10 still processed; plus a structural assertion that `process`/`recordFailure` are `REQUIRES_NEW` on a **separate bean** and the batch loop holds no transaction |
 | 13 | Rejected records retain **all** reasons | ✅ YES | Multiply-broken record recorded **6** reasons, not 1; `ingestion_rejections` view groups 9 distinct faults |
 | 14 | `ObjectMapper` config introduces no duplicate beans | ✅ YES | **No `@Bean ObjectMapper` exists anywhere.** Fixed during this audit: the hash mapper was on Jackson 2, present only *transitively* via `jjwt-jackson` — now on the app's own Jackson 3, as a private static field, not a bean |
-| 15 | Photo upload fully documented or explicitly deferred | ✅ YES | `photo-upload-contract.md` marked `STATUS: DEFERRED`, §8 documents the live `photoUrl` defect |
+| 15 | Photo upload fully documented or explicitly deferred | ✅ YES *(defect closed 2026-09-19)* | `photo-upload-contract.md` marked `STATUS: DEFERRED`. The caller-supplied `photoUrl` is no longer accepted on `POST /complaints` at all — field removed from the DTO, the service and the frontend request type |
 | 16 | Node matcher spatial/temporal responsibilities documented | ✅ YES | `matching-contract.md` §2 — ward/category/status constrained, distance/time explicitly **not** |
 | 17 | 10-minute rule implemented or removed | ✅ N/A | Never existed in this codebase; stated in `matching-contract.md` §1 |
 | 18 | Priority refresh behaviour explicitly defined | ✅ YES | `service-boundaries.md` decision 1; config in `application.yaml`; **observed running** |
@@ -169,31 +170,67 @@ Statuses are used strictly:
 
 ---
 
-## 3. The one failed check: `created_at` conflation
+## 3. Remediation since the first audit (2026-09-19)
 
-`complaints.created_at` answers two different questions depending on how the row
-arrived — report time for ingested rows, row-creation time for submitted ones.
-The import moment is not lost (`ingestion_records.created_at` holds it) but it is
-a join away rather than a column away.
+Everything the first pass left open and actionable has been closed. What
+remains open is listed in §7 and is either someone else's action or new feature
+work.
 
-**Concrete cost, and it is not hypothetical.**
-`ComplaintRepository.findReconcileCandidates` orders by `createdAt asc`. A
-backdated import therefore lands at the **front** of the reconcile queue, ahead
-of complaints filed this morning. At the default 25 records per 60-second sweep,
-importing 10,000 backdated complaints delays semantic matching of new citizen
-submissions by roughly **seven hours**. They stay visible throughout (the naive
-fallback groups them) but remain `DEGRADED`.
+**`created_at` conflation — fixed.** V16 adds `complaints.reported_at`
+(NOT NULL, backfilled from `created_at`, which was exact because every existing
+row was a website submission). `created_at` is never rewritten;
+`backdateCreatedAt` is deleted. `PriorityService` counts growth by
+`reported_at`; the incident chronology orders by it.
 
-**Not a blocker for this release** — no feed is configured and
-`ingestion_records` is empty. **It is a blocker for the first real import.**
+**Reconcile starvation — fixed.** The sweep orders by `id`, which is arrival
+order and cannot be influenced by anything a caller sends.
+`ReconcileOrderingTest` runs against the real database and proves a complaint
+filed five minutes ago is processed before an import carrying a six-month-old
+`reported_at`, and that a page of five rows with descending reported times still
+comes back in arrival order.
 
-Recommended fix order, documented in `service-boundaries.md`:
-1. Cheap and sufficient: order the reconcile sweep by `id asc`. Arrival order is
-   what that queue wants, and id *is* arrival order. No schema change.
-2. Correct eventual shape: add `reported_at`, backfill from `created_at`, point
-   `PriorityService` and the 24-hour counters at it, stop overwriting.
+**Area-change validation not persisted — fixed.** V17 creates
+`dataset_validations` — a generic per-check record with `status`
+(PASS/WARN/FAIL), `observed`, `threshold` and `detail` — and backfills the ward
+import's five checks. Four are re-derived from current rows rather than
+remembered; the repair-drift row is transcribed from the V13 run and says so,
+because the pre-repair geometry no longer exists. The generator now writes these
+rows itself, so a future re-import records its own quality.
 
----
+Operational query:
+```sql
+SELECT check_name, status, observed, threshold, unit
+FROM dataset_validations WHERE status <> 'PASS';
+-- currently one row: lgd-code-coverage, WARN, 45 wards without an LGD code
+```
+
+**`photoUrl` hole — closed.** Removed from `CreateComplaintRequest`,
+`ComplaintService.create` and the frontend's `CreateComplaintInput`. It stays on
+the response shape, since that column is where the server-issued upload flow
+will write a key it minted itself.
+
+**A timezone bug the split exposed — fixed.** `BackendSpringApplication` pinned
+the JVM to UTC in a `@PostConstruct`, which runs *after* Hibernate resolves its
+default zone. `@CreationTimestamp` therefore wrote the machine's local wall
+clock into a zoneless column and `Wire.timestamp()` stamped a `Z` on it: on an
+IST machine every `created_at` was **5.5 hours in the future**, reported that way
+to every client, with nothing failing. It was invisible until `reported_at`
+landed a correct UTC value one second apart from a wrong one. Enforcement moved
+to a `static` initialiser, which runs at class load. Verified: a fresh
+complaint's `reported_at`, `created_at` and the database's own
+`now() at time zone 'UTC'` now agree within one second.
+
+Rows written before the fix keep their old stamps and are left alone
+deliberately — some timestamps in those tables came from SQL `NOW()` and were
+always correct, so a uniform shift would corrupt the rows that were right. They
+are internally consistent (V16 copied `created_at` into `reported_at`), and the
+drift is hours against a formula whose shortest window is 24 hours.
+
+**Generator can no longer clobber an applied migration.** V13 has been applied
+to real databases, and Flyway checksums applied migrations — silently
+regenerating over it would have bricked startup everywhere it had already run.
+The generator now refuses to overwrite an existing file and tells you to pass a
+new migration name above V17.
 
 ## 4. Deployment blockers
 
@@ -359,7 +396,7 @@ Verification standing behind this:
 
 | | |
 |---|---|
-| backend-spring | **169 tests pass** (including the context test, which applies all 15 migrations and validates every entity) |
+| backend-spring | **172 tests pass** (including the context test, which applies all 17 migrations and validates every entity) |
 | backend-node | **23 tests pass**, incl. 5 against real pgvector; typechecks; lints clean |
 | frontend | typechecks, lints, builds |
 | `verify-ward-import.mjs` | ALL CHECKS PASSED |
@@ -375,6 +412,9 @@ unmodified by this work.
 1. Set `WARD_RESOLVER=postgis` in Railway **with** the deploy (BLOCKER-2).
 2. Take the Neon branch first (§6).
 3. Run §5 smoke tests immediately; run the priority-sweep check 10 minutes later.
-4. **Do not enable any external feed** until the `created_at` issue in §3 is
-   addressed — one line, ordering the reconcile sweep by `id`.
-5. **Do not render `photo_url`** anywhere until the photo contract ships.
+4. **Do not render `photo_url`** anywhere until the photo contract ships. The
+   field can no longer be set from outside, but the column is still displayed
+   nowhere by design, and that is the property to guard in review.
+5. When the first external feed is onboarded, run `verify-ingestion.mjs`
+   against it before trusting a full import, and watch `unchanged` on the second
+   run — it should be most of the batch.

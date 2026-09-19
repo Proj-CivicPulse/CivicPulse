@@ -28,14 +28,32 @@
  * and produces no error anywhere.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const INPUT = resolve(process.argv[2] ?? join(HERE, 'BBMP.geojson'));
-const OUTPUT = join(HERE, '..', 'src', 'main', 'resources', 'db', 'migration',
-    'V13__bbmp_ward_boundaries.sql');
+const MIGRATIONS = join(HERE, '..', 'src', 'main', 'resources', 'db', 'migration');
+
+/**
+ * Output migration filename. Defaults to the one this script originally
+ * produced, and REFUSES TO OVERWRITE IT.
+ *
+ * V13 has been applied to real databases. Flyway checksums every applied
+ * migration and refuses to start if one changes on disk, so silently
+ * regenerating over it would not produce a new import — it would brick every
+ * environment that already ran the old one, at startup, with an error that
+ * points at a file rather than at the script that rewrote it.
+ *
+ * A re-import is therefore a NEW migration:
+ *   node scripts/generate-ward-migration.mjs BBMP.geojson V18__bbmp_wards_2027.sql
+ *
+ * It must also be numbered above V17, because the generated SQL writes into
+ * `dataset_validations`, which V17 creates.
+ */
+const OUTPUT_NAME = process.argv[3] ?? 'V13__bbmp_ward_boundaries.sql';
+const OUTPUT = join(MIGRATIONS, OUTPUT_NAME);
 
 /** The delimitation this file describes. Both end up on every imported row. */
 const SOURCE_KEY = 'kgis-bbmp-2022';
@@ -64,6 +82,18 @@ const PRECISION = 6;
 function fail(message) {
     console.error(`REFUSING TO GENERATE: ${message}`);
     process.exit(1);
+}
+
+// Refuse before doing any work, so the failure is obvious rather than a
+// surprise at the end.
+if (existsSync(OUTPUT)) {
+    fail([
+        `${OUTPUT_NAME} already exists.`,
+        '  Applied migrations are checksummed by Flyway, and rewriting one breaks',
+        '  startup in every environment that already ran it.',
+        '  A re-import is a NEW migration, numbered above V17:',
+        `    node scripts/generate-ward-migration.mjs ${process.argv[2] ?? 'BBMP.geojson'} V18__bbmp_wards_2027.sql`,
+    ].join('\n'));
 }
 
 const geo = JSON.parse(readFileSync(INPUT, 'utf8'));
@@ -246,6 +276,10 @@ const sql = `-- BBMP ward boundaries — the authoritative ward universe.
 
 -- Point-in-polygon needs real geometry. V1 already creates an extension
 -- (pgvector), so the role can do this; Neon supports PostGIS ${'3.x'}.
+--
+-- NOTE FOR A FUTURE RE-IMPORT: this migration writes its validation results
+-- into \`dataset_validations\`, created in V17. A regenerated migration must
+-- therefore be numbered ABOVE V17, or those INSERTs have no table to land in.
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 ALTER TABLE wards
@@ -346,6 +380,20 @@ BEGIN
     RAISE NOTICE 'Repaired % invalid ward boundaries; largest area change % percent (ward %)',
         repaired, round((worst * 100)::numeric, 4), worst_ward;
 
+    -- PERSIST it, do not merely announce it. A RAISE NOTICE cannot be queried,
+    -- compared against the next import, or alerted on -- it lives exactly as
+    -- long as whoever happened to be watching the deploy output.
+    -- dataset_validations is created in V17.
+    INSERT INTO dataset_validations
+        (dataset_name, dataset_version, check_name, subject, status,
+         observed, threshold, unit, detail, checked_at)
+    VALUES ('bbmp-wards', '${DATASET_VERSION}', 'repair-area-drift', NULL,
+            CASE WHEN worst > 0.005 THEN 'FAIL' ELSE 'PASS' END,
+            round((worst * 100)::numeric, 6)::double precision, 0.5, 'percent',
+            format('%s invalid boundaries repaired with ST_MakeValid; largest area change on ward %s',
+                   repaired, worst_ward),
+            NOW());
+
     IF worst > 0.005 THEN
         RAISE EXCEPTION 'ST_MakeValid moved a ward boundary by % percent (ward %) — that is a rewrite, not a repair',
             round((worst * 100)::numeric, 3), worst_ward;
@@ -434,6 +482,7 @@ DECLARE
     invalid_geom   INTEGER;
     centroid_out   INTEGER;
     overlap_pairs  INTEGER;
+    lgd_missing    INTEGER;
     stranded       INTEGER;
 BEGIN
     SELECT COUNT(*) INTO ward_count   FROM wards WHERE source = '${SOURCE_KEY}';
@@ -469,6 +518,38 @@ BEGIN
     IF overlap_pairs > 0 THEN
         RAISE WARNING '% ward pairs overlap by more than 1 hectare', overlap_pairs;
     END IF;
+
+    SELECT COUNT(*) INTO lgd_missing FROM wards
+     WHERE source = '${SOURCE_KEY}' AND lgd_ward_code IS NULL;
+
+    -- Every structural check, recorded alongside the repair, so one query
+    -- answers "how good was this import?" without anyone reading a migration.
+    INSERT INTO dataset_validations
+        (dataset_name, dataset_version, check_name, subject, status,
+         observed, threshold, unit, detail, checked_at)
+    VALUES
+        ('bbmp-wards', '${DATASET_VERSION}', 'ward-count', NULL,
+         CASE WHEN ward_count = ${EXPECTED_WARDS} THEN 'PASS' ELSE 'FAIL' END,
+         ward_count, ${EXPECTED_WARDS}, 'wards',
+         'Expected ward count for this delimitation.', NOW()),
+        ('bbmp-wards', '${DATASET_VERSION}', 'geometry-validity', NULL,
+         CASE WHEN invalid_geom = 0 THEN 'PASS' ELSE 'FAIL' END,
+         invalid_geom, 0, 'invalid geometries',
+         'Boundaries PostGIS will not answer ST_Contains on reliably.', NOW()),
+        ('bbmp-wards', '${DATASET_VERSION}', 'centroid-containment', NULL,
+         CASE WHEN centroid_out = 0 THEN 'PASS' ELSE 'FAIL' END,
+         centroid_out, 0, 'centroids outside their ward',
+         'ST_PointOnSurface guarantees this; a failure means the derivation changed.', NOW()),
+        ('bbmp-wards', '${DATASET_VERSION}', 'ward-overlap', NULL,
+         CASE WHEN overlap_pairs = 0 THEN 'PASS' ELSE 'WARN' END,
+         overlap_pairs, 0, 'ward pairs overlapping by >1 hectare',
+         'Sliver overlaps along shared edges are harmless; a large one means two '
+         'wards claim the same streets.', NOW()),
+        ('bbmp-wards', '${DATASET_VERSION}', 'lgd-code-coverage', NULL,
+         CASE WHEN lgd_missing = 0 THEN 'PASS' ELSE 'WARN' END,
+         lgd_missing, 0, 'wards without an LGD code',
+         'Absence is recorded rather than invented; see the ward_external_ids view.',
+         NOW());
 
     SELECT COUNT(*) INTO stranded FROM complaints c
       JOIN wards w ON w.id = c.ward_id WHERE w.source = 'placeholder-v2';

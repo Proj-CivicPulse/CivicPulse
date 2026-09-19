@@ -33,6 +33,44 @@ in it. Those items are marked below with what was actually found.
 
 ---
 
+## If you are holding a document that numbers these differently
+
+A later implementation plan ("CivicPulse — Production Fixes and Explorer
+Implementation Plan") re-numbers the findings from scratch: its ISSUE-01 is
+"Production version mismatch", its ISSUE-13 is "Unsupported photo_url
+rendering". **Those IDs are not these IDs.**
+
+The collision is worse than it looks, because the two schemes agree by accident
+on ISSUE-07 (priority) and so appear compatible. They are not. This register's
+numbering is the one used by `release-readiness.md`, by the code comments that
+cite issue numbers, and by the commit history.
+
+**This table is canonical.** When reading that plan, translate:
+
+| Plan's ID | Its subject | Canonical ID here |
+|---|---|---|
+| ISSUE-01 | Production version mismatch | *(not an audit finding — a deployment state; see release-readiness.md BLOCKER-1)* |
+| ISSUE-02 / 03 | Legacy ward resolver, retired ward exposure | ISSUE-05, ISSUE-06 |
+| ISSUE-04 | Reconciliation ordering | *(found during the release audit, not in the original 16; fixed in V16)* |
+| ISSUE-05 | Missing timestamp separation | *(same — fixed in V16)* |
+| ISSUE-06 | Non-persisted area validation | *(same — fixed in V17)* |
+| ISSUE-07 | Priority computation job | ISSUE-07 *(agrees, by coincidence)* |
+| ISSUE-08 | Hash mapper stability | *(found during the release audit)* |
+| ISSUE-09 | LGD mapping gaps | ISSUE-11 |
+| ISSUE-10 | Category inconsistencies | ISSUE-03 / ISSUE-04 |
+| ISSUE-11 | Geometry validity | ISSUE-05 |
+| ISSUE-12 | Explorer API contract gaps | *(new feature work, not an audit finding)* |
+| ISSUE-13 | Unsupported photo_url rendering | ISSUE-16 |
+
+That plan also contains three factual errors about this repository, corrected
+here so nobody acts on them: the priority job **is** already scheduled
+(`PriorityRefreshJob`, `@Scheduled`); its suggested monitoring query references
+`incidents.resolved_at`, **which does not exist** (status is an enum); and it
+mandates `npm test` for the frontend, which **has no test script** — the real
+gates are `npx tsc --noEmit`, `npm run lint`, `npm run build`.
+
+---
+
 ## The data defects found along the way
 
 Four faults that no amount of code review would have surfaced, because they only

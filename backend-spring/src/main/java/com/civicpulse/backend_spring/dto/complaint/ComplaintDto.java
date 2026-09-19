@@ -62,6 +62,16 @@ public class ComplaintDto {
     /** Human-readable location. Null when geocoding is disabled. */
     private final String address;
     private final String photoUrl;
+
+    /**
+     * When the problem was reported. Equal to {@code createdAt} for a website
+     * submission; the upstream timestamp for an imported complaint, which may be
+     * far older than the row. Clients showing "reported N days ago" want this
+     * one; anything reasoning about arrival order wants {@code createdAt}.
+     */
+    private final String reportedAt;
+
+    /** When CivicPulse created the row. Never rewritten. */
     private final String createdAt;
     private final String updatedAt;
 
@@ -83,6 +93,7 @@ public class ComplaintDto {
                 Wire.enumValue(complaint.getMatchingStatus()),
                 complaint.getAddress(),
                 complaint.getPhotoUrl(),
+                Wire.timestamp(complaint.getReportedAt()),
                 Wire.timestamp(complaint.getCreatedAt()),
                 Wire.timestamp(complaint.getUpdatedAt())
         );

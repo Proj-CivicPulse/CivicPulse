@@ -178,7 +178,7 @@ public class IncidentAttachmentService {
     @Transactional
     public void recompute(Incident incident) {
         List<Complaint> members =
-                complaintRepository.findByIncidentIdOrderByCreatedAtAsc(incident.getId());
+                complaintRepository.findByIncidentIdOrderByReportedAtAsc(incident.getId());
 
         // Counted from scratch, never count+1, so a retried callback cannot
         // inflate the total.

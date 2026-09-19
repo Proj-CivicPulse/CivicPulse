@@ -127,9 +127,10 @@ async function seedComplaint(
     const row = await c.query<{ id: string }>(
         `INSERT INTO complaints
            (ward_id, incident_id, description, category, latitude, longitude, status,
-            reference_no, matching_status, embedding, created_at, updated_at)
+            reference_no, matching_status, embedding, created_at, updated_at, reported_at)
          VALUES ($1, $2, 'linkage probe', 'pothole', 12.9716, 77.5946, 'OPEN',
-                 'TEST-' || substr(md5(random()::text), 1, 20), 'MATCHED', $3::vector, NOW(), NOW())
+                 'TEST-' || substr(md5(random()::text), 1, 20), 'MATCHED', $3::vector,
+                 NOW(), NOW(), NOW())
          RETURNING id::text`,
         [opts.wardId, opts.incidentId, literal(unitVectorAtAngle(opts.angle))],
     );
@@ -283,9 +284,10 @@ describe('single-linkage chaining (real pgvector)', () => {
             await c.query(
                 `INSERT INTO complaints (ward_id, incident_id, description, category, latitude,
                                          longitude, status, reference_no, matching_status,
-                                         embedding, created_at, updated_at)
+                                         embedding, created_at, updated_at, reported_at)
                  VALUES ($1, $2, 'linkage probe', 'garbage', 12.9716, 77.5946, 'OPEN',
-                         'TEST-' || substr(md5(random()::text), 1, 20), 'MATCHED', $3::vector, NOW(), NOW())`,
+                         'TEST-' || substr(md5(random()::text), 1, 20), 'MATCHED', $3::vector,
+                         NOW(), NOW(), NOW())`,
                 [wardA, wrongCategoryId, literal(unitVectorAtAngle(0))]);
 
             const newId = await seedComplaint(c, { wardId: wardA, incidentId: null, angle: 0 });

@@ -154,6 +154,23 @@ public class Complaint {
     @Column(name = "matched_at")
     private LocalDateTime matchedAt;
 
+    /**
+     * When the problem was actually reported.
+     *
+     * <p>Equal to {@link #createdAt} for a website submission. For a complaint
+     * imported from an external feed it is the UPSTREAM timestamp, which may be
+     * months older than the row. Every time-dependent term of the priority
+     * formula reads this, never createdAt — otherwise a backlog imported on a
+     * Tuesday looks like it all happened on Tuesday.
+     */
+    @Column(name = "reported_at", nullable = false)
+    private LocalDateTime reportedAt;
+
+    /**
+     * When CivicPulse created this row. Generated, never rewritten, so ordering
+     * by it (or by id) is arrival order — which is what the reconcile queue
+     * needs and what {@link #reportedAt} deliberately is not.
+     */
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

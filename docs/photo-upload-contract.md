@@ -5,13 +5,8 @@
 > release**. The submit form says photo upload is unavailable, and that copy
 > stays until this ships.
 >
-> **One thing here is a live defect, not a deferral.**
-> `CreateComplaintRequest.photoUrl` is still accepted on the public
-> `POST /complaints` and stored verbatim in `complaints.photo_url`. Any caller
-> can therefore store any URL against a complaint. It is currently
-> **unexploitable in practice** — nothing in the frontend renders `photoUrl`, so
-> the value is inert — but it becomes live the moment any UI displays it.
-> See §8.
+> The caller-supplied `photoUrl` hole described in §8 is **now closed** —
+> `POST /complaints` no longer accepts the field at all.
 
 ISSUE-16's instruction was to **define the media contract before implementing or
 exposing the feature as complete**. This is that definition.
@@ -35,8 +30,8 @@ two options as originally framed is right, and the reason matters.
   length of the upload; a hundred concurrent reports do that a hundred times.
   The service is a small container behind a platform with request timeouts, and
   image bytes are the one payload it has no reason to touch.
-- **Client sends an arbitrary `photoUrl`** — which is what the DTO accepts
-  today — is worse, and is the reason this must not ship as-is. It lets any
+- **Client sends an arbitrary `photoUrl`** — which the DTO accepted until this
+  was closed (§8) — is worse. It let any
   caller store any URL against a complaint. That URL is then rendered in an
   officer's dashboard. It is an SSRF vector if the server ever fetches it, a
   tracking pixel if it does not, and a way to put arbitrary third-party content
@@ -65,9 +60,9 @@ that uploads something other than what it declared is never caught. Step 3 is
 where the server checks the object is there, is the size and type it permitted,
 and only then writes anything to the complaint.
 
-**`photo_url` stops being caller-supplied.** `CreateComplaintRequest.photoUrl`
-must be removed from the public API at the same time this ships. Leaving both
-paths open leaves the hole this design exists to close.
+**`photo_url` is no longer caller-supplied.** `CreateComplaintRequest.photoUrl`
+has already been removed (§8), so the confirm step above will be the only way a
+value reaches that column. Do not reintroduce the field alongside it.
 
 ---
 
@@ -161,39 +156,24 @@ connection and an unspecified one produces a form that silently loses a report.
 
 ---
 
-## 8. The one live defect: caller-supplied `photoUrl`
+## 8. The caller-supplied `photoUrl` hole — CLOSED
 
-**What it is.** `POST /complaints` accepts a `photoUrl` string and stores it
-unchanged. Nothing validates it, and nothing issued it.
-
-**Why it is not exploitable today.** No frontend code renders `photoUrl` — it
-exists in `complaint.service.ts` as a type and nowhere else. A stored URL is
-inert text. This was verified, not assumed:
-
-```bash
-grep -rn "photoUrl" frontend/src --include=*.tsx   # no render sites
-```
-
-**What makes it live.** The first UI that displays it. At that moment a
-caller-supplied URL becomes: a tracking pixel that reports an officer's IP and
-user-agent to a third party; arbitrary third-party imagery shown inside the
-officer dashboard; and, if any server-side code ever fetches it (thumbnailing,
-EXIF stripping, virus scanning — all plausible next steps), an SSRF vector
+**What it was.** `POST /complaints` accepted a `photoUrl` string and stored it
+unchanged. Nothing validated it, and nothing had issued it. The first UI to
+render it would have turned that into a tracking pixel reporting an officer's IP
+to a third party, arbitrary imagery inside the dashboard, and — the moment any
+server-side code fetched it for thumbnailing or EXIF stripping — an SSRF vector
 pointed at the platform's internal network.
 
-**Decision.** Removing the field now is a public API change for a field nothing
-uses, made under time pressure before a release. It is not removed in this
-release. Instead:
+**What changed.** The field is gone from `CreateComplaintRequest`,
+`ComplaintService.create` no longer copies it, and it is gone from the
+frontend's `CreateComplaintInput`. `complaints.photo_url` remains in the schema
+and on the response DTO — it is where §2's confirm step will write the object
+key — but nothing can now put a value there from outside.
 
-- **It is a release-blocking prerequisite of the photo feature, not of this
-  deploy.** `CreateComplaintRequest.photoUrl` and `ComplaintService`'s use of it
-  must be deleted in the same change that adds the intent/confirm endpoints of
-  §2. Shipping the upload flow while the old field remains open leaves the hole
-  wide and adds a second way in.
-- **Nothing may render `photo_url` until then.** That is the property keeping
-  this inert, and it is the one to guard in review.
+**Why it cost nothing.** No client ever sent it. The submit form has always said
+photo upload is unavailable, so removing the field broke no caller.
 
-**If you want it closed sooner** it is a three-line change — drop the field from
-the DTO, drop `.photoUrl(request.getPhotoUrl())` from `ComplaintService.create`,
-drop it from the frontend's request type — and costs nothing, because no client
-sends it.
+**What still holds.** Nothing may render `photo_url` until §2 ships. That is the
+property that kept this inert while the field was open, and it is still the one
+to guard in review.

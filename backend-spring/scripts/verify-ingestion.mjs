@@ -159,16 +159,25 @@ check('both landed in real BBMP wards',
     wards.rows.map((r) => `${r.code} ${r.name}`).join(' | '));
 
 console.log('\nUpstream timestamps kept, not overwritten with import time');
-// created_at::text, NOT the driver's Date. `timestamp without time zone` is
-// parsed by node-postgres in the PROCESS's local zone, so a correct 08:30 reads
-// back as 03:00Z on a machine set to IST — which looks exactly like the bug
-// this check exists to catch. Comparing the raw text removes the ambiguity.
+// ::text, NOT the driver's Date. `timestamp without time zone` is parsed by
+// node-postgres in the PROCESS's local zone, so a correct 08:30 reads back as
+// 03:00Z on a machine set to IST — which looks exactly like a bug. Comparing
+// the raw text removes the ambiguity.
 const times = await pool.query(
-    `SELECT created_at::text AS stored FROM complaints
-     WHERE source = $1 AND source_record_id = 'P-001'`, [SOURCE]);
-check('created_at is the upstream reported time, not the import moment',
-    times.rows[0].stored.startsWith('2026-09-10 08:30'),
-    times.rows[0].stored);
+    `SELECT reported_at::text AS reported,
+            created_at::text  AS created,
+            (created_at > NOW() - INTERVAL '10 minutes') AS created_recently
+     FROM complaints WHERE source = $1 AND source_record_id = 'P-001'`, [SOURCE]);
+
+check('reported_at carries the UPSTREAM report time',
+    times.rows[0].reported.startsWith('2026-09-10 08:30'), times.rows[0].reported);
+
+// The other half, and the one that used to be wrong: created_at must be the
+// IMPORT moment. When these shared a column, a backdated import made every row
+// look like it arrived months ago — which inverted the reconcile queue.
+check('created_at is the import moment, NOT the upstream time',
+    times.rows[0].created_recently === true && !times.rows[0].created.startsWith('2026-09-10'),
+    times.rows[0].created);
 
 console.log('\nBatch 2 — the same file again (idempotency)');
 const report2 = await ingest(batch1);

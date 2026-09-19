@@ -7,7 +7,6 @@ import com.civicpulse.backend_spring.repository.projection.CategoryCountRow;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -29,28 +28,6 @@ public interface ComplaintRepository
      */
     Optional<Complaint> findBySourceAndSourceRecordId(String source, String sourceRecordId);
 
-    /**
-     * Overwrites {@code created_at} with the time the report was actually made
-     * upstream.
-     *
-     * <p>Needed because {@code Complaint.createdAt} carries Hibernate's
-     * {@code @CreationTimestamp}, which GENERATES the value on insert and
-     * silently discards anything the caller set. For a complaint typed into the
-     * website that is exactly right. For one imported from a feed it is wrong in
-     * a way nothing downstream can detect: a six-month backlog imported on
-     * Tuesday would look like it all arrived on Tuesday, handing every one of
-     * those incidents a maximal growth score and a zero age.
-     *
-     * <p>A NATIVE statement, and deliberately so — the mapping says this column
-     * is generated and not updatable, and going around that should look like
-     * going around it rather than like an ordinary save. {@code seed-dev-data.mjs}
-     * backdates in SQL for the same reason.
-     */
-    @Modifying
-    @Query(value = "UPDATE complaints SET created_at = :reportedAt WHERE id = :id",
-            nativeQuery = true)
-    void backdateCreatedAt(@Param("id") Long id, @Param("reportedAt") LocalDateTime reportedAt);
-
     List<Complaint> findByUserId(Long userId);
 
     List<Complaint> findByWardId(Long wardId);
@@ -62,8 +39,15 @@ public interface ComplaintRepository
     /** Newest first — the order My reports renders in. */
     List<Complaint> findByUserIdOrderByCreatedAtDesc(Long userId);
 
-    /** Oldest first: an incident's reports read as a chronology. */
-    List<Complaint> findByIncidentIdOrderByCreatedAtAsc(Long incidentId);
+    /**
+     * Oldest first: an incident's reports read as a chronology.
+     *
+     * <p>By REPORTED time, not row-creation time. For an incident containing
+     * imported reports those orders differ, and the chronology a person wants
+     * is the order the problems were reported in, not the order we happened to
+     * learn about them.
+     */
+    List<Complaint> findByIncidentIdOrderByReportedAtAsc(Long incidentId);
 
     long countByStatus(ComplaintStatus status);
 
@@ -95,8 +79,13 @@ public interface ComplaintRepository
     /**
      * The reconcile sweep's candidate set: complaints the semantic pipeline has
      * not settled — PENDING or DEGRADED outright, plus PROCESSING rows whose
-     * claim has gone stale (Node crashed mid-run). Oldest first, so the backlog
-     * drains in arrival order.
+     * claim has gone stale (Node crashed mid-run).
+     *
+     * <p>Ordered by {@code id}, which IS arrival order and cannot be influenced
+     * by anything a caller sends. Ordering by a timestamp a source supplies
+     * would let a backdated import jump the queue ahead of complaints a
+     * resident filed this morning — at 25 records a minute, a 10,000-row
+     * backlog would delay live submissions by hours while they sat DEGRADED.
      *
      * <p>{@code staleBefore} is only a filter here — backend-node's compare-and-swap
      * claim is the actual authority on whether a stale row may be re-taken, so a
@@ -109,7 +98,7 @@ public interface ComplaintRepository
                                        com.civicpulse.backend_spring.enums.MatchingStatus.DEGRADED)
                or (c.matchingStatus = com.civicpulse.backend_spring.enums.MatchingStatus.PROCESSING
                    and c.updatedAt < :staleBefore)
-            order by c.createdAt asc
+            order by c.id asc
             """)
     List<Complaint> findReconcileCandidates(
             @Param("staleBefore") LocalDateTime staleBefore, Pageable page);

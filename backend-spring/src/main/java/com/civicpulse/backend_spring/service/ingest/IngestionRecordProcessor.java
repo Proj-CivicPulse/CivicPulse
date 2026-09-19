@@ -138,19 +138,7 @@ public class IngestionRecordProcessor {
                 .referenceNo(referenceNumberService.allocate(valid.ward()))
                 .build(), valid);
 
-        Complaint saved = complaintRepository.saveAndFlush(complaint);
-
-        // created_at must carry the UPSTREAM report time, not the import moment.
-        // Setting it on the entity does NOT work: @CreationTimestamp generates
-        // the value on insert and discards whatever was there. So the row is
-        // inserted first and corrected here, inside the same transaction.
-        //
-        // This is not cosmetic. Without it a six-month backlog imported on a
-        // Tuesday looks like it all arrived on Tuesday: every incident gets a
-        // zero age and a maximal 24-hour growth score, and the entire officer
-        // queue inverts on import day.
-        complaintRepository.backdateCreatedAt(saved.getId(), valid.reportedAt());
-        saved.setCreatedAt(valid.reportedAt());
+        Complaint saved = complaintRepository.save(complaint);
 
         // The same event the public submit path fires, so ingested complaints
         // run through the identical matching pipeline. An ingestion-only
@@ -177,6 +165,12 @@ public class IngestionRecordProcessor {
     }
 
     private Complaint applyTo(Complaint complaint, IngestionValidator.Validated valid) {
+        // The UPSTREAM report time. created_at stays what Hibernate generates —
+        // the moment we imported the row — so the two facts no longer fight over
+        // one column. Without this split, a six-month backlog imported on a
+        // Tuesday looks like it all happened on Tuesday and every resulting
+        // incident gets a maximal 24-hour growth score.
+        complaint.setReportedAt(valid.reportedAt());
         complaint.setTitle(valid.title());
         complaint.setDescription(valid.description());
         // Canonical code stored, raw spelling preserved — identical to the

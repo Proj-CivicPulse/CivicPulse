@@ -25,6 +25,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -68,8 +69,12 @@ public class ComplaintService {
                 .sourceCategory(request.getCategory())
                 .latitude(request.getLat())
                 .longitude(request.getLng())
-                .photoUrl(request.getPhotoUrl())
                 .status(ComplaintStatus.OPEN)
+                // Same instant as created_at for a website submission -- the
+                // person is reporting it now. Set explicitly rather than left
+                // to Hibernate, because reported_at is NOT generated: for an
+                // imported complaint it carries the upstream time instead.
+                .reportedAt(LocalDateTime.now())
                 // Best-effort: empty when geocoding is off, the point has no
                 // street address, or the provider is unreachable. A report
                 // without an address is still a perfectly good report.

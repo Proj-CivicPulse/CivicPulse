@@ -70,6 +70,13 @@ export interface Complaint {
      */
     matchingStatus: MatchingStatus;
     photoUrl?: string;
+    /**
+     * When the problem was reported. Equal to createdAt for a complaint filed
+     * through this site; the upstream timestamp for an imported one, which can
+     * be far older than the row. Render this for "reported N days ago".
+     */
+    reportedAt: string;
+    /** When the row was created here. Use for arrival order, not for age. */
     createdAt: string;
     updatedAt: string;
 }
@@ -86,13 +93,10 @@ export interface CreateComplaintInput {
     wardId?: string;
     lat: number;
     long: number;
-    /**
-     * The upload mechanism is still an open decision in docs/endpoints.md
-     * (direct-to-storage URL vs. a multipart endpoint on Spring). No storage
-     * provider is configured, so the submit form ships this block disabled
-     * rather than shipping a fake uploader.
-     */
-    photoUrl?: string;
+    // No photoUrl. The server no longer accepts one on create: a caller-supplied
+    // URL ends up rendered in an officer's dashboard, which makes it a tracking
+    // pixel at best. Photos will arrive through the server-issued
+    // intent/confirm flow in docs/photo-upload-contract.md.
 }
 
 export interface ComplaintFilters {

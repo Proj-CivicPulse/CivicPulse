@@ -49,6 +49,11 @@ public class CreateComplaintRequest {
     @JsonProperty("long")
     private Double lng;
 
-    @Size(max = 1024)
-    private String photoUrl;
+    // photoUrl is DELIBERATELY ABSENT. It used to be accepted here and stored
+    // verbatim, which let any caller put an arbitrary URL on a complaint that an
+    // officer's dashboard would later render -- a tracking pixel at best, an
+    // SSRF vector the moment anything server-side fetched it. Photos will arrive
+    // through the intent/confirm flow in docs/photo-upload-contract.md, where
+    // the server issues the upload target and records only a key it minted
+    // itself. Nothing ever sent this field, so removing it breaks no client.
 }

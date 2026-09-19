@@ -38,6 +38,7 @@ import static org.mockito.Mockito.when;
  * {@code complaints} with a broken ward or a fabricated timestamp corrupts
  * matching and every priority score derived from it, invisibly.
  */
+@SuppressWarnings("unused")
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class IngestionValidatorTest {

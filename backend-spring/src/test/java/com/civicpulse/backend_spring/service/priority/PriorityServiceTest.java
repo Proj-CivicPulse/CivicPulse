@@ -247,14 +247,21 @@ class PriorityServiceTest {
         return incident;
     }
 
-    private static Complaint complaint(LocalDateTime createdAt, double lat, double lon) {
+    /**
+     * @param reportedAt when the problem was REPORTED, which is the axis every
+     *                   time-dependent term of the formula reads. createdAt is
+     *                   set to the same instant because these fixtures stand in
+     *                   for website submissions, where the two coincide.
+     */
+    private static Complaint complaint(LocalDateTime reportedAt, double lat, double lon) {
         Complaint complaint = Complaint.builder()
                 .description("test")
                 .category("pothole")
                 .latitude(lat)
                 .longitude(lon)
+                .reportedAt(reportedAt)
                 .build();
-        complaint.setCreatedAt(createdAt);
+        complaint.setCreatedAt(reportedAt);
         return complaint;
     }
 }

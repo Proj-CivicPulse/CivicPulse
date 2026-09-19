@@ -139,7 +139,7 @@ class PriorityServiceBenchmarkTest {
         List<Complaint> members = new ArrayList<>();
         members.add(complaint(12.9716, 77.5946, now));
         members.add(complaint(12.9717, 77.5947, now));
-        members.add(Complaint.builder().createdAt(now).build()); // no coordinates
+        members.add(Complaint.builder().reportedAt(now).createdAt(now).build()); // no coordinates
 
         PriorityResult result = service.compute(incident(now), members, now);
 
@@ -165,6 +165,7 @@ class PriorityServiceBenchmarkTest {
     }
 
     private static Complaint complaint(double lat, double lon, LocalDateTime createdAt) {
-        return Complaint.builder().latitude(lat).longitude(lon).createdAt(createdAt).build();
+        return Complaint.builder().latitude(lat).longitude(lon)
+                .reportedAt(createdAt).createdAt(createdAt).build();
     }
 }

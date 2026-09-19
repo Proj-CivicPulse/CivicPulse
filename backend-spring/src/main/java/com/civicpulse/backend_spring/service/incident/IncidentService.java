@@ -66,7 +66,7 @@ public class IncidentService {
         // Check the incident exists first: an empty list would otherwise be
         // ambiguous between "no reports" and "no such incident".
         requireIncident(id);
-        return complaintRepository.findByIncidentIdOrderByCreatedAtAsc(id).stream()
+        return complaintRepository.findByIncidentIdOrderByReportedAtAsc(id).stream()
                 .map(ComplaintDto::from)
                 .toList();
     }

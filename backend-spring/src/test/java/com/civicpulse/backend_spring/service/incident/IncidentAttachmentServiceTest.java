@@ -25,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -80,7 +81,7 @@ class IncidentAttachmentServiceTest {
     void semanticCreate() {
         Complaint complaint = complaint(1L, null);
         when(complaintRepository.findById(1L)).thenReturn(Optional.of(complaint));
-        when(complaintRepository.findByIncidentIdOrderByCreatedAtAsc(100L))
+        when(complaintRepository.findByIncidentIdOrderByReportedAtAsc(100L))
                 .thenReturn(List.of(complaint));
 
         AttachResponse response = service.attach(1L, MatchDecision.semantic(
@@ -109,7 +110,7 @@ class IncidentAttachmentServiceTest {
         Incident existing = incident(55L);
         when(complaintRepository.findById(1L)).thenReturn(Optional.of(complaint));
         when(incidentRepository.findById(55L)).thenReturn(Optional.of(existing));
-        when(complaintRepository.findByIncidentIdOrderByCreatedAtAsc(55L)).thenReturn(List.of(complaint));
+        when(complaintRepository.findByIncidentIdOrderByReportedAtAsc(55L)).thenReturn(List.of(complaint));
 
         service.attach(1L, MatchDecision.semantic(55L, 0.88, 4821L, 2, 0.75, "gemini-embedding-001", 1536));
 
@@ -129,7 +130,7 @@ class IncidentAttachmentServiceTest {
         Incident existing = incident(55L);
         when(complaintRepository.findById(1L)).thenReturn(Optional.of(complaint));
         when(incidentRepository.findById(55L)).thenReturn(Optional.of(existing));
-        when(complaintRepository.findByIncidentIdOrderByCreatedAtAsc(55L)).thenReturn(List.of(complaint));
+        when(complaintRepository.findByIncidentIdOrderByReportedAtAsc(55L)).thenReturn(List.of(complaint));
 
         AttachResponse response = service.attach(1L, MatchDecision.naive(55L, 1));
 
@@ -182,7 +183,7 @@ class IncidentAttachmentServiceTest {
         when(complaintRepository.findById(1L)).thenReturn(Optional.of(complaint));
         when(incidentRepository.findById(70L)).thenReturn(Optional.of(target));
         when(incidentRepository.findById(55L)).thenReturn(Optional.of(stale));
-        when(complaintRepository.findByIncidentIdOrderByCreatedAtAsc(70L)).thenReturn(List.of(complaint));
+        when(complaintRepository.findByIncidentIdOrderByReportedAtAsc(70L)).thenReturn(List.of(complaint));
         // the stale incident has no members left after the move
         when(complaintRepository.countByIncidentId(55L)).thenReturn(0L);
 
@@ -209,7 +210,7 @@ class IncidentAttachmentServiceTest {
 
         when(complaintRepository.findById(1L)).thenReturn(Optional.of(complaint));
         when(incidentRepository.findById(55L)).thenReturn(Optional.of(stale));
-        when(complaintRepository.findByIncidentIdOrderByCreatedAtAsc(100L)).thenReturn(List.of(complaint));
+        when(complaintRepository.findByIncidentIdOrderByReportedAtAsc(100L)).thenReturn(List.of(complaint));
         when(complaintRepository.countByIncidentId(55L)).thenReturn(0L);
 
         // incidentId null => the matcher found nothing similar and split it out
@@ -233,8 +234,8 @@ class IncidentAttachmentServiceTest {
         when(complaintRepository.findById(1L)).thenReturn(Optional.of(moved));
         when(incidentRepository.findById(70L)).thenReturn(Optional.of(target));
         when(incidentRepository.findById(55L)).thenReturn(Optional.of(stale));
-        when(complaintRepository.findByIncidentIdOrderByCreatedAtAsc(70L)).thenReturn(List.of(moved));
-        when(complaintRepository.findByIncidentIdOrderByCreatedAtAsc(55L)).thenReturn(List.of(stayed));
+        when(complaintRepository.findByIncidentIdOrderByReportedAtAsc(70L)).thenReturn(List.of(moved));
+        when(complaintRepository.findByIncidentIdOrderByReportedAtAsc(55L)).thenReturn(List.of(stayed));
         when(complaintRepository.countByIncidentId(55L)).thenReturn(1L);
 
         service.attach(1L, MatchDecision.semantic(70L, 0.91, 4821L, 1, 0.75, "gemini-embedding-001", 1536));
@@ -251,7 +252,7 @@ class IncidentAttachmentServiceTest {
         Complaint member = complaint(1L, incident);
         member.setMatchingStatus(MatchingStatus.DEGRADED);
         when(incidentRepository.findById(55L)).thenReturn(Optional.of(incident));
-        when(complaintRepository.findByIncidentIdOrderByCreatedAtAsc(55L)).thenReturn(List.of(member));
+        when(complaintRepository.findByIncidentIdOrderByReportedAtAsc(55L)).thenReturn(List.of(member));
 
         service.recomputeById(55L);
 
@@ -278,6 +279,7 @@ class IncidentAttachmentServiceTest {
                 .longitude(77.5946)
                 .incident(incident)
                 .matchingStatus(MatchingStatus.PENDING)
+                .reportedAt(LocalDateTime.now())
                 .build();
     }
 

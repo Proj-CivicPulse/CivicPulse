@@ -235,43 +235,58 @@ Normalisation reuses `CategoryService` and `WardResolver` rather than
 reimplementing either. A second, ingestion-only set of rules would drift from
 the first, and the drift would be invisible.
 
-### KNOWN LIMITATION: report time and row-creation time share one column
+### Report time and row-creation time are separate columns
 
-`complaints.created_at` is **overwritten** with the upstream report time. There
-is no separate `reported_at` column, so one column now answers two different
-questions depending on how the row arrived:
+`complaints` carries both, and they answer different questions:
 
-| Row origin | `created_at` means |
-|---|---|
-| Public submit form | when the row was created here, which *is* when it was reported |
-| External feed | when it was reported UPSTREAM — the import moment is not on the complaint at all |
+| Column | Means | Written by |
+|---|---|---|
+| `created_at` | when CivicPulse created the row | `@CreationTimestamp`, never rewritten |
+| `reported_at` | when the problem was reported | the write path — `now()` on the public form, the upstream timestamp on an import |
 
-The import moment is not lost: `ingestion_records.created_at` holds it, joined to
-the complaint by `complaint_id`. So nothing is unrecoverable — it is one join
-away rather than one column away.
+They are equal for a website submission and can differ by months for an
+imported one.
 
-**Why it was done this way.** Every consumer of `created_at` — the priority
-formula's age and growth terms, "N new complaints in the last 24 hours", the My
-Reports ordering — wants the REPORT time. A separate `reported_at` would have
-meant auditing and changing each of those, and a consumer missed in that sweep
-would have silently kept using the wrong one.
+**Who reads which, and why it matters.** Every time-dependent term of the
+priority formula reads `reported_at` — counting by row creation would score a
+six-month backlog imported this morning as six months of reports arriving in a
+single day, handing a maximal growth term to every incident it formed. The
+reconcile sweep orders by `id`, which is arrival order and cannot be influenced
+by anything a caller sends; ordering it by any supplied timestamp would let a
+backdated import jump ahead of complaints a resident filed minutes earlier, at
+25 records a minute, for hours. `ReconcileOrderingTest` pins both properties
+against the real database.
 
-**The concrete cost, and it is not hypothetical.**
-`ComplaintRepository.findReconcileCandidates` orders by `createdAt asc`. An
-imported backlog with backdated timestamps therefore lands at the FRONT of the
-reconcile queue, ahead of complaints a resident filed this morning. At the
-default 25 records per 60-second sweep, importing 10,000 backdated complaints
-would delay semantic matching of new citizen submissions by roughly seven hours.
-They stay visible the whole time — the naive fallback still groups them — but
-they stay `DEGRADED` until the backlog drains.
+This was originally built as a single column with `created_at` overwritten on
+import (V15). V16 split them, and the split was done while no feed existed and
+`ingestion_records` was empty — which is what made the backfill exact rather
+than a guess, since every pre-existing row genuinely was reported when it was
+created.
 
-**Before the first real import**, do one of:
+### A timezone bug the split exposed, and what it left behind
 
-1. Add `reported_at`, populate it from `created_at` for every existing row, point
-   `PriorityService` and the "last 24 hours" counters at it, and stop
-   overwriting `created_at`. This is the correct model.
-2. Or, far cheaper: order the reconcile sweep by `id asc` instead of
-   `createdAt asc`. Arrival order is what that queue actually wants, and id is
-   arrival order. This removes the starvation without touching the schema.
+Splitting the columns surfaced something older. `BackendSpringApplication`
+pinned the JVM to UTC in a `@PostConstruct`, which runs **after** Hibernate has
+already resolved its default time zone — so `@CreationTimestamp` kept writing
+the machine's LOCAL wall clock into a zoneless column, and `Wire.timestamp()`
+then stamped a trailing `Z` on it. On an IST machine every `created_at` went in
+**5.5 hours ahead** of the instant it described, and the API reported times in
+the future. Nothing failed; the numbers were simply wrong, and there was nothing
+to compare them against until `reported_at` arrived carrying a correct UTC value
+one second apart from a wrong one.
 
-Option 2 is the recommended first move; option 1 is the right eventual shape.
+The enforcement now lives in a `static` initialiser on the application class,
+which runs at class load — before `SpringApplication.run()` and before the test
+context bootstraps. Verified: a freshly submitted complaint's `reported_at`,
+`created_at` and the database's own `now() at time zone 'UTC'` now agree within
+one second.
+
+**Rows written before the fix keep their old stamps**, roughly 5.5 hours ahead
+on anything created from an IST machine. They are *internally* consistent —
+V16's backfill copied `created_at` into `reported_at`, so the two agree on every
+historical row — and no blanket correction is applied, deliberately: some
+timestamps in those tables were written by migrations using SQL `NOW()`, which
+was always correct UTC, so a uniform shift would corrupt exactly the rows that
+were right. The discrepancy is at most a few hours against a formula whose
+shortest meaningful window is 24 hours, so it changes no score materially.
+Treat absolute timestamps on pre-2026-09-19 rows as approximate.
