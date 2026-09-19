@@ -2,9 +2,11 @@
 
 **Audited:** 2026-09-17 · **Re-audited after remediation:** 2026-09-19
 **Target:** backend-spring, backend-node, frontend
-**Verdict:** **GO — and deploy urgently.** Production is already degraded
-because the database schema shipped ahead of the application code. Deploying is
-the remedy, not the risk. See BLOCKER-1.
+**Deployed and verified:** 2026-09-19
+**Verdict:** **SHIPPED.** Both blockers are cleared; every smoke test in §5
+passes against production. The original verdict, kept for the record, was "GO —
+and deploy urgently", because the schema had shipped ahead of the code and
+production was serving retired placeholder wards. That is resolved — see §8.
 
 Statuses are used strictly:
 
@@ -418,3 +420,70 @@ unmodified by this work.
 5. When the first external feed is onboarded, run `verify-ingestion.mjs`
    against it before trusting a full import, and watch `unchanged` on the second
    run — it should be most of the batch.
+
+---
+
+## 8. Post-deployment verification — 2026-09-19
+
+Run against production after the deploy and the `WARD_RESOLVER` change.
+
+### BLOCKER-1 — CLEARED
+
+| Check | Result |
+|---|---|
+| `/wards` | **243**, zero `LEGACY` / "retired placeholder" entries |
+| `/categories` | **200**, all 8 codes |
+| Unknown category on `POST /complaints` | **400** naming the accepted codes |
+
+### BLOCKER-2 — CLEARED (on the second attempt)
+
+The first check after deploy **failed**: both discriminating probes returned the
+nearest-centroid answer, meaning `WARD_RESOLVER=postgis` was not in effect in
+the running process. It took a redeploy to pick the variable up. Worth
+remembering — on Railway, editing a variable does not restart a running
+container, and the failure is silent: every complaint still gets a ward, just
+the approximate one.
+
+After the redeploy:
+
+| Point | PostGIS | Centroid | Production |
+|---|---|---|---|
+| 12.973256, 77.510895 | 48 Jnana Bharathi | 46 Sir M.V. | **48** ✅ |
+| 13.128979, 77.586145 | 1 Kempegowda | 2 Chowdeswari | **1** ✅ |
+
+Out-of-area refuses everywhere it should: Mysuru, Chennai, Null Island and a
+point just north of the boundary all **404**.
+
+### Write path
+
+One complaint submitted with the alias `"Solid Waste"` and a hostile
+`photoUrl`, then deleted:
+
+```
+category     garbage              (alias normalised)
+referenceNo  CP-2026-W48-00001    (real ward code, no LEGACY)
+wardId       538  -> ward 48 Jnana Bharathi, which is what ST_Contains says
+photoUrl     null                 (the hole is closed — the hostile URL was dropped)
+reportedAt   2026-09-19T07:28:31.044Z
+createdAt    2026-09-19T07:28:31.379Z   (0.33 s apart; 16 s behind the DB's own UTC clock)
+matchingStat MATCHED              (the SEMANTIC matcher ran, not the naive fallback)
+```
+
+The timestamp pair is the timezone fix confirmed in production: before it,
+`created_at` would have been 5.5 hours ahead of the database's own clock.
+
+### Background jobs and services
+
+| Check | Result |
+|---|---|
+| Open incidents lacking `priority_computed_at` | **0 of 31** — the sweep is running |
+| `incident_match_log` rows in the last hour | **0** — the sweep writes no matching decisions |
+| backend-node `/health` | ok |
+| Frontend | 200; `/api/core/categories` returns the registry through the same-origin proxy |
+| `/api/ai/health` | 200 |
+
+### Residue
+
+None. Production is back to its pre-verification baseline: **167 complaints, 31
+incidents**, zero sourced rows, zero empty incidents, zero complaints missing
+`reported_at`.
