@@ -104,6 +104,23 @@ public class Incident {
     @Builder.Default
     private IncidentStatus status = IncidentStatus.OPEN;
 
+    /**
+     * When {@link #status} last entered {@code RESOLVED}; null at every other
+     * status.
+     *
+     * <p>Maintained only by {@code IncidentService.update}, which owns status
+     * transitions. Reopening clears it — a resolution time on an OPEN incident
+     * would be counted by every "resolved in this period" query, and would make
+     * a reopened incident look closed in exactly the reports meant to show it
+     * is not.
+     *
+     * <p>The reason this is a stored column and not a derivation: {@code
+     * updatedAt} moves every time PriorityRefreshJob recomputes a score, so any
+     * resolution metric inferred from it would measure the sweep.
+     */
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
+
     @Column(name = "complaint_count", nullable = false)
     @Builder.Default
     private Integer complaintCount = 1;

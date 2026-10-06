@@ -35,6 +35,15 @@ export interface Incident {
     long: number | null;
     /** Node writes this in Phase 6. Null until then. */
     aiRecommendation: string | null;
+    /**
+     * When this incident was resolved. Null at every other status — including
+     * one that was resolved and then reopened, which has no resolution time.
+     *
+     * Do NOT compute resolution time as `updatedAt - createdAt`: the priority
+     * refresh job touches every open incident every few minutes, so that
+     * subtraction measures the sweep. This field is the only honest answer.
+     */
+    resolvedAt: string | null;
     createdAt: string;
     updatedAt: string;
 }

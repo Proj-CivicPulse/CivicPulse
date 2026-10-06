@@ -500,10 +500,26 @@ Keep in sync with `backend-spring/src/main/resources/db/migration/`.
   "long": 77.5946,
   "aiRecommendation": null,   // written by Node in Phase 6; null until then
   "priorityComputedAt": "…",  // when the score was last DERIVED; null if never
+  "resolvedAt": null,         // set only while status is `resolved`; see below
   "createdAt": "…",
   "updatedAt": "…"
 }
 ```
+
+**`resolvedAt` is maintained with `status`, not alongside it.** It is stamped
+when an incident enters `resolved` and **cleared when it leaves** — a reopened
+incident has no resolution time, because a stamp left behind would be counted by
+every "resolved in this period" query while the problem is demonstrably still
+open. Re-sending `resolved` on an already-resolved incident does not move it, so
+editing a closed incident's summary cannot rewrite when it was closed.
+
+Do not compute resolution time as `updatedAt − createdAt`. `PriorityRefreshJob`
+touches every open incident every few minutes, so that subtraction measures the
+refresh sweep. `resolvedAt` is the only field that answers the question.
+
+Complaints have no equivalent field, deliberately: the incident is the entity
+that gets assigned and closed, and two resolution timestamps would disagree
+whenever a member complaint is resolved inside a still-open incident.
 
 **`priorityComputedAt` is not `updatedAt`.** The priority formula has a
 time-dependent term (age, saturating at 14 days), so a stored score drifts with

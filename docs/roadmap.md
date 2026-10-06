@@ -1,6 +1,11 @@
 # CivicPulse — Implementation Roadmap
 ### Requirement-driven, based on what the project actually needs
 
+> **This document covers the pre-midsem build-out and is kept for its stack
+> rationale.** For what happens next, see
+> [post-midsem-roadmap.md](post-midsem-roadmap.md), which supersedes the phase
+> ordering below.
+
 ---
 
 ## Tech Stack — What's required and why
@@ -12,7 +17,7 @@
 | Database | PostgreSQL | System of record; the Complaint/Incident/Ward/Department relationships are inherently relational |
 | Vector search | pgvector | Core requirement, not optional — semantic incident matching has no other way to compare complaint embeddings |
 | Maps | Leaflet + OpenStreetMap | Free, lightweight, sufficient for markers and basic hotspot display; no licensing overhead |
-| Geospatial | PostGIS | **Deferred.** Only add if ward-boundary lookups become a real blocker — lat/long + ward_id covers P0 needs |
+| Geospatial | PostGIS | **Adopted** (V13, 2026-09). The original deferral held until real ward boundaries arrived; approximating 243 wards by centroid distance put complaints in the wrong ward often enough to matter, so `ST_Contains` is now the authoritative resolver |
 | Auth | JWT | Needed for citizen vs. officer role-based access control |
 | Embeddings | Google Gemini `gemini-embedding-001`, 1536-dim | Required to convert complaint text into comparable vectors. Provider was left open by the project scope; **settled in Phase 2** on multilingual grounds — complaint text here mixes English, Hindi and Kannada |
 | LLM | External LLM API | Needed only for summaries and Copilot — not for structured complaint processing itself |

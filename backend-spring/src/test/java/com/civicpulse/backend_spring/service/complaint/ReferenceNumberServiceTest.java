@@ -41,7 +41,13 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 @Transactional
 class ReferenceNumberServiceTest {
 
-    private static final Pattern FORMAT = Pattern.compile("^CP-\\d{4}-W[A-Za-z0-9]+-\\d{5,}$");
+    /**
+     * The ward code segment permits hyphens because real ward codes contain
+     * them: V13 retired the four original placeholders as {@code LEGACY-1} and
+     * friends, and complaints filed before that still carry their numbers. A
+     * pattern that forbade them would call a correct reference malformed.
+     */
+    private static final Pattern FORMAT = Pattern.compile("^CP-\\d{4}-W[A-Za-z0-9-]+-\\d{5,}$");
 
     @Autowired
     private ReferenceNumberService referenceNumberService;
@@ -53,7 +59,12 @@ class ReferenceNumberServiceTest {
 
     @BeforeEach
     void setUp() {
-        List<Ward> wards = wardRepository.findAllByOrderByIdAsc();
+        // ACTIVE wards only, which is the only kind the write path can reach:
+        // PostGisWardResolver answers from current boundaries and never returns
+        // a retired placeholder. Taking the lowest-id ward unconditionally used
+        // to pick LEGACY-1 — a ward no complaint can be filed against — and
+        // tested allocation against a row production cannot produce.
+        List<Ward> wards = wardRepository.findByActiveTrueOrderByIdAsc();
         assumeTrue(!wards.isEmpty(), "reference data must be seeded");
         ward = wards.getFirst();
     }

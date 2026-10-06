@@ -61,6 +61,17 @@ public class IncidentDto {
      */
     private final String priorityComputedAt;
 
+    /**
+     * When this incident was resolved; null at every other status, including an
+     * incident that was resolved and then reopened.
+     *
+     * Shipped on the response because resolution time is the one operational
+     * metric a client cannot derive: {@code updatedAt} moves on every priority
+     * recompute, so subtracting it from {@code createdAt} would measure the
+     * refresh sweep rather than the work.
+     */
+    private final String resolvedAt;
+
     private final String createdAt;
     private final String updatedAt;
 
@@ -84,6 +95,7 @@ public class IncidentDto {
                 incident.getLongitude(),
                 incident.getAiRecommendation(),
                 Wire.timestamp(incident.getPriorityComputedAt()),
+                Wire.timestamp(incident.getResolvedAt()),
                 Wire.timestamp(incident.getCreatedAt()),
                 Wire.timestamp(incident.getUpdatedAt())
         );

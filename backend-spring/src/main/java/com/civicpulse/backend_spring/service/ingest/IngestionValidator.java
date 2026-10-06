@@ -41,7 +41,6 @@ public class IngestionValidator {
     private static final int MAX_DESCRIPTION = 5000;
     private static final int MAX_TITLE = 255;
     private static final int MAX_SOURCE_RECORD_ID = 128;
-    private static final int MAX_PHOTO_URL = 1024;
 
     /**
      * Timestamp formats accepted, in order.
@@ -74,8 +73,7 @@ public class IngestionValidator {
             double latitude,
             double longitude,
             LocalDateTime reportedAt,
-            ComplaintStatus status,
-            String photoUrl) {
+            ComplaintStatus status) {
     }
 
     public record Result(Validated validated, List<RejectionReason> reasons) {
@@ -112,10 +110,12 @@ public class IngestionValidator {
             reasons.add(RejectionReason.tooLong("title", title.length(), MAX_TITLE));
         }
 
-        String photoUrl = trimToNull(input.getPhotoUrl());
-        if (photoUrl != null && photoUrl.length() > MAX_PHOTO_URL) {
-            reasons.add(RejectionReason.tooLong("photoUrl", photoUrl.length(), MAX_PHOTO_URL));
-        }
+        // photoUrl is NOT validated and NOT carried forward. A feed may send it
+        // and it is preserved verbatim in ingestion_records.raw for audit, but
+        // it never reaches complaints.photo_url: that column takes only a key
+        // the server minted itself (docs/photo-upload-contract.md §2). Rejecting
+        // a record over the length of a field we discard would refuse a usable
+        // report for an irrelevant reason.
 
         Category category = null;
         String rawCategory = trimToNull(input.getCategory());
@@ -172,7 +172,7 @@ public class IngestionValidator {
 
         return new Result(new Validated(
                 sourceRecordId, title, description, category, rawCategory,
-                ward, latitude, longitude, reportedAt, status, photoUrl), List.of());
+                ward, latitude, longitude, reportedAt, status), List.of());
     }
 
     private Double parseCoordinate(

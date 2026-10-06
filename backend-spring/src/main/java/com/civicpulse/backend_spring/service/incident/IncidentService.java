@@ -20,6 +20,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -86,7 +87,9 @@ public class IncidentService {
         Incident incident = requireIncident(id);
 
         if (notBlank(request.getStatus())) {
-            incident.setStatus(Wire.parseEnum(IncidentStatus.class, request.getStatus(), "status"));
+            applyStatus(
+                    incident,
+                    Wire.parseEnum(IncidentStatus.class, request.getStatus(), "status"));
         }
         if (notBlank(request.getTitle())) {
             incident.setTitle(request.getTitle());
@@ -106,6 +109,29 @@ public class IncidentService {
         // judgement about handling, not an input to the model — only membership
         // changes move a score (docs/service-boundaries.md decision 1).
         return IncidentDto.from(incidentRepository.save(incident));
+    }
+
+    /**
+     * The only writer of {@code resolvedAt}, so the column cannot disagree with
+     * the status it describes.
+     *
+     * <p>Re-sending {@code RESOLVED} on an already-resolved incident is
+     * idempotent: an officer correcting the summary of a closed incident must
+     * not move its resolution time, which is what re-stamping on every write
+     * would do. Reopening clears the stamp — see {@link Incident#getResolvedAt}
+     * for why a resolution time on an open incident is worse than none.
+     */
+    private void applyStatus(Incident incident, IncidentStatus next) {
+        boolean wasResolved = incident.getStatus() == IncidentStatus.RESOLVED;
+        boolean isResolved = next == IncidentStatus.RESOLVED;
+
+        if (isResolved && !wasResolved) {
+            incident.setResolvedAt(LocalDateTime.now());
+        } else if (!isResolved && wasResolved) {
+            incident.setResolvedAt(null);
+        }
+
+        incident.setStatus(next);
     }
 
     @Transactional(readOnly = true)

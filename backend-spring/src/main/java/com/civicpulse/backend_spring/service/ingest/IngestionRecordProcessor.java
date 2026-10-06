@@ -181,7 +181,13 @@ public class IngestionRecordProcessor {
         complaint.setLatitude(valid.latitude());
         complaint.setLongitude(valid.longitude());
         complaint.setStatus(valid.status());
-        complaint.setPhotoUrl(valid.photoUrl());
+        // photo_url is deliberately NOT set from the feed. It was, and that left
+        // the hole the public path closed still open here: an upstream URL
+        // stored unchanged and later rendered in an officer's dashboard is a
+        // tracking pixel, and an SSRF vector the moment anything server-side
+        // fetches it. A trusted feed operator is not a trusted feed — the
+        // content comes from whoever filed the report upstream. The URL stays in
+        // ingestion_records.raw, where it is evidence rather than a target.
         if (complaint.getAddress() == null) {
             complaint.setAddress(geocodingService
                     .reverseGeocode(valid.latitude(), valid.longitude()).orElse(null));

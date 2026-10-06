@@ -5,8 +5,9 @@
 > release**. The submit form says photo upload is unavailable, and that copy
 > stays until this ships.
 >
-> The caller-supplied `photoUrl` hole described in §8 is **now closed** —
-> `POST /complaints` no longer accepts the field at all.
+> The caller-supplied `photoUrl` hole described in §8 is **now closed on both
+> write paths** — `POST /complaints` no longer accepts the field, and
+> `/internal/ingest` no longer carries an upstream one into the column.
 
 ISSUE-16's instruction was to **define the media contract before implementing or
 exposing the feature as complete**. This is that definition.
@@ -169,10 +170,32 @@ pointed at the platform's internal network.
 `ComplaintService.create` no longer copies it, and it is gone from the
 frontend's `CreateComplaintInput`. `complaints.photo_url` remains in the schema
 and on the response DTO — it is where §2's confirm step will write the object
-key — but nothing can now put a value there from outside.
+key.
 
-**Why it cost nothing.** No client ever sent it. The submit form has always said
-photo upload is unavailable, so removing the field broke no caller.
+**The ingestion path was missed, and is now closed too.** The first version of
+this section claimed "nothing can now put a value there from outside", and that
+was wrong: `IngestionRecordProcessor` still copied `ExternalComplaint.photoUrl`
+straight into the column, length-checked and otherwise untouched. The public
+path had been closed and the internal one left open, which is the harder of the
+two to notice precisely because it is called "internal".
+
+A trusted feed operator is not a trusted feed. The URL in an imported record was
+written by whoever filed the report upstream, and it was heading for the same
+officer's dashboard with the same consequences — a tracking pixel reporting a
+city employee's IP, arbitrary third-party imagery, and an SSRF target the moment
+anything server-side fetched it. `IngestionValidator.Validated` no longer carries
+the field and the processor no longer sets it.
+
+The field is still **accepted** on the ingest DTO and preserved verbatim in
+`ingestion_records.raw`. That is deliberate: a feed that sends one should not
+have its record rejected, and the URL is useful evidence when reconciling against
+the source. It is evidence there, not a target. Its length is no longer validated
+either — refusing a usable report over the length of a field we discard would be
+a rejection with no reason behind it.
+
+**Why it cost nothing.** No client ever sent it, no feed is configured, and
+`photo_url` is NULL on all 167 production complaints. The submit form has always
+said photo upload is unavailable, so removing the field broke no caller.
 
 **What still holds.** Nothing may render `photo_url` until §2 ships. That is the
 property that kept this inert while the field was open, and it is still the one
