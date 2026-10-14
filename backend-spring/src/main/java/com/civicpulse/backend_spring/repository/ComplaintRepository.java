@@ -55,9 +55,15 @@ public interface ComplaintRepository
 
     long countByWardIdAndStatus(Long wardId, ComplaintStatus status);
 
-    long countByCreatedAtAfter(LocalDateTime since);
+    /**
+     * Dashboard "last N days" windows. On {@code reportedAt}, never
+     * {@code createdAt}: an import of last year's complaints arrives today, and
+     * counting arrival would show it as this week's activity
+     * (docs/data-quality-rules.md §3).
+     */
+    long countByReportedAtAfter(LocalDateTime since);
 
-    long countByWardIdAndCreatedAtAfter(Long wardId, LocalDateTime since);
+    long countByWardIdAndReportedAtAfter(Long wardId, LocalDateTime since);
 
     /**
      * Recomputed from scratch on every attach rather than incremented, so the

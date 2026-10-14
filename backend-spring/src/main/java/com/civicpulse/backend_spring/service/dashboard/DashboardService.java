@@ -5,16 +5,19 @@ import com.civicpulse.backend_spring.dto.dashboard.DashboardSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.WardDashboardSummaryDto;
 import com.civicpulse.backend_spring.dto.incident.IncidentDto;
 import com.civicpulse.backend_spring.dto.ward.WardDto;
+import com.civicpulse.backend_spring.entity.Incident;
 import com.civicpulse.backend_spring.entity.Ward;
 import com.civicpulse.backend_spring.enums.ComplaintStatus;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
 import com.civicpulse.backend_spring.repository.ComplaintRepository;
 import com.civicpulse.backend_spring.repository.IncidentRepository;
 import com.civicpulse.backend_spring.repository.projection.CategoryCountRow;
+import com.civicpulse.backend_spring.repository.spec.IncidentSpecifications;
 import com.civicpulse.backend_spring.service.ward.WardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,8 +49,8 @@ public class DashboardService {
                 complaintRepository.countByStatus(ComplaintStatus.RESOLVED),
                 incidentRepository.count(),
                 incidentRepository.countByStatusIn(ACTIVE),
-                complaintRepository.countByCreatedAtAfter(now.minusDays(1)),
-                complaintRepository.countByCreatedAtAfter(now.minusDays(7)),
+                complaintRepository.countByReportedAtAfter(now.minusDays(1)),
+                complaintRepository.countByReportedAtAfter(now.minusDays(7)),
                 topCategories(null),
                 // Same narrow shape the public strip uses, deliberately — one
                 // definition of "ward plus open count", not two.
@@ -65,7 +68,7 @@ public class DashboardService {
                 complaintRepository.countByWardId(wardId),
                 complaintRepository.countByWardIdAndStatus(wardId, ComplaintStatus.OPEN),
                 incidentRepository.countByWardIdAndStatusIn(wardId, ACTIVE),
-                complaintRepository.countByWardIdAndCreatedAtAfter(wardId, now.minusDays(7)),
+                complaintRepository.countByWardIdAndReportedAtAfter(wardId, now.minusDays(7)),
                 topCategories(wardId),
                 topIncidents(wardId));
     }
@@ -78,16 +81,23 @@ public class DashboardService {
                 .toList();
     }
 
+    /**
+     * The highest-priority ACTIVE incidents. A resolved or closed incident keeps
+     * the score it had while live, so ranking every status would let finished
+     * work occupy the slots meant for what still needs doing. Ties break on id
+     * so the list is stable between calls.
+     */
     private List<IncidentDto> topIncidents(Long wardId) {
-        var sort = Sort.by(Sort.Direction.DESC, "priorityScore");
+        var sort = Sort.by(Sort.Direction.DESC, "priorityScore")
+                .and(Sort.by(Sort.Direction.ASC, "id"));
         var page = PageRequest.of(0, TOP_INCIDENTS, sort);
 
-        var incidents = wardId == null
-                ? incidentRepository.findAll(page).getContent()
-                : incidentRepository.findAll(
-                        (root, query, cb) -> cb.equal(root.get("ward").get("id"), wardId),
-                        page).getContent();
+        Specification<Incident> spec = Specification.allOf(
+                IncidentSpecifications.hasWard(wardId),
+                IncidentSpecifications.hasStatusIn(ACTIVE));
 
-        return incidents.stream().map(IncidentDto::from).toList();
+        return incidentRepository.findAll(spec, page).getContent().stream()
+                .map(IncidentDto::from)
+                .toList();
     }
 }

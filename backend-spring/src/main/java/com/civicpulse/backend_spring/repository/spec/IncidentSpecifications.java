@@ -4,6 +4,8 @@ import com.civicpulse.backend_spring.entity.Incident;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.util.Collection;
+
 /**
  * Composable filters for GET /incidents.
  *
@@ -37,6 +39,12 @@ public final class IncidentSpecifications {
     public static Specification<Incident> hasStatus(IncidentStatus status) {
         return (root, query, cb) ->
                 status == null ? null : cb.equal(root.get("status"), status);
+    }
+
+    /** Any of the given statuses; null or empty means no restriction. */
+    public static Specification<Incident> hasStatusIn(Collection<IncidentStatus> statuses) {
+        return (root, query, cb) ->
+                statuses == null || statuses.isEmpty() ? null : root.get("status").in(statuses);
     }
 
     public static Specification<Incident> minPriority(Double minPriority) {
