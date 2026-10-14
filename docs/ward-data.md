@@ -105,8 +105,14 @@ not unique**, and the absence is recorded rather than invented.
 `ward_external_ids` reports them:
 
 ```sql
-SELECT ward_id, internal_code, name FROM ward_external_ids WHERE lgd_unmapped;
+SELECT ward_id, internal_code, name FROM ward_external_ids
+WHERE lgd_unmapped AND source = 'kgis-bbmp-2022';
 ```
+
+The `source` filter matters: the view covers every ward with a source, which
+includes the four retired `placeholder-v2` rows. Without it the query returns
+**49** rows, not 45 — the placeholders have no LGD code either, but they are not
+part of the delimitation and are not what the WARN is about.
 
 This is the ward crosswalk ISSUE-11 asked for, as a view rather than a table so
 it cannot go stale. An external feed may quote our ward number, the KGIS code,
@@ -156,6 +162,105 @@ All checks pass. Notably:
   neighbouring one
 - the four multi-part wards kept their parts; Kogilu kept its enclave
 - no complaint sits outside the ward it is filed in
+
+---
+
+## Audit — 2026-10-13
+
+Measured against the live database (Flyway head V18). Read-only; the queries
+are below so the next audit can re-run them.
+
+### Counts
+
+| | Wards | `source` | `active` |
+|---|---|---|---|
+| Active, 2022 delimitation | **243** | `kgis-bbmp-2022` | true |
+| Retired placeholders (`LEGACY-*`) | **4** | `placeholder-v2` | false |
+| Total rows | **247** | | |
+
+There is no third state. "Retired" and "placeholder" are the same four rows;
+every active ward is a real one.
+
+Activity is concentrated: complaints exist in **17** of the 243 wards. Every
+complaint point lies inside exactly one active ward, and none lies outside all
+of them.
+
+### LGD mapping coverage
+
+| | Wards |
+|---|---|
+| With a national LGD code | **198** (wards 1–198, all distinct) |
+| Without | **45** (exactly wards 199–243) |
+
+This is the persisted `dataset_validations` row `bbmp-wards / 2022-delimitation
+/ lgd-code-coverage`, status **WARN**, observed 45, threshold 0. The other four
+rows for this dataset — `ward-count`, `geometry-validity`,
+`centroid-containment`, `repair-area-drift` — are **PASS**. The unmapped set is
+exactly the wards the 2022 delimitation created, and nothing else.
+
+### Overlap check
+
+Not previously checked either way. **The boundaries are not a perfect tiling.**
+
+| | |
+|---|---|
+| Ward pairs whose interiors overlap | **26** |
+| Total overlapping area | **50.94 m²** |
+| Largest single overlap | 8.70 m² (wards 87 / 88) |
+| Share of the city's 716.28 km² | ~0.00000007 |
+| Complaints inside an overlap | **0** |
+
+These are digitisation slivers along shared edges — the largest is smaller than
+a parking space — not two wards claiming the same neighbourhood. They are
+recorded rather than repaired: editing survey boundaries to remove them would be
+a hand edit to source data with no reference to check it against.
+
+**What happens to a point inside one.** `WardRepository.findContaining` orders
+by `w.id` and takes the first, so a point in a sliver resolves deterministically
+to the ward with the lower internal id — the same answer every time, which is
+the property that matters for matching. It is not "the right" ward, because at
+this scale there isn't one.
+
+**And a point exactly on a shared edge** resolves to **no ward** (404), because
+`ST_Contains` excludes a polygon's boundary. At six-decimal coordinate precision
+that requires a GPS fix landing on the line to within ~0.1 m, so it is a
+theoretical case, not a practical one.
+
+`V20__ward_overlap_validation.sql` persists this as a sixth `bbmp-wards` row,
+`boundary-overlap`: re-derived from the boundaries when it runs, **PASS** while
+no single pair overlaps by more than 100 m² (about one residential plot), WARN
+above. The largest pair is the measure, not the total — one 500 m² overlap is a
+boundary dispute, fifty 1 m² slivers are not. It is the baseline the next
+delimitation import is compared against.
+
+### Re-running this audit
+
+```sql
+-- Counts by source and state
+SELECT source, active, count(*) FROM wards GROUP BY 1, 2 ORDER BY 1, 2;
+
+-- LGD coverage, scoped to the delimitation
+SELECT count(*) AS total, count(lgd_ward_code) AS with_lgd,
+       count(DISTINCT lgd_ward_code) AS distinct_lgd
+FROM wards WHERE source = 'kgis-bbmp-2022';
+
+-- Persisted validation results
+SELECT check_name, status, observed, threshold, unit
+FROM dataset_validations WHERE dataset_name = 'bbmp-wards' ORDER BY id;
+
+-- Overlaps between active wards (interiors, not shared edges)
+SELECT a.code, b.code,
+       round(ST_Area(ST_Intersection(a.boundary, b.boundary)::geography)::numeric, 2) AS m2
+FROM wards a JOIN wards b ON a.id < b.id AND ST_Intersects(a.boundary, b.boundary)
+WHERE a.active AND b.active AND NOT ST_Touches(a.boundary, b.boundary)
+ORDER BY 3 DESC;
+
+-- Complaints contained by more than one active ward — MUST be empty
+SELECT c.id FROM complaints c
+JOIN wards w ON w.active
+ AND ST_Contains(w.boundary, ST_SetSRID(ST_MakePoint(c.longitude, c.latitude), 4326))
+GROUP BY c.id HAVING count(*) > 1;
+```
 
 ---
 

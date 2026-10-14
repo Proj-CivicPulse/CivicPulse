@@ -377,7 +377,7 @@ type ExplorerFilters = {
   wardIds: string[];
   categoryCodes: string[];          // canonical codes, never display names
   priorityBands: PriorityBand[];    // 'low' | 'medium' | 'high' | 'critical'
-  statuses: IncidentStatus[];       // 'open' | 'in_progress' | 'resolved'
+  statuses: IncidentStatus[];       // 'open' | 'in_progress' | 'resolved' | 'closed'
   from: string | null;              // against reported_at — see below
   to: string | null;
   search: string;
@@ -509,8 +509,11 @@ Category → Complaint trend → Incident count → Ward distribution
     → Priority distribution → Recent incidents
 ```
 
-Do not create category semantics in the frontend. The display name, the
-canonical code and the alias set all come from `/categories`.
+Do not create category semantics in the frontend. The display name and the
+canonical code come from `/categories`. The alias set does **not** — it is
+deliberately kept off the wire (see
+[category-dataset-audit.md](category-dataset-audit.md)); the frontend never
+needs it, because it only ever submits codes.
 
 ---
 
@@ -943,13 +946,22 @@ A feature is not done because the UI works.
 
 # 35. Recommended Immediate Sprint
 
-**Step 1 — Documentation.** Create `category-dataset-audit.md` and
-`data-quality-rules.md`; extend `ward-data.md` and `api-contract.md` per §31. Do
-not create the other seven files.
+**Step 1 — Documentation.** ✅ Done 2026-10-13:
+[category-dataset-audit.md](category-dataset-audit.md) and
+[data-quality-rules.md](data-quality-rules.md) created; `ward-data.md` extended
+(counts, LGD coverage, overlap check); `api-contract.md` extended (dashboard
+shapes, Explorer query conventions, known gaps). Decisions it surfaced are
+recorded in data-quality-rules.md §6: `CLOSED` = no fix (excluded from
+resolution metrics), time to resolve starts at the first report, provisional
+department per category (V19), ward overlap persisted (V20), imports accept
+retired categories.
 
-**Step 2 — Endpoint classification.** Go through the ten controllers in §6.1 and
-label each Explorer data requirement REUSE / EXTEND / NEW. Do not implement new
-APIs before this classification exists.
+**Step 2 — Endpoint classification.** ✅ Done 2026-10-13 — "Endpoint
+classification" in [api-contract.md](api-contract.md): 4 new endpoints, 5
+extended, 2 deferred, 0 new controllers. Implementation order: the E5/E6
+correctness fixes first (no frontend consumer, so nothing breaks), then E1 + the
+console together (breaking), then N1–N4 with the Explorer shell. Progress
+2026-10-13: E5's two fixes ✅, E1 + E2 report span + console ✅ (V21).
 
 **Step 3 — Explorer shell**, refactored out of `IncidentDashboard.tsx`.
 

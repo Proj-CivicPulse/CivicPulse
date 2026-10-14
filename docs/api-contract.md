@@ -190,20 +190,23 @@ Derives the ward from a coordinate pair, so the submit form can show that the
 system already knows the location rather than asking for it.
 
 ```jsonc
-// 200
-{ "id": "3", "code": "17", "name": "Ward 17", "zone": "South", "lat": 12.925, "long": 77.5938 }
+// GET /wards/resolve?lat=12.9479&long=77.5057 → 200
+{ "id": "538", "code": "48", "name": "Jnana Bharathi", "zone": null, "lat": 12.9478675, "long": 77.5057219 }
 // 404 — a real answer, not a failure
 { "error": { "code": "NOT_FOUND", "message": "No ward covers that location" } }
 ```
 
-404 beyond `app.ward-resolution-max-km` (default 25 km). Returning the nearest
+Point-in-polygon against the 243 imported BBMP boundaries (`PostGisWardResolver`,
+the default — see [ward-data.md](ward-data.md)). **404 when no active ward
+contains the point**; there is no nearest-ward fallback. Returning the nearest
 ward regardless would file an out-of-city report into whichever ward happened to
 be least far away, corrupting both the dashboard and the Phase 2 candidate
 pre-filter, invisibly. Callers fall back to the `GET /wards` picker.
 
-Implementation is behind a `WardResolver` seam — nearest seeded centroid today,
-point-in-polygon once real boundaries are imported. Swapping it is a config
-change (`WARD_RESOLVER`) and touches no caller.
+Implementation is behind a `WardResolver` seam. `WARD_RESOLVER=centroid`
+selects the old nearest-centroid resolver (404 beyond
+`app.ward-resolution-max-km`, default 25 km) for a database without PostGIS;
+production runs `postgis`.
 
 #### `GET /wards/summary`
 Feeds the public landing strip. **Counts, never rows.**
@@ -256,7 +259,7 @@ an enumeration oracle.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/incidents` | `?wardId&category&status&minPriority`, sorted by priority desc then recency |
+| GET | `/incidents` | Paged `{ items, total, limit, offset }`. Repeatable `wardId`, `category`, `status`, `priorityBand`; `from`/`to` (member `reportedAt`), `q`, `sort`, `dir`, `limit`, `offset` — see E1 |
 | GET | `/incidents/{id}` | |
 | GET | `/incidents/{id}/complaints` | 404 if the incident is unknown, so an empty list is unambiguous |
 | PATCH | `/incidents/{id}` | `{ status?, departmentId?, title?, summary? }`, at least one required |
@@ -269,14 +272,332 @@ outside 0–10 returns 400.
 
 ### Dashboard — officer only
 
-| Method | Path |
-|---|---|
-| GET | `/dashboard/summary` |
-| GET | `/dashboard/wards/{wardId}/summary` |
+| Method | Path | Returns |
+|---|---|---|
+| GET | `/dashboard/summary` | `DashboardSummary` |
+| GET | `/dashboard/wards/{wardId}/summary` | `WardDashboardSummary`; 404 for an unknown ward |
+
+No parameters, no pagination; every list inside is capped server-side.
+
+#### `DashboardSummary`
+```jsonc
+// production values, 2026-10-13
+{
+  "totalComplaints": 167,
+  "openComplaints": 166,       // complaints.status = OPEN only (not IN_PROGRESS)
+  "resolvedComplaints": 0,     // complaints.status = RESOLVED only (not CLOSED)
+  "totalIncidents": 31,
+  "openIncidents": 31,         // incidents.status IN (OPEN, IN_PROGRESS) — "active"
+  "complaintsLast24h": 0,      // complaints REPORTED in the last 24 h (reported_at)
+  "complaintsLast7d": 0,       // … last 7 days
+  "topCategories": [{ "category": "pothole", "count": 59 }],  // ≤ 5, by complaint count, all statuses
+  "wards": [WardSummary],      // every ACTIVE ward (243), same shape as GET /wards/summary
+  "topIncidents": [Incident]   // ≤ 5 ACTIVE incidents, priorityScore desc, ties by id
+}
+```
+
+Note the naming trap: `openComplaints` means status `OPEN` exactly, while
+`openIncidents` means *active* (`OPEN` + `IN_PROGRESS`). New fields use the
+Explorer vocabulary below (`activeIncidentCount`) rather than extending the
+ambiguity; these two keep their names because the frontend reads them.
+
+#### `WardDashboardSummary`
+```jsonc
+// values illustrative
+{
+  "ward": Ward,
+  "totalComplaints": 12,
+  "openComplaints": 12,        // status = OPEN
+  "openIncidents": 3,          // OPEN + IN_PROGRESS
+  "complaintsLast7d": 0,       // reported_at
+  "topCategories": [CategoryCount],  // ≤ 5, this ward
+  "topIncidents": [Incident]   // ≤ 5 ACTIVE incidents in this ward, by score
+}
+```
+
+`category` in `topCategories` is the canonical code; render it through the
+`GET /categories` display name, never as-is.
 
 ---
 
-## Spring → Node
+## Explorer query conventions
+
+> **Status: adopted 2026-10-13.** Binding on every new or extended
+> Explorer endpoint. Not yet implemented by the existing endpoints — see Known
+> gaps at the end of this section.
+
+The rules every Explorer-facing endpoint follows — new ones, and existing ones
+as they are extended. Written before the endpoints so that they are defined
+once; which endpoints are REUSE / EXTEND / NEW is roadmap §35 step 2, and lands
+in this section when it is done. Domain definitions behind these rules are in
+[data-quality-rules.md](data-quality-rules.md) §3.
+
+### Where it lives
+
+- **Aggregates go on `DashboardController`** (`/dashboard/**`, officer-only),
+  extending what is there. No `/ward-stats`, `/ward-analytics`,
+  `/ward-overview` family returning overlapping data.
+- **Row lists stay on their resource** — `/incidents`, `/complaints`.
+- **Explicit response DTOs only.** Never a JPA entity on the wire.
+- **Officer-only**, with one exception that already exists: `GET /wards/summary`
+  is public and counts-only, and nothing is added to it.
+
+### Shared filter parameters
+
+One meaning per parameter, on every endpoint that accepts it. Repeating a
+parameter means OR within it; different parameters AND together.
+
+| Parameter | Meaning | Validation |
+|---|---|---|
+| `wardId` (repeatable) | `ward_id` — internal id, as on the wire | unknown id → empty result, not 404 (a filter, not a lookup) |
+| `category` (repeatable) | canonical code; any alias is canonicalised first; an unresolvable value matches only rows literally carrying it | never 400 |
+| `status` (repeatable) | `open` \| `in_progress` \| `resolved` \| `closed` — `resolved` = fixed, `closed` = terminated without a fix | unknown → 400 naming the allowed values |
+| `priorityBand` (repeatable) | `low` \| `medium` \| `high` \| `critical`, thresholds server-side | unknown → 400 |
+| `from`, `to` | ISO-8601 instants, **filtering `reported_at`**, half-open `[from, to)` | unparseable or `from >= to` → 400 |
+| `q` | case-insensitive substring over title/description | trimmed; blank = absent |
+
+- **`from`/`to` always mean report time.** An operator asking "what came in last
+  week" means when problems were reported. On an incident the filter applies to
+  its members' `reported_at`.
+- **No `severity` parameter, ever** — the field does not exist
+  ([priority-evaluation.md](priority-evaluation.md) §DECISION).
+- **"High priority" is `priorityBand in (high, critical)`**, computed once on
+  the server. A client never compares `priorityScore` to a number.
+
+### Lists: pagination, sorting, size
+
+| | |
+|---|---|
+| Parameters | `limit` (default 50, max 200), `offset` (default 0) |
+| Over max | clamped to 200, not 400 — a too-large page is a client bug, not a user error |
+| Response | `{ "items": [...], "total": 123, "limit": 50, "offset": 0 }` |
+| Sort | `sort=<field>` and `dir=asc\|desc`; each endpoint documents its allowed fields and default; **ties broken by `id`** so pages are stable |
+| Aggregates | not paginated, but bounded by construction (≤ 243 wards, ≤ number of categories, fixed top-N) |
+
+Existing `GET /incidents` and `GET /complaints` return bare, unbounded arrays —
+see Known gaps. They move to this envelope when the Explorer starts reading
+them; the change is breaking, so it ships with the frontend change in one PR.
+
+### Empty and error behaviour
+
+- **No matching data is `200` with an empty list / zero counts**, never `404`.
+  The Explorer must be able to tell "widen your filters" from "something
+  broke" (roadmap §9).
+- `404` only for a path resource that does not exist (`/dashboard/wards/999/summary`).
+- Errors use the standard envelope above. A metric that cannot be computed yet
+  — resolution time before any incident has been resolved — is `null`, not `0`.
+
+### Time and freshness
+
+- Every window is computed in UTC; responses carry instants with `Z`.
+- An aggregate that could be stale says when it was computed. Priority
+  freshness is `priorityComputedAt`, already on `Incident`.
+- **Resolution data begins 2026-10-06** (V18). A resolution metric for an
+  earlier window is `null` with no data, not `0`.
+- **Resolution metrics count `resolved` incidents only.** Time to resolve is
+  `resolvedAt − min(member reportedAt)`. `closed` incidents were not fixed and
+  are never in a resolution figure.
+
+### Known gaps in existing endpoints
+
+Each is latent with today's data and must be fixed before the Explorer reads
+through it. Detail in [data-quality-rules.md](data-quality-rules.md) §5.
+
+| Endpoint | Gap |
+|---|---|
+| ~~`GET /dashboard/summary`, `/dashboard/wards/{id}/summary`~~ | ~~windows counted `created_at`~~ — **fixed 2026-10-13**, now `reported_at` |
+| ~~same~~ | ~~`topIncidents` ranked any status~~ — **fixed 2026-10-13**, active only |
+| `GET /complaints` | loads the entire table and filters in memory; no pagination |
+| ~~`GET /incidents`~~ | ~~no pagination; single-valued filters~~ — **fixed 2026-10-13** (E1) |
+
+### Endpoint classification
+
+Roadmap §35 step 2, done 2026-10-13. Every Explorer data requirement in roadmap
+§11–16 is mapped to an existing endpoint before anything is built:
+**REUSE** as-is, **EXTEND** an existing endpoint, **NEW** only where no
+existing endpoint has the same domain responsibility, **DEFER** with a reason.
+
+Who reads what today matters for EXTEND, because some changes are breaking:
+
+| Endpoint | Frontend consumer today |
+|---|---|
+| `GET /incidents` | `IncidentDashboard` (officer console) — all filters server-side since E1 |
+| `GET /incidents/{id}/complaints` | `IncidentDetail` |
+| `GET /wards`, `/categories` | console, submit form |
+| `GET /wards/summary` | public landing `WardStrip` |
+| `GET /dashboard/summary`, `/dashboard/wards/{id}/summary` | **none** |
+| `GET /complaints` (officer list) | **none** (`complaintService.list` is unused) |
+
+#### Requirement → endpoint
+
+| Requirement (roadmap §) | Class | Endpoint |
+|---|---|---|
+| Ward table: complaints, active, high-priority, dominant category, last activity (§11) | **NEW** | N1 `GET /dashboard/wards` |
+| Ward map: boundaries (§11) | **NEW** | N4 `GET /wards/boundaries` |
+| Ward map: density / priority overlay (§11) | REUSE N1 | choropleth from per-ward counts, not markers (§29) |
+| Ward detail: metadata (§12) | REUSE | `GET /wards/{id}` |
+| Ward detail: incident summary, category + priority distribution (§12) | **EXTEND** | E6 `GET /dashboard/wards/{wardId}/summary` |
+| Ward detail: trend (§12) | **NEW** | N3 `GET /dashboard/trends?wardId=` |
+| Ward detail: recent incidents (§12) | EXTEND | E1 `GET /incidents?wardId=&sort=lastReportedAt` |
+| Category table: volume, active, high-priority, resolution metrics (§13) | **NEW** | N2 `GET /dashboard/categories` |
+| Category trend (§13–14) | NEW | N3 `GET /dashboard/trends?groupBy=category` |
+| Category → ward distribution (§13–14) | REUSE N1 | `GET /dashboard/wards?category=` |
+| Category display names (§14) | REUSE | `GET /categories` |
+| Incident list with shared filters (§15) | **EXTEND** | E1 `GET /incidents` |
+| First / last reported (§15) | **EXTEND** | E2 `Incident` shape |
+| Incident detail + timeline (§16) | REUSE | `GET /incidents/{id}`, `GET /incidents/{id}/complaints` (already ordered by `reported_at`) |
+| Complaint drill-down outside an incident | **EXTEND** | E4 `GET /complaints` |
+| Dashboard headline figures | **EXTEND** (fix) | E5 `GET /dashboard/summary` |
+| "Why are these grouped" — `incident_match_log` (§16) | **DEFER** to Milestone 4 | needs operator language ("40 m away, same problem"), not cosine scores; design with the matching evaluation |
+| Last ingestion freshness (§10) | **DEFER** | no feed exists; add when the first one is onboarded |
+| Officer-facing ward strip | **not** `GET /wards/summary` | that endpoint is public and counts-only; the Explorer uses N1 |
+
+Net: **4 new endpoints, 5 extended, 0 new controllers.** N1–N3 sit on
+`DashboardController`; N4 on `WardController`, under the already-public
+`/wards` prefix.
+
+#### E1 — `GET /incidents` (extend; breaking) — ✅ implemented 2026-10-13
+
+| | |
+|---|---|
+| Auth | officer |
+| Filters | `wardId`, `category`, `status`, `priorityBand` (all repeatable), `from`/`to`, `q` (title + summary). `minPriority` stays accepted for one release, then goes — `priorityBand` replaces it. |
+| Date semantics | an incident matches `[from, to)` when **at least one member complaint** was reported in it |
+| Sort | `priority` (default: score desc, then `lastReportedAt` desc), `lastReportedAt`, `firstReportedAt`, `complaintCount`, `resolvedAt`; ties by `id` |
+| Response | `{ items: Incident[], total, limit, offset }` |
+| Max | 200 per page |
+| Empty | `200`, `items: []` |
+| Breaking | yes — bare array → envelope. Shipped together with `incident.service.ts` + `IncidentDashboard`, which no longer filters in the browser. The console requests `limit=200` and says "N of total" when there are more; past that, the map moves to N1's per-ward aggregate. **Deploy backend and frontend together.** |
+
+#### E2 — `Incident` shape (extend; additive) — ✅ report span implemented 2026-10-13
+
+| Field | Meaning | Status |
+|---|---|---|
+| `firstReportedAt` | `min(member complaints.reportedAt)` — never `createdAt` | ✅ V21 |
+| `lastReportedAt` | `max(member complaints.reportedAt)` | ✅ V21 |
+| `owningDepartmentId` | `departmentId` if an officer set one, else the category's default (V19); `null` = triage by hand | not yet — lands with N2, which already needs the category→department join |
+
+Additive, so non-breaking. Stored as `incidents.first_reported_at` /
+`last_reported_at` (V21, backfilled) and maintained by
+`IncidentAttachmentService.recompute` with `complaintCount`, the way the
+centroid already is, rather than aggregated per request.
+
+#### E4 — `GET /complaints` (extend; non-breaking — no consumer)
+
+Officer-only. Filtering moves into the query (today it loads the table and
+filters in Java). Filters `wardId`, `category`, `status` (repeatable), `from`/`to`
+on `reportedAt`, `q` (title + description). Sort `reportedAt` (default desc),
+ties by `id`. Envelope, max 200.
+
+#### E5 — `GET /dashboard/summary` (extend; fix)
+
+- ✅ `complaintsLast24h` / `complaintsLast7d` count **`reported_at`**.
+- ✅ `topIncidents` ranks **active** incidents only.
+- Adds `highPriorityIncidentCount` (active, `priorityBand in (high, critical)`) — not yet.
+
+No consumer, so the semantic fix breaks nothing.
+
+#### E6 — `GET /dashboard/wards/{wardId}/summary` (extend)
+
+Same two fixes as E5, plus:
+
+```jsonc
+// values illustrative
+{
+  // …existing fields…
+  "highPriorityIncidentCount": 1,
+  "lastActivityAt": "2026-09-10T11:02:43Z",        // max(reported_at); null if none
+  "categoryDistribution": [{ "category": "pothole", "count": 9 }],  // every category with ≥1 complaint, not top 5
+  "priorityDistribution": { "low": 0, "medium": 2, "high": 1, "critical": 0 },  // active incidents
+  "statusDistribution": { "open": 3, "in_progress": 0, "resolved": 0, "closed": 0 } // incidents
+}
+```
+
+Filters `category` (repeatable), `from`/`to`. 404 for an unknown or retired ward.
+`topCategories` stays for compatibility; new clients read `categoryDistribution`.
+
+#### N1 — `GET /dashboard/wards` (new)
+
+One row per **active** ward. Serves the ward table, the ward map's choropleth
+and category→ward distribution.
+
+```jsonc
+// 200 — WardExplorerSummary[] (values illustrative)
+[{
+  "wardId": "491", "wardCode": "1", "wardName": "Kempegowda Ward",
+  "complaintCount": 33,
+  "activeIncidentCount": 4,
+  "highPriorityIncidentCount": 1,
+  "dominantCategory": "pothole",     // most complaints; ties → registry sort order; null if none
+  "lastActivityAt": "2026-09-10T…Z"  // null if none
+}]
+```
+
+| | |
+|---|---|
+| Auth | officer |
+| Filters | `category` (repeatable), `from`/`to`. Complaint counts use complaints reported in the window; incident counts use incidents with a member in it. Status and band are not filters here — they are what the columns already split by. |
+| Sort | `wardCode` numeric ascending; the client re-sorts (≤ 243 rows) |
+| Size | always every active ward — 243 — including zeros, so a map can colour every polygon |
+| Empty | wards with no activity return zeros and nulls, not absence |
+
+#### N2 — `GET /dashboard/categories` (new)
+
+One row per category that is active **or** has data.
+
+```jsonc
+// 200 — CategoryExplorerSummary[] (values illustrative)
+[{
+  "category": "pothole",
+  "complaintCount": 59,
+  "activeIncidentCount": 4,
+  "highPriorityIncidentCount": 1,
+  "wardCount": 9,                     // wards with ≥1 complaint
+  "resolvedIncidentCount": 0,         // RESOLVED only — never CLOSED
+  "medianHoursToResolve": null,       // resolvedAt − min(member reportedAt); null when nothing resolved
+  "defaultDepartmentId": "1",         // V19; null = triage by hand
+  "lastActivityAt": "…Z"
+}]
+```
+
+Filters `wardId` (repeatable), `from`/`to` (resolution figures: incidents
+**resolved** in the window). Ordered by registry `sort_order`. Bounded by the
+registry (8 today).
+
+#### N3 — `GET /dashboard/trends` (new)
+
+Complaint counts over time, bucketed by `reported_at`.
+
+| | |
+|---|---|
+| Auth | officer |
+| Params | `from`, `to` (required), `bucket=day\|week` (default `day`), `groupBy=none\|category` (default `none`), plus `wardId`, `category` (repeatable) |
+| Response | `{ bucket, series: [{ key: "pothole" \| null, points: [{ start: "…Z", count: 3 }] }] }` — every bucket in range present, zeros included, so a chart never interpolates a gap |
+| Max | 400 buckets per series (`day` ≈ 13 months, `week` ≈ 7.5 years); over → 400 naming the limit |
+| Weeks | start Monday 00:00 UTC |
+
+`groupBy=ward` is deliberately absent — 243 series is not a chart. A ward's
+trend is `?wardId=`.
+
+#### N4 — `GET /wards/boundaries` (new, public)
+
+```jsonc
+// 200, Cache-Control: public, max-age=86400 — GeoJSON
+{
+  "type": "FeatureCollection",
+  "datasetVersion": "2022-delimitation",
+  "attribution": "KSRSAC / DataMeet, CC BY-SA 2.5 India",
+  "features": [{ "type": "Feature", "geometry": { "type": "MultiPolygon", … },
+                 "properties": { "id": "491", "code": "1", "name": "Kempegowda Ward" } }]
+}
+```
+
+Active wards only. Geometry simplified server-side
+(`ST_SimplifyPreserveTopology`, ~10 m tolerance) — display only; **ward
+assignment never uses this payload**, it stays `ST_Contains` on the full
+geometry. Public because it is open data already published under that licence,
+and the attribution must be rendered on the map. Lives under `/wards`, whose
+posture is already entirely public.
 
 ### `POST /complaints/{id}/process` — Phase 2
 
@@ -501,6 +822,8 @@ Keep in sync with `backend-spring/src/main/resources/db/migration/`.
   "aiRecommendation": null,   // written by Node in Phase 6; null until then
   "priorityComputedAt": "…",  // when the score was last DERIVED; null if never
   "resolvedAt": null,         // set only while status is `resolved`; see below
+  "firstReportedAt": "…",     // min(member reportedAt) — "age" is measured from this
+  "lastReportedAt": "…",      // max(member reportedAt)
   "createdAt": "…",
   "updatedAt": "…"
 }
@@ -602,19 +925,21 @@ The raw string a caller sent is preserved server-side in
 ### `Ward`
 ```jsonc
 {
-  "id": "3",
-  "code": "17",               // stable ward number used in reference numbers
-  "name": "Ward 17",
-  "zone": "South",            // nullable
-  "lat": 12.9250,             // centroid; nullable
-  "long": 77.5938
+  "id": "538",
+  "code": "48",               // BBMP ward number (1–243), used in reference numbers
+  "name": "Jnana Bharathi",
+  "zone": null,               // nullable — null for every imported ward (no zone in the source)
+  "lat": 12.9478675,          // ST_PointOnSurface, guaranteed inside the ward; nullable
+  "long": 77.5057219
 }
 ```
 
-Note `id` and `code` differ: the seeded "Ward 17" has `id: "3"`. Reference
-numbers use `code`, so a resident receipt reads `W17` and matches what the UI
-shows them. `name` is a mutable display label and must never feed a printed
-identifier.
+Note `id` and `code` differ: ward 48 has `id: "538"`. Reference numbers use
+`code`, so a resident receipt reads `W48` and matches what the UI shows them.
+`name` is a mutable display label and must never feed a printed identifier.
+
+`lat`/`long` are a label point, not a geometric centroid: a true centroid of a
+concave ward can fall in its neighbour. Boundaries are not on the wire.
 
 ### `WardSummary`
 ```jsonc
@@ -708,10 +1033,10 @@ naive fallback runs, and the reconcile sweep retries once the provider is back.
       `NaiveIncidentGrouper` (`matching_status = degraded`); `MatchReconciliationJob`
       re-runs the real pipeline once Node recovers. See `service-boundaries.md`
       decision 2.
-- [ ] **Refresh-token revocation.** Tokens are stateless, so logout cannot
-      invalidate a copied refresh token before it expires. A
-      `refresh_tokens` table (jti + revoked_at) is the fix if the team wants
-      real logout-everywhere.
+- [x] **Refresh-token revocation.** Resolved by V9: refresh tokens are
+      server-side sessions in `refresh_tokens` (`revoked_at`,
+      `revoked_reason`). `POST /auth/logout` revokes the current session and
+      `POST /auth/logout-all` revokes every session for the caller.
 - [x] **Photo upload.** **Decided: direct-to-storage with a SERVER-ISSUED
       upload URL** (intent -> direct PUT -> confirm). Neither original option
       was right: multipart holds a request thread for the length of every

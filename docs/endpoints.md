@@ -110,14 +110,15 @@ default (`EMAIL_PROVIDER=log`), so auth has no runtime email dependency.
 ### Wards & Departments — Phase 0 (reference data)
 - [x] `GET /wards` — public
 - [x] `GET /wards/{id}` — public
-- [x] `GET /wards/resolve?lat=&long=` — public; derives the ward from a coordinate pair, 404 beyond 25 km
+- [x] `GET /wards/resolve?lat=&long=` — public; point-in-polygon against the 243 BBMP boundaries, 404 when no active ward contains the point
 - [x] `GET /wards/summary` — **public**; landing-page ward strip. Counts, never rows
+- [ ] `GET /wards/boundaries` — **public**; simplified GeoJSON for the Explorer map (N4 in `api-contract.md`)
 - [x] `GET /departments`
 - [x] `GET /departments/{id}`
 
 ### Complaints — Phase 1, P0
 - [x] `POST /complaints` — public; `wardId` optional, derived from coordinates when absent
-- [x] `GET /complaints` — **officer only**; this is every resident complaint text
+- [x] `GET /complaints` — **officer only**; this is every resident complaint text. **To extend (E4)**: filtering in the query, pagination
 - [x] `GET /complaints/{id}` — citizen reads only their own, 404 (not 403) otherwise
 - [x] `GET /complaints/mine` — citizen
 - [x] `PATCH /complaints/{id}` — **officer only**; previously fell through to `anyRequest().authenticated()`
@@ -125,7 +126,7 @@ default (`EMAIL_PROVIDER=log`), so auth has no runtime email dependency.
 - [ ] `POST /complaints/{id}/photo` *(not built — confirms an upload by object key, never a caller-supplied URL)*
 
 ### Incidents — Phase 2/3
-- [x] `GET /incidents` — `?wardId&category&status&minPriority`, priority desc
+- [x] `GET /incidents` — **paged** (E1, 2026-10-13): repeatable `wardId`/`category`/`status`/`priorityBand`, `from`/`to` on member `reportedAt`, `q`, `sort`/`dir`, `limit`/`offset`. `minPriority` still accepted for one release
 - [x] `GET /incidents/{id}`
 - [x] `GET /incidents/{id}/complaints`
 - [x] `PATCH /incidents/{id}` — does not recompute priority; status is not a model input
@@ -140,14 +141,22 @@ default (`EMAIL_PROVIDER=log`), so auth has no runtime email dependency.
 > returns 404 is worse than no method, because it type-checks. Build the server
 > side and the client together when the need is real.
 
-### Dashboard — Phase 4
-- [x] `GET /dashboard/summary`
-- [x] `GET /dashboard/wards/{wardId}/summary`
+### Dashboard — Phase 4 / Explorer
+
+Classified 2026-10-13 — see "Endpoint classification" in `api-contract.md`.
+
+- [x] `GET /dashboard/summary` — **to extend (E5)**: windows on `reported_at`, active-only top incidents
+- [x] `GET /dashboard/wards/{wardId}/summary` — **to extend (E6)**: distributions, filters
+- [ ] `GET /dashboard/wards` — per-ward Explorer summary (N1)
+- [ ] `GET /dashboard/categories` — per-category Explorer summary (N2)
+- [ ] `GET /dashboard/trends` — complaint counts over `reported_at` buckets (N3)
 
 ### Analytics — Phase 5
-- [ ] `GET /analytics/trends`
-- [ ] `GET /analytics/stale-incidents`
-- [ ] `GET /analytics/rising-categories`
+
+- ~~`GET /analytics/trends`~~ — superseded by `GET /dashboard/trends`; aggregates
+  live on `DashboardController` (roadmap §6.1)
+- [ ] `GET /analytics/stale-incidents` — Milestone 5; classify REUSE/EXTEND/NEW then
+- [ ] `GET /analytics/rising-categories` — Milestone 5; classify then
 
 ### Ingestion — external feeds (see `api-contract.md`)
 - [x] `POST /internal/ingest/{source}` — shared-secret; bulk, validating,

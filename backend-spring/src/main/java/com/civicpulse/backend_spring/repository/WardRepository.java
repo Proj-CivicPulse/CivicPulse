@@ -36,8 +36,12 @@ public interface WardRepository extends JpaRepository<Ward, Long> {
      * says it. Getting it backwards yields a point in the Indian Ocean and a
      * silent 404, so the parameters are named rather than positional.
      *
-     * <p>{@code LIMIT 1} because BBMP wards tile the city without overlap; on a
-     * shared boundary line PostGIS may report both, and either is defensible.
+     * <p>{@code ORDER BY w.id LIMIT 1} because the tiling is not perfect: 26 ward
+     * pairs overlap in digitisation slivers totalling ~51 m² (docs/ward-data.md,
+     * "Overlap check"). A point in one resolves to the lower id — not "right",
+     * but the same answer every time, which is what matching needs. A point
+     * exactly ON a shared edge resolves to nothing, since ST_Contains excludes
+     * the boundary.
      */
     @Query(value = """
             SELECT * FROM wards w
