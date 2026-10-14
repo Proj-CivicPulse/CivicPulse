@@ -112,13 +112,13 @@ default (`EMAIL_PROVIDER=log`), so auth has no runtime email dependency.
 - [x] `GET /wards/{id}` — public
 - [x] `GET /wards/resolve?lat=&long=` — public; point-in-polygon against the 243 BBMP boundaries, 404 when no active ward contains the point
 - [x] `GET /wards/summary` — **public**; landing-page ward strip. Counts, never rows
-- [ ] `GET /wards/boundaries` — **public**; simplified GeoJSON for the Explorer map (N4 in `api-contract.md`)
+- [x] `GET /wards/boundaries` — **public**; simplified GeoJSON for the Explorer map (N4), cached a day
 - [x] `GET /departments`
 - [x] `GET /departments/{id}`
 
 ### Complaints — Phase 1, P0
 - [x] `POST /complaints` — public; `wardId` optional, derived from coordinates when absent
-- [x] `GET /complaints` — **officer only**; this is every resident complaint text. **To extend (E4)**: filtering in the query, pagination
+- [x] `GET /complaints` — **officer only**; this is every resident complaint text. **Paged** (E4): repeatable `wardId`/`category`/`status`, `from`/`to`, `q`, `dir`, `limit`/`offset`
 - [x] `GET /complaints/{id}` — citizen reads only their own, 404 (not 403) otherwise
 - [x] `GET /complaints/mine` — citizen
 - [x] `PATCH /complaints/{id}` — **officer only**; previously fell through to `anyRequest().authenticated()`
@@ -145,11 +145,11 @@ default (`EMAIL_PROVIDER=log`), so auth has no runtime email dependency.
 
 Classified 2026-10-13 — see "Endpoint classification" in `api-contract.md`.
 
-- [x] `GET /dashboard/summary` — **to extend (E5)**: windows on `reported_at`, active-only top incidents
-- [x] `GET /dashboard/wards/{wardId}/summary` — **to extend (E6)**: distributions, filters
-- [ ] `GET /dashboard/wards` — per-ward Explorer summary (N1)
-- [ ] `GET /dashboard/categories` — per-category Explorer summary (N2)
-- [ ] `GET /dashboard/trends` — complaint counts over `reported_at` buckets (N3)
+- [x] `GET /dashboard/summary` — E5: windows on `reported_at`, active-only top incidents, `highPriorityIncidentCount`
+- [x] `GET /dashboard/wards/{wardId}/summary` — E6: priority/status distributions, last activity, `category`/`from`/`to` filters; 404 on retired wards
+- [x] `GET /dashboard/wards` — per-ward Explorer summary (N1)
+- [x] `GET /dashboard/categories` — per-category Explorer summary incl. resolution metrics (N2)
+- [x] `GET /dashboard/trends` — complaint counts over `reported_at` buckets (N3)
 
 ### Analytics — Phase 5
 

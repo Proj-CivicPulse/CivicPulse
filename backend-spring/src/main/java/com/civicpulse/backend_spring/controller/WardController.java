@@ -3,9 +3,11 @@ package com.civicpulse.backend_spring.controller;
 import com.civicpulse.backend_spring.dto.ward.WardDto;
 import com.civicpulse.backend_spring.dto.ward.WardSummaryDto;
 import com.civicpulse.backend_spring.exception.ValidationException;
+import com.civicpulse.backend_spring.service.explorer.ExplorerService;
 import com.civicpulse.backend_spring.service.ward.WardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +28,7 @@ import java.util.List;
 public class WardController {
 
     private final WardService wardService;
+    private final ExplorerService explorerService;
 
     @GetMapping
     public ResponseEntity<List<WardDto>> list() {
@@ -91,8 +94,27 @@ public class WardController {
         return ResponseEntity.ok(wardService.resolve(lat, lng));
     }
 
-    // Declared after /summary and /resolve so those literal paths are not
-    // shadowed by the {id} template.
+    /**
+     * Active ward boundaries as GeoJSON, for the Explorer map (N4).
+     *
+     * <p>Public, like the rest of /wards: the boundaries are open data
+     * (KSRSAC via DataMeet, CC BY-SA 2.5 India), and the attribution travels in
+     * the payload because the licence requires the map to show it. Nothing
+     * here derives from a resident's report.
+     *
+     * <p>Simplified to ~10 m for display. Ward assignment never reads this —
+     * it stays point-in-polygon on the full geometry.
+     */
+    @GetMapping(value = "/boundaries", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> boundaries() {
+        return ResponseEntity.ok()
+                // Boundaries change only with a new delimitation import.
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePublic())
+                .body(explorerService.wardBoundaries());
+    }
+
+    // Declared after the literal paths so they are not shadowed by the {id}
+    // template.
     @GetMapping("/{id}")
     public ResponseEntity<WardDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(wardService.getById(id));

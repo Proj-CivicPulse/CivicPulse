@@ -235,7 +235,7 @@ records.
 | Method | Path | Access | Notes |
 |---|---|---|---|
 | POST | `/complaints` | **public** | 201 + `Location`. Attributes to the caller when signed in. |
-| GET | `/complaints` | **officer** | Full text of every complaint — not `authenticated` |
+| GET | `/complaints` | **officer** | Full text of every complaint — not `authenticated`. Paged `{ items, total, limit, offset }`, newest report first; see E4 |
 | GET | `/complaints/mine` | **citizen** | Newest first |
 | GET | `/complaints/{id}` | authenticated | Officer reads any; citizen reads only their own |
 | PATCH | `/complaints/{id}` | **officer** | `{ status?, departmentId? }`, at least one required |
@@ -288,6 +288,7 @@ No parameters, no pagination; every list inside is capped server-side.
   "resolvedComplaints": 0,     // complaints.status = RESOLVED only (not CLOSED)
   "totalIncidents": 31,
   "openIncidents": 31,         // incidents.status IN (OPEN, IN_PROGRESS) — "active"
+  "highPriorityIncidentCount": 0, // active, priorityBand in (high, critical)
   "complaintsLast24h": 0,      // complaints REPORTED in the last 24 h (reported_at)
   "complaintsLast7d": 0,       // … last 7 days
   "topCategories": [{ "category": "pothole", "count": 59 }],  // ≤ 5, by complaint count, all statuses
@@ -407,7 +408,7 @@ through it. Detail in [data-quality-rules.md](data-quality-rules.md) §5.
 |---|---|
 | ~~`GET /dashboard/summary`, `/dashboard/wards/{id}/summary`~~ | ~~windows counted `created_at`~~ — **fixed 2026-10-13**, now `reported_at` |
 | ~~same~~ | ~~`topIncidents` ranked any status~~ — **fixed 2026-10-13**, active only |
-| `GET /complaints` | loads the entire table and filters in memory; no pagination |
+| ~~`GET /complaints`~~ | ~~loaded the entire table and filtered in memory~~ — **fixed 2026-10-14** (E4) |
 | ~~`GET /incidents`~~ | ~~no pagination; single-valued filters~~ — **fixed 2026-10-13** (E1) |
 
 ### Endpoint classification
@@ -436,7 +437,8 @@ Who reads what today matters for EXTEND, because some changes are breaking:
 | Ward map: boundaries (§11) | **NEW** | N4 `GET /wards/boundaries` |
 | Ward map: density / priority overlay (§11) | REUSE N1 | choropleth from per-ward counts, not markers (§29) |
 | Ward detail: metadata (§12) | REUSE | `GET /wards/{id}` |
-| Ward detail: incident summary, category + priority distribution (§12) | **EXTEND** | E6 `GET /dashboard/wards/{wardId}/summary` |
+| Ward detail: incident summary, priority + status distribution (§12) | **EXTEND** | E6 `GET /dashboard/wards/{wardId}/summary` |
+| Ward detail: category distribution (§12) | REUSE N2 | `GET /dashboard/categories?wardId=` — one answer to that question, not two |
 | Ward detail: trend (§12) | **NEW** | N3 `GET /dashboard/trends?wardId=` |
 | Ward detail: recent incidents (§12) | EXTEND | E1 `GET /incidents?wardId=&sort=lastReportedAt` |
 | Category table: volume, active, high-priority, resolution metrics (§13) | **NEW** | N2 `GET /dashboard/categories` |
@@ -452,7 +454,7 @@ Who reads what today matters for EXTEND, because some changes are breaking:
 | Last ingestion freshness (§10) | **DEFER** | no feed exists; add when the first one is onboarded |
 | Officer-facing ward strip | **not** `GET /wards/summary` | that endpoint is public and counts-only; the Explorer uses N1 |
 
-Net: **4 new endpoints, 5 extended, 0 new controllers.** N1–N3 sit on
+Net: **4 new endpoints, 5 extended, 0 new controllers** — all implemented by 2026-10-14. N1–N3 sit on
 `DashboardController`; N4 on `WardController`, under the already-public
 `/wards` prefix.
 
@@ -469,35 +471,35 @@ Net: **4 new endpoints, 5 extended, 0 new controllers.** N1–N3 sit on
 | Empty | `200`, `items: []` |
 | Breaking | yes — bare array → envelope. Shipped together with `incident.service.ts` + `IncidentDashboard`, which no longer filters in the browser. The console requests `limit=200` and says "N of total" when there are more; past that, the map moves to N1's per-ward aggregate. **Deploy backend and frontend together.** |
 
-#### E2 — `Incident` shape (extend; additive) — ✅ report span implemented 2026-10-13
+#### E2 — `Incident` shape (extend; additive) — ✅ implemented 2026-10-13/14
 
 | Field | Meaning | Status |
 |---|---|---|
 | `firstReportedAt` | `min(member complaints.reportedAt)` — never `createdAt` | ✅ V21 |
 | `lastReportedAt` | `max(member complaints.reportedAt)` | ✅ V21 |
-| `owningDepartmentId` | `departmentId` if an officer set one, else the category's default (V19); `null` = triage by hand | not yet — lands with N2, which already needs the category→department join |
+| `owningDepartmentId` | `departmentId` if an officer set one, else the category's default (V19); `null` = triage by hand | ✅ read with the row (`@Formula` on `Incident`) |
 
 Additive, so non-breaking. Stored as `incidents.first_reported_at` /
 `last_reported_at` (V21, backfilled) and maintained by
 `IncidentAttachmentService.recompute` with `complaintCount`, the way the
 centroid already is, rather than aggregated per request.
 
-#### E4 — `GET /complaints` (extend; non-breaking — no consumer)
+#### E4 — `GET /complaints` (extend; non-breaking — no consumer) — ✅ implemented 2026-10-14
 
-Officer-only. Filtering moves into the query (today it loads the table and
-filters in Java). Filters `wardId`, `category`, `status` (repeatable), `from`/`to`
+Officer-only. Filtering is in the query (it used to load the table and
+filter in Java). Filters `wardId`, `category`, `status` (repeatable), `from`/`to`
 on `reportedAt`, `q` (title + description). Sort `reportedAt` (default desc),
 ties by `id`. Envelope, max 200.
 
-#### E5 — `GET /dashboard/summary` (extend; fix)
+#### E5 — `GET /dashboard/summary` (extend; fix) — ✅ implemented 2026-10-14
 
 - ✅ `complaintsLast24h` / `complaintsLast7d` count **`reported_at`**.
 - ✅ `topIncidents` ranks **active** incidents only.
-- Adds `highPriorityIncidentCount` (active, `priorityBand in (high, critical)`) — not yet.
+- ✅ Adds `highPriorityIncidentCount` (active, `priorityBand in (high, critical)`).
 
 No consumer, so the semantic fix breaks nothing.
 
-#### E6 — `GET /dashboard/wards/{wardId}/summary` (extend)
+#### E6 — `GET /dashboard/wards/{wardId}/summary` (extend) — ✅ implemented 2026-10-14
 
 Same two fixes as E5, plus:
 
@@ -507,16 +509,22 @@ Same two fixes as E5, plus:
   // …existing fields…
   "highPriorityIncidentCount": 1,
   "lastActivityAt": "2026-09-10T11:02:43Z",        // max(reported_at); null if none
-  "categoryDistribution": [{ "category": "pothole", "count": 9 }],  // every category with ≥1 complaint, not top 5
   "priorityDistribution": { "low": 0, "medium": 2, "high": 1, "critical": 0 },  // active incidents
   "statusDistribution": { "open": 3, "in_progress": 0, "resolved": 0, "closed": 0 } // incidents
 }
 ```
 
-Filters `category` (repeatable), `from`/`to`. 404 for an unknown or retired ward.
-`topCategories` stays for compatibility; new clients read `categoryDistribution`.
+Filters `category` (repeatable), `from`/`to`, applied to the four new fields;
+the existing fields stay unfiltered for compatibility. 404 for an unknown **or
+retired** ward. Bands are assigned with the same `PriorityBand.of` every
+`Incident` carries, and every band and status key is always present.
 
-#### N1 — `GET /dashboard/wards` (new)
+**No `categoryDistribution`** (dropped from the proposal at implementation):
+`GET /dashboard/categories?wardId=` already answers "how do this ward's
+complaints split by category", with more columns. Two endpoints answering one
+question is the drift §6.1 warns about.
+
+#### N1 — `GET /dashboard/wards` (new) — ✅ implemented 2026-10-14
 
 One row per **active** ward. Serves the ward table, the ward map's choropleth
 and category→ward distribution.
@@ -541,7 +549,7 @@ and category→ward distribution.
 | Size | always every active ward — 243 — including zeros, so a map can colour every polygon |
 | Empty | wards with no activity return zeros and nulls, not absence |
 
-#### N2 — `GET /dashboard/categories` (new)
+#### N2 — `GET /dashboard/categories` (new) — ✅ implemented 2026-10-14
 
 One row per category that is active **or** has data.
 
@@ -564,7 +572,7 @@ Filters `wardId` (repeatable), `from`/`to` (resolution figures: incidents
 **resolved** in the window). Ordered by registry `sort_order`. Bounded by the
 registry (8 today).
 
-#### N3 — `GET /dashboard/trends` (new)
+#### N3 — `GET /dashboard/trends` (new) — ✅ implemented 2026-10-14
 
 Complaint counts over time, bucketed by `reported_at`.
 
@@ -579,7 +587,10 @@ Complaint counts over time, bucketed by `reported_at`.
 `groupBy=ward` is deliberately absent — 243 series is not a chart. A ward's
 trend is `?wardId=`.
 
-#### N4 — `GET /wards/boundaries` (new, public)
+#### N4 — `GET /wards/boundaries` (new, public) — ✅ implemented 2026-10-14
+
+311 KB for 243 wards (the full-resolution geometry is ~1.4 MB); ~150 ms to
+build, then cached by the browser for a day.
 
 ```jsonc
 // 200, Cache-Control: public, max-age=86400 — GeoJSON
@@ -808,6 +819,7 @@ Keep in sync with `backend-spring/src/main/resources/db/migration/`.
   "id": "45",
   "wardId": "3",
   "departmentId": "2",
+  "owningDepartmentId": "2",  // departmentId, else the category's default (V19); null = triage by hand
   "title": "Potholes on MG Road",
   "summary": "…",
   "category": "pothole",

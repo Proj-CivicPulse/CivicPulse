@@ -962,6 +962,9 @@ extended, 2 deferred, 0 new controllers. Implementation order: the E5/E6
 correctness fixes first (no frontend consumer, so nothing breaks), then E1 + the
 console together (breaking), then N1–N4 with the Explorer shell. Progress
 2026-10-13: E5's two fixes ✅, E1 + E2 report span + console ✅ (V21).
+2026-10-14: N1–N4, E2 owning department, E4, E5, E6 ✅ — the whole
+classification is implemented; typed clients in `frontend/src/services/
+explorer.service.ts`. **Next: step 3, the Explorer shell.**
 
 **Step 3 — Explorer shell**, refactored out of `IncidentDashboard.tsx`.
 

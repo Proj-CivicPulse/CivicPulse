@@ -17,6 +17,8 @@ public class DashboardSummaryDto {
     private final long resolvedComplaints;
     private final long totalIncidents;
     private final long openIncidents;
+    /** Active incidents in the high or critical band. */
+    private final long highPriorityIncidentCount;
     private final long complaintsLast24h;
     private final long complaintsLast7d;
     private final List<CategoryCountDto> topCategories;

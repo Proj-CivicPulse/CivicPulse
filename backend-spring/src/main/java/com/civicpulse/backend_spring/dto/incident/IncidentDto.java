@@ -16,6 +16,13 @@ public class IncidentDto {
     private final String id;
     private final String wardId;
     private final String departmentId;
+
+    /**
+     * Whose queue this incident is in: the officer-assigned department when
+     * there is one, otherwise the category's default (V19). Null means no
+     * owner — triage by hand.
+     */
+    private final String owningDepartmentId;
     private final String title;
     private final String summary;
     private final String category;
@@ -90,6 +97,9 @@ public class IncidentDto {
                 Wire.id(incident.getId()),
                 incident.getWard() == null ? null : Wire.id(incident.getWard().getId()),
                 incident.getDepartment() == null ? null : Wire.id(incident.getDepartment().getId()),
+                incident.getDepartment() != null
+                        ? Wire.id(incident.getDepartment().getId())
+                        : Wire.id(incident.getCategoryDefaultDepartmentId()),
                 incident.getTitle(),
                 incident.getSummary(),
                 incident.getCategory(),

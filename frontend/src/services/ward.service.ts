@@ -11,7 +11,7 @@ export interface Ward {
     code: string;
     name: string;
     zone: string | null;
-    /** Centroid. Null until a ward is given coordinates. */
+    /** A point guaranteed inside the ward (not the geometric centroid). */
     lat: number | null;
     long: number | null;
 }
@@ -35,9 +35,8 @@ export const wardService = {
     getById: (id: string) => get<Ward>(SPRING_API_PATH, `/wards/${id}`),
 
     /**
-     * Derives the ward from a coordinate pair. Nearest seeded centroid today,
-     * behind a resolver seam so real boundary polygons can replace it without
-     * touching this call.
+     * Derives the ward from a coordinate pair: point-in-polygon against the
+     * 243 BBMP boundaries.
      *
      * Throws ApiError 404 when no ward covers the location — the submit flow
      * treats that as "fall back to the ward picker", not as a failure.
@@ -49,4 +48,22 @@ export const wardService = {
         ),
 
     summary: () => get<WardSummary[]>(SPRING_API_PATH, '/wards/summary'),
+
+    /**
+     * Active ward boundaries as GeoJSON for the Explorer map (public; cached a
+     * day). Simplified for display — never use it to decide a ward. The
+     * licence requires `attribution` to be shown on the map.
+     */
+    boundaries: () => get<WardBoundaries>(SPRING_API_PATH, '/wards/boundaries'),
 };
+
+export interface WardBoundaries {
+    type: 'FeatureCollection';
+    datasetVersion: string;
+    attribution: string;
+    features: {
+        type: 'Feature';
+        geometry: { type: 'Polygon' | 'MultiPolygon'; coordinates: unknown };
+        properties: { id: string; code: string; name: string };
+    }[];
+}

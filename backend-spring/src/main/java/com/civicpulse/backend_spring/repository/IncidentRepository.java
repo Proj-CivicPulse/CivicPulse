@@ -26,6 +26,9 @@ public interface IncidentRepository
 
     long countByWardIdAndStatusIn(Long wardId, Collection<IncidentStatus> statuses);
 
+    /** Active incidents at or above a score — the caller passes PriorityBand.HIGH's bound. */
+    long countByStatusInAndPriorityScoreGreaterThanEqual(Collection<IncidentStatus> statuses, Double score);
+
     /**
      * Candidate incidents for the naive fallback grouper: same ward, same
      * category, still actionable, and opened recently enough that a new report

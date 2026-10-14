@@ -4,7 +4,9 @@ import com.civicpulse.backend_spring.entity.Incident;
 import com.civicpulse.backend_spring.entity.Ward;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
 import com.civicpulse.backend_spring.repository.ComplaintRepository;
+import com.civicpulse.backend_spring.repository.ExplorerRepository;
 import com.civicpulse.backend_spring.repository.IncidentRepository;
+import com.civicpulse.backend_spring.service.category.CategoryService;
 import com.civicpulse.backend_spring.service.ward.WardService;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -50,13 +52,16 @@ class DashboardServiceTest {
     @Mock private ComplaintRepository complaintRepository;
     @Mock private IncidentRepository incidentRepository;
     @Mock private WardService wardService;
+    @Mock private ExplorerRepository explorerRepository;
+    @Mock private CategoryService categoryService;
 
     private DashboardService service;
 
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {
-        service = new DashboardService(complaintRepository, incidentRepository, wardService);
+        service = new DashboardService(
+                complaintRepository, incidentRepository, wardService, explorerRepository, categoryService);
         when(wardService.summary()).thenReturn(List.of());
         when(complaintRepository.topCategories(any(), any())).thenReturn(List.of());
         when(incidentRepository.findAll(any(Specification.class), any(Pageable.class)))

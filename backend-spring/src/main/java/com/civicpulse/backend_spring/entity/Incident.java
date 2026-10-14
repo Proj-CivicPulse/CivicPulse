@@ -20,6 +20,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
@@ -60,6 +61,15 @@ public class Incident {
     @JoinColumn(name = "department_id")
     @ToString.Exclude
     private Department department;
+
+    /**
+     * The category's default department (V19), read with the row. Read-only:
+     * it belongs to the category, and {@link #department} — the officer's
+     * assignment — always overrides it. The owning department on the wire is
+     * {@code department ?? categoryDefaultDepartmentId}.
+     */
+    @Formula("(SELECT c.default_department_id FROM categories c WHERE c.code = category)")
+    private Long categoryDefaultDepartmentId;
 
     @Column(name = "title")
     private String title;

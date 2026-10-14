@@ -15,6 +15,11 @@ export interface Incident {
     id: string;
     wardId: string;
     departmentId: string | null;
+    /**
+     * Whose queue this is: the officer-assigned department, else the
+     * category's default. Null means no owner — triage by hand.
+     */
+    owningDepartmentId: string | null;
     title: string | null;
     summary: string | null;
     category: string;

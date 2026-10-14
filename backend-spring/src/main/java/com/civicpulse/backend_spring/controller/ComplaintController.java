@@ -1,10 +1,9 @@
 package com.civicpulse.backend_spring.controller;
 
-import com.civicpulse.backend_spring.dto.Wire;
+import com.civicpulse.backend_spring.dto.PageResponse;
 import com.civicpulse.backend_spring.dto.complaint.ComplaintDto;
 import com.civicpulse.backend_spring.dto.complaint.CreateComplaintRequest;
 import com.civicpulse.backend_spring.dto.complaint.UpdateComplaintRequest;
-import com.civicpulse.backend_spring.enums.ComplaintStatus;
 import com.civicpulse.backend_spring.exception.UnauthorizedException;
 import com.civicpulse.backend_spring.service.complaint.ComplaintService;
 import jakarta.validation.Valid;
@@ -58,13 +57,19 @@ public class ComplaintController {
      */
     @GetMapping
     @PreAuthorize("hasRole('OFFICER')")
-    public ResponseEntity<List<ComplaintDto>> list(
-            @RequestParam(required = false) Long wardId,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String status) {
+    public ResponseEntity<PageResponse<ComplaintDto>> list(
+            @RequestParam(required = false) List<Long> wardId,
+            @RequestParam(required = false) List<String> category,
+            @RequestParam(required = false) List<String> status,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String dir,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer offset) {
 
         return ResponseEntity.ok(complaintService.list(
-                wardId, category, Wire.parseEnum(ComplaintStatus.class, status, "status")));
+                wardId, category, status, from, to, q, dir, limit, offset));
     }
 
     @GetMapping("/mine")

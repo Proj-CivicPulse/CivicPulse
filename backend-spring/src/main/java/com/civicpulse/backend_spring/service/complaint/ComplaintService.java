@@ -1,5 +1,7 @@
 package com.civicpulse.backend_spring.service.complaint;
 
+import com.civicpulse.backend_spring.dto.PageResponse;
+import com.civicpulse.backend_spring.dto.QueryParams;
 import com.civicpulse.backend_spring.dto.Wire;
 import com.civicpulse.backend_spring.dto.complaint.ComplaintDto;
 import com.civicpulse.backend_spring.dto.complaint.CreateComplaintRequest;
@@ -15,13 +17,18 @@ import com.civicpulse.backend_spring.exception.ResourceNotFoundException;
 import com.civicpulse.backend_spring.exception.ValidationException;
 import com.civicpulse.backend_spring.repository.ComplaintRepository;
 import com.civicpulse.backend_spring.repository.DepartmentRepository;
+import com.civicpulse.backend_spring.repository.OffsetPageRequest;
 import com.civicpulse.backend_spring.repository.UserRepository;
 import com.civicpulse.backend_spring.repository.WardRepository;
+import com.civicpulse.backend_spring.repository.spec.ComplaintSpecifications;
 import com.civicpulse.backend_spring.service.category.CategoryService;
 import com.civicpulse.backend_spring.service.geocoding.GeocodingService;
 import com.civicpulse.backend_spring.service.ward.WardResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -119,18 +126,41 @@ public class ComplaintService {
                 .toList();
     }
 
+    /**
+     * One page of every resident complaint, newest report first by default
+     * (docs/api-contract.md, E4). Filtering happens in the query — this used
+     * to load the whole table and filter it in Java.
+     */
     @Transactional(readOnly = true)
-    public List<ComplaintDto> list(Long wardId, String category, ComplaintStatus status) {
-        // Canonicalised so any accepted spelling selects the stored code.
-        String categoryFilter = categoryService.canonicaliseFilter(category);
+    public PageResponse<ComplaintDto> list(
+            List<Long> wardIds, List<String> categories, List<String> statuses,
+            String from, String to, String q, String dir, Integer limit, Integer offset) {
 
-        return complaintRepository.findAll().stream()
-                .filter(c -> wardId == null
-                        || (c.getWard() != null && wardId.equals(c.getWard().getId())))
-                .filter(c -> categoryFilter == null || categoryFilter.equals(c.getCategory()))
-                .filter(c -> status == null || status == c.getStatus())
-                .map(this::toDto)
-                .toList();
+        LocalDateTime fromTime = QueryParams.instant(from, "from");
+        LocalDateTime toTime = QueryParams.instant(to, "to");
+        QueryParams.requireOrderedWindow(fromTime, toTime);
+        int pageLimit = QueryParams.limit(limit);
+        int pageOffset = QueryParams.offset(offset);
+
+        Specification<Complaint> spec = Specification.allOf(
+                ComplaintSpecifications.hasWardIn(
+                        wardIds == null ? List.of() : wardIds.stream().distinct().toList()),
+                // Canonicalised so any accepted spelling selects the stored code.
+                ComplaintSpecifications.hasCategoryIn(
+                        QueryParams.each(categories, categoryService::canonicaliseFilter)),
+                ComplaintSpecifications.hasStatusIn(QueryParams.each(statuses,
+                        value -> Wire.parseEnum(ComplaintStatus.class, value, "status"))),
+                ComplaintSpecifications.reportedBetween(fromTime, toTime),
+                ComplaintSpecifications.matchesText(QueryParams.text(q)));
+
+        Sort sort = Sort.by(QueryParams.direction(dir, Sort.Direction.DESC), "reportedAt")
+                .and(Sort.by(Sort.Direction.ASC, "id"));
+        Page<Complaint> page = complaintRepository.findAll(
+                spec, new OffsetPageRequest(pageOffset, pageLimit, sort));
+
+        return new PageResponse<>(
+                page.getContent().stream().map(this::toDto).toList(),
+                page.getTotalElements(), pageLimit, pageOffset);
     }
 
     /**

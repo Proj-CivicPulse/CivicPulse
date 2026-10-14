@@ -1,4 +1,4 @@
-import { get, post, patch } from './api';
+import { get, post, patch, type Page } from './api';
 import { SPRING_API_PATH } from '../config/constants';
 
 export type ComplaintStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -99,10 +99,19 @@ export interface CreateComplaintInput {
     // intent/confirm flow in docs/photo-upload-contract.md.
 }
 
+/** GET /complaints parameters (docs/api-contract.md, E4). Newest report first by default. */
 export interface ComplaintFilters {
-    wardId?: string;
-    category?: string;
-    status?: ComplaintStatus;
+    wardIds?: string[];
+    categories?: string[];
+    statuses?: ComplaintStatus[];
+    /** ISO-8601 instants bounding reportedAt, [from, to). */
+    from?: string;
+    to?: string;
+    q?: string;
+    dir?: 'asc' | 'desc';
+    /** Server default 50, server max 200. */
+    limit?: number;
+    offset?: number;
 }
 
 export interface UpdateComplaintInput {
@@ -112,9 +121,15 @@ export interface UpdateComplaintInput {
 
 function buildQuery(filters: ComplaintFilters = {}): string {
     const params = new URLSearchParams();
-    if (filters.wardId) params.set('wardId', filters.wardId);
-    if (filters.category) params.set('category', filters.category);
-    if (filters.status) params.set('status', filters.status);
+    filters.wardIds?.forEach((id) => params.append('wardId', id));
+    filters.categories?.forEach((code) => params.append('category', code));
+    filters.statuses?.forEach((status) => params.append('status', status));
+    if (filters.from) params.set('from', filters.from);
+    if (filters.to) params.set('to', filters.to);
+    if (filters.q) params.set('q', filters.q);
+    if (filters.dir) params.set('dir', filters.dir);
+    if (filters.limit !== undefined) params.set('limit', String(filters.limit));
+    if (filters.offset !== undefined) params.set('offset', String(filters.offset));
     const query = params.toString();
     return query ? `?${query}` : '';
 }
@@ -126,7 +141,7 @@ export const complaintService = {
 
     /** Officer only — this is every citizen's complaint text. */
     list: (filters?: ComplaintFilters) =>
-        get<Complaint[]>(SPRING_API_PATH, `/complaints${buildQuery(filters)}`),
+        get<Page<Complaint>>(SPRING_API_PATH, `/complaints${buildQuery(filters)}`),
 
     getById: (id: string) => get<Complaint>(SPRING_API_PATH, `/complaints/${id}`),
 
