@@ -40,6 +40,10 @@ function lazyWithChunkRecovery<T extends ComponentType<any>>(importer: () => Pro
 const SubmitComplaint = lazyWithChunkRecovery(() => import('./pages/SubmitComplaint'));
 const MyComplaints = lazyWithChunkRecovery(() => import('./pages/MyComplaints'));
 const IncidentDashboard = lazyWithChunkRecovery(() => import('./pages/IncidentDashboard'));
+const WardExplorer = lazyWithChunkRecovery(() => import('./pages/WardExplorer'));
+const WardDetail = lazyWithChunkRecovery(() => import('./pages/WardDetail'));
+const CategoryExplorer = lazyWithChunkRecovery(() => import('./pages/CategoryExplorer'));
+const CategoryDetail = lazyWithChunkRecovery(() => import('./pages/CategoryDetail'));
 const Login = lazyWithChunkRecovery(() => import('./pages/Login'));
 const Register = lazyWithChunkRecovery(() => import('./pages/Register'));
 const VerifyEmail = lazyWithChunkRecovery(() => import('./pages/VerifyEmail'));
@@ -97,6 +101,41 @@ export default function App() {
                             element={
                                 <ProtectedRoute requireRole="officer">
                                     <IncidentDashboard />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* The Explorer: three views of one filter state, all
+                            officer-only like the console they extend. */}
+                        <Route
+                            path="/dashboard/wards"
+                            element={
+                                <ProtectedRoute requireRole="officer">
+                                    <WardExplorer />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/dashboard/wards/:wardId"
+                            element={
+                                <ProtectedRoute requireRole="officer">
+                                    <WardDetail />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/dashboard/categories"
+                            element={
+                                <ProtectedRoute requireRole="officer">
+                                    <CategoryExplorer />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/dashboard/categories/:code"
+                            element={
+                                <ProtectedRoute requireRole="officer">
+                                    <CategoryDetail />
                                 </ProtectedRoute>
                             }
                         />

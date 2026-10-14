@@ -29,6 +29,7 @@ export const queryKeys = {
         detail: (id: string) => ['wards', 'detail', id] as const,
         summary: () => ['wards', 'summary'] as const,
         resolve: (lat: number, long: number) => ['wards', 'resolve', lat, long] as const,
+        boundaries: () => ['wards', 'boundaries'] as const,
     },
 
     categories: {
@@ -58,6 +59,10 @@ export const queryKeys = {
     dashboard: {
         all: () => ['dashboard'] as const,
         summary: () => ['dashboard', 'summary'] as const,
-        ward: (wardId: string) => ['dashboard', 'ward', wardId] as const,
+        ward: (wardId: string, filters?: object) => ['dashboard', 'ward', wardId, filters ?? {}] as const,
+        // Explorer aggregates (N1–N3). Keyed by their filters, like the lists.
+        wards: (filters?: object) => ['dashboard', 'wards', filters ?? {}] as const,
+        categories: (filters?: object) => ['dashboard', 'categories', filters ?? {}] as const,
+        trends: (filters?: object) => ['dashboard', 'trends', filters ?? {}] as const,
     },
 } as const;

@@ -80,6 +80,12 @@
 
 .table {
     width: 100%;
+    /*
+     * Below this the columns would crush their text to ellipses; instead the
+     * table keeps its shape and scrolls inside .scroll, which is what that
+     * container is for.
+     */
+    min-width: 640px;
     border-collapse: collapse;
     background: var(--surface);
     font: var(--t-data);

@@ -964,7 +964,23 @@ console together (breaking), then N1–N4 with the Explorer shell. Progress
 2026-10-13: E5's two fixes ✅, E1 + E2 report span + console ✅ (V21).
 2026-10-14: N1–N4, E2 owning department, E4, E5, E6 ✅ — the whole
 classification is implemented; typed clients in `frontend/src/services/
-explorer.service.ts`. **Next: step 3, the Explorer shell.**
+explorer.service.ts`.
+2026-10-14: steps 3–5 and 8 ✅ in the frontend — the Explorer shell
+(Incidents / Wards / Categories under `/dashboard`, one shared filter store
+with a "reported within" window), Ward Explorer + ward detail (choropleth on a
+new validated `--density-*` ramp in tokens.css, distributions, trend, recent
+incidents), Category Explorer + category detail (table with weekly
+sparklines, resolution figures, default department), and the console now
+searches, honours the window, and shows report span and owning department.
+Step 6 run against production data at the API level: every aggregate
+reconciles with the database totals (167 / 31 / 7 high priority). Step 7
+found one real issue — every incident title is null — so lists now name an
+incident by category plus place (house numbers and plus codes skipped).
+Checked visually in headless Chrome against production data served from a
+read-only fixture capture, at 1440 / 1024 / 390 px: no console errors, no
+page overflow. That pass caught and fixed four layout defects, one of them
+pre-existing — the console map opened on a fixed centre with every incident
+out of view; it now frames its markers.
 
 **Step 3 — Explorer shell**, refactored out of `IncidentDashboard.tsx`.
 

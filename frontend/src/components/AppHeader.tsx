@@ -8,6 +8,8 @@ import styles from './AppHeader.module.css';
 export interface NavItem {
     label: string;
     to: string;
+    /** Active only on an exact match — for a section root like /dashboard. */
+    end?: boolean;
 }
 
 interface Props {
@@ -42,6 +44,7 @@ export default function AppHeader({ nav = [], wide = false }: Props) {
                             <NavLink
                                 key={item.to}
                                 to={item.to}
+                                end={item.end}
                                 className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
                             >
                                 {item.label}

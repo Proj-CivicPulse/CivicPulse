@@ -1,0 +1,145 @@
+/*
+ * The Explorer's analytical views. Unlike the incident console — a working
+ * surface fixed to the viewport — these are read top to bottom, so the page
+ * scrolls. Same ground, same panels, same 1px rules.
+ */
+.page {
+    min-height: 100svh;
+    background: var(--ground);
+}
+
+.main {
+    display: grid;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-6) var(--space-10);
+}
+
+.stack {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.head {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.titleRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+}
+
+.title {
+    font: var(--t-title);
+    letter-spacing: var(--tracking-title);
+    color: var(--ink);
+}
+
+.crumb {
+    font: var(--t-micro);
+    color: var(--ink-muted);
+}
+
+.crumb a {
+    color: var(--seal);
+}
+
+.lede {
+    font: var(--t-body);
+    color: var(--ink-muted);
+}
+
+/* Map beside table at desktop width; stacked below it. */
+.split {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    gap: var(--space-4);
+    align-items: start;
+}
+
+.twoUp {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+}
+
+@media (max-width: 1100px) {
+    .split,
+    .twoUp {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.mapBox {
+    height: 440px;
+}
+
+.mapBoxSmall {
+    height: 300px;
+}
+
+/* Refetch keeps the frame: the old render stays, dimmed — no skeleton flash. */
+.stale {
+    opacity: 0.55;
+    transition: opacity var(--motion-base) var(--ease);
+}
+
+.fresh {
+    opacity: 1;
+    transition: opacity var(--motion-base) var(--ease);
+}
+
+.note {
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-faint);
+}
+
+.toggle {
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+    font: var(--t-micro);
+    color: var(--ink-muted);
+    cursor: pointer;
+}
+
+.toggle:hover {
+    color: var(--ink);
+    background: var(--ground);
+}
+
+.toggle:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+}
+
+.check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font: var(--t-micro);
+    color: var(--ink-muted);
+}
+
+.wardCode {
+    display: inline-block;
+    min-width: 2.5em;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.linkButton {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: var(--t-micro);
+    color: var(--seal);
+    text-decoration: underline;
+    cursor: pointer;
+}

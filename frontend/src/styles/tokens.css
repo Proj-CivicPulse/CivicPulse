@@ -77,6 +77,29 @@
     --priority-high-ink: #B54F26;     /* 4.96:1 */
     --priority-critical-ink: #8E1F16; /* 8.65:1 — already passes, no variant needed */
 
+    /* ------------------------------------------------------- density ramp */
+
+    /*
+     * Magnitude on a map: the Explorer's ward choropleth (how many active
+     * incidents a ward holds). SEQUENTIAL, so one hue — the seal's teal —
+     * light to dark, more-is-darker. Not the priority ramp: a ward's count is
+     * a magnitude, not an urgency rank, and borrowing priority colours would
+     * make a busy ward read as an alarming one.
+     *
+     * Validated as an ordinal ramp (dataviz validate_palette.js --ordinal,
+     * surface --surface): lightness monotone, every adjacent step >= 0.06 L
+     * apart, single hue (11° spread), light end 2.21:1 on --surface. Zero is
+     * NOT step 1 — a ward with nothing gets no fill at all, so "none" and "a
+     * little" never share a colour.
+     *
+     * Graphics only, like the priority ramp. Never text, never a wash.
+     */
+    --density-1: #8AB4B2;
+    --density-2: #639797;
+    --density-3: #437778;
+    --density-4: #295B5E;
+    --density-5: #123E42;
+
     /* -------------------------------------------------------------- status */
 
     /*

@@ -84,6 +84,27 @@
     color: var(--ink);
 }
 
+.search {
+    flex: 1;
+    max-width: 280px;
+    margin-inline-start: auto;
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+    font: var(--t-data);
+    color: var(--ink);
+}
+
+.search::placeholder {
+    color: var(--ink-faint);
+}
+
+.search:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+}
+
 .queueCount {
     font: var(--t-micro);
     font-variant-numeric: tabular-nums;

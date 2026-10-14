@@ -2,6 +2,7 @@ import type { Ward } from '@/services/ward.service';
 import type { IncidentStatus } from '@/services/incident.service';
 import { PRIORITY_BAND_ORDER, priorityLabel, type PriorityBand } from '@/lib/priority';
 import { humanizeEnum } from '@/lib/format';
+import { WINDOW_OPTIONS } from '@/lib/reportWindow';
 import { useDashboardStore } from '@/stores/dashboard.store';
 import styles from './WardRail.module.css';
 
@@ -25,8 +26,11 @@ export default function WardRail({ wards, categories, categoryLabel }: Props) {
     const setBandFilter = useDashboardStore((s) => s.setBandFilter);
     const setCategoryFilter = useDashboardStore((s) => s.setCategoryFilter);
     const clearFilters = useDashboardStore((s) => s.clearFilters);
+    const windowDays = useDashboardStore((s) => s.windowDays);
+    const setWindowDays = useDashboardStore((s) => s.setWindowDays);
 
-    const hasFilters = statusFilter !== null || bandFilter !== null || categoryFilter !== null;
+    const hasFilters =
+        statusFilter !== null || bandFilter !== null || categoryFilter !== null || windowDays !== null;
 
     return (
         <div className={styles.rail}>
@@ -59,6 +63,26 @@ export default function WardRail({ wards, categories, categoryLabel }: Props) {
                         </li>
                     ))}
                 </ul>
+            </section>
+
+            {/* Shared with every Explorer view: incidents with a report in the window. */}
+            <section className={styles.group} aria-labelledby="rail-window">
+                <h2 className={styles.groupTitle} id="rail-window">
+                    Reported
+                </h2>
+                <div className={styles.chips}>
+                    {WINDOW_OPTIONS.map((option) => (
+                        <button
+                            key={option.label}
+                            type="button"
+                            className={windowDays === option.days ? styles.chipActive : styles.chip}
+                            aria-pressed={windowDays === option.days}
+                            onClick={() => setWindowDays(option.days)}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>
             </section>
 
             <section className={styles.group} aria-labelledby="rail-priority">

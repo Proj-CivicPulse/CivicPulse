@@ -1,0 +1,127 @@
+.wrap {
+    position: relative;
+    width: 100%;
+}
+
+.wrap:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: var(--r-sharp);
+}
+
+.svg {
+    display: block;
+}
+
+/* Solid hairline, one step off the surface. Never dashed. */
+.grid {
+    stroke: var(--rule);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.tick {
+    font: var(--t-data);
+    font-variant-numeric: tabular-nums;
+    fill: var(--ink-faint);
+}
+
+.bar {
+    fill: var(--seal);
+}
+
+/* The hovered column lifts by darkening one step, so it reads as a response. */
+.barActive {
+    fill: var(--seal-hover);
+}
+
+.crosshair {
+    stroke: var(--ink-faint);
+    stroke-width: 1;
+    pointer-events: none;
+}
+
+.hit {
+    fill: transparent;
+    cursor: default;
+}
+
+.tooltip {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    display: grid;
+    gap: 2px;
+    padding: var(--space-1) var(--space-2);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    box-shadow: var(--shadow-overlay);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* Value leads, label follows. */
+.tooltipValue {
+    font: var(--t-ui);
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.tooltipLabel {
+    font: var(--t-micro);
+    color: var(--ink-muted);
+}
+
+/* ------------------------------------------------------------ table twin */
+
+.tableWrap {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font: var(--t-data);
+    color: var(--ink);
+}
+
+.table th {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    padding: var(--space-1) var(--space-2);
+    background: var(--surface-sunk);
+    font: var(--t-micro);
+    color: var(--ink-muted);
+    text-align: start;
+}
+
+.table td {
+    padding: var(--space-1) var(--space-2);
+    border-bottom: 1px solid var(--rule);
+}
+
+.num {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+}
+
+.table th.num {
+    text-align: end;
+}
+
+/* ------------------------------------------------------------- sparkline */
+
+.spark {
+    fill: var(--rule-strong);
+}
+
+.sparkNow {
+    fill: var(--seal);
+}
+
+.sparkZero {
+    fill: var(--rule);
+}

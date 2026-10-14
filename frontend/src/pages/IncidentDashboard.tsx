@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { incidentService, type Incident, type IncidentFilters } from '@/services/incident.service';
 import { categoryService } from '@/services/category.service';
 import { wardService } from '@/services/ward.service';
@@ -7,8 +7,11 @@ import { queryKeys } from '@/lib/queryKeys';
 import { describeError } from '@/lib/errors';
 import { formatCount, humanizeEnum, truncate } from '@/lib/format';
 import { daysSince } from '@/lib/datetime';
+import { reportWindow } from '@/lib/reportWindow';
 import { useDashboardStore } from '@/stores/dashboard.store';
 import AppHeader from '@/components/AppHeader';
+import { EXPLORER_NAV } from '@/components/explorer/ExplorerFilterBar';
+import { incidentName } from '@/components/explorer/IncidentList';
 import WardRail from '@/components/dashboard/WardRail';
 import IncidentDetail from '@/components/dashboard/IncidentDetail';
 import Button from '@/components/ui/Button';
@@ -50,6 +53,15 @@ export default function IncidentDashboard() {
     const categoryFilter = useDashboardStore((s) => s.categoryFilter);
     const selectedIncidentId = useDashboardStore((s) => s.selectedIncidentId);
     const selectIncident = useDashboardStore((s) => s.selectIncident);
+    const windowDays = useDashboardStore((s) => s.windowDays);
+
+    // Search is typed, so it is debounced: one request per pause, not per key.
+    const [searchInput, setSearchInput] = useState('');
+    const [search, setSearch] = useState('');
+    useEffect(() => {
+        const id = window.setTimeout(() => setSearch(searchInput.trim()), 300);
+        return () => window.clearTimeout(id);
+    }, [searchInput]);
 
     const wardsQuery = useQuery({
         queryKey: queryKeys.wards.list(),
@@ -66,19 +78,31 @@ export default function IncidentDashboard() {
             ...(statusFilter !== null ? { statuses: [statusFilter] } : {}),
             ...(bandFilter !== null ? { priorityBands: [bandFilter] } : {}),
             ...(categoryFilter !== null ? { categories: [categoryFilter] } : {}),
+            // Incidents with a member REPORTED in the window — the same window
+            // every Explorer view applies.
+            ...reportWindow(windowDays),
+            ...(search !== '' ? { q: search } : {}),
             limit: QUEUE_FETCH_LIMIT,
         }),
-        [selectedWardId, statusFilter, bandFilter, categoryFilter]
+        [selectedWardId, statusFilter, bandFilter, categoryFilter, windowDays, search]
     );
 
     const incidentsQuery = useQuery({
         queryKey: queryKeys.incidents.list(serverFilters),
         queryFn: () => incidentService.list(serverFilters),
+        // Refetch keeps the frame: the previous queue stays up, dimmed, while
+        // a new filter combination loads — no skeleton flash per click.
+        placeholderData: keepPreviousData,
     });
 
     const incidents = useMemo(() => incidentsQuery.data?.items ?? [], [incidentsQuery.data]);
     const total = incidentsQuery.data?.total ?? 0;
-    const hasNarrowingFilters = statusFilter !== null || bandFilter !== null || categoryFilter !== null;
+    const hasNarrowingFilters =
+        statusFilter !== null ||
+        bandFilter !== null ||
+        categoryFilter !== null ||
+        windowDays !== null ||
+        search !== '';
 
     const categoriesQuery = useQuery({
         queryKey: queryKeys.categories.list(),
@@ -120,7 +144,7 @@ export default function IncidentDashboard() {
                     lat: i.lat,
                     long: i.long,
                     band: i.priorityBand,
-                    label: i.title ?? categoryLabel(i.category),
+                    label: incidentName(i, categoryLabel),
                 })),
         // categoryLabel belongs here: it changes exactly once, when /categories
         // resolves, and that is precisely when these labels must be rebuilt.
@@ -134,8 +158,8 @@ export default function IncidentDashboard() {
             {
                 key: 'title',
                 header: 'Incident',
-                cell: (row) => truncate(row.title ?? categoryLabel(row.category), 44),
-                sortValue: (row) => row.title ?? row.category,
+                cell: (row) => truncate(incidentName(row, categoryLabel), 44),
+                sortValue: (row) => incidentName(row, categoryLabel),
             },
             {
                 key: 'priority',
@@ -185,7 +209,7 @@ export default function IncidentDashboard() {
 
     return (
         <div className={styles.page}>
-            <AppHeader wide />
+            <AppHeader wide nav={EXPLORER_NAV} />
 
             <div className={selected ? styles.layoutWithDetail : styles.layout}>
                 <aside className={styles.rail} aria-label="Wards and filters">
@@ -206,6 +230,7 @@ export default function IncidentDashboard() {
                     <div className={styles.map}>
                         <MapView
                             ariaLabel="Incidents on a map"
+                            fitToMarkers
                             markers={markers}
                             selectedId={selectedIncidentId}
                             onSelect={selectIncident}
@@ -217,6 +242,14 @@ export default function IncidentDashboard() {
                             <h2 className={styles.queueTitle} id="queue-heading">
                                 Incident queue
                             </h2>
+                            <input
+                                type="search"
+                                className={styles.search}
+                                placeholder="Search titles and summaries"
+                                aria-label="Search incidents"
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                            />
                             <span className={styles.queueCount}>
                                 {total > incidents.length
                                     ? `${formatCount(incidents.length)} of ${formatCount(total)} incidents`

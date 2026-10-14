@@ -1,0 +1,104 @@
+/*
+ * Ward polygons. Every colour is a token: the density ramp for magnitude, the
+ * surface for the 1px separating stroke (a surface gap, not a drawn border),
+ * the seal for the one highlighted ward.
+ */
+.ward {
+    stroke: var(--surface);
+    stroke-width: 1;
+    fill-opacity: 0.82;
+    cursor: pointer;
+}
+
+/* No shading requested: boundaries only, for context. */
+.outline {
+    fill: none;
+    stroke: var(--rule-strong);
+    stroke-width: 1;
+}
+
+/* Zero is not the first step: no fill at all, a hairline so the ward still reads. */
+.d0 {
+    fill: var(--surface);
+    fill-opacity: 0.35;
+    stroke: var(--rule-strong);
+}
+
+.d1 { fill: var(--density-1); }
+.d2 { fill: var(--density-2); }
+.d3 { fill: var(--density-3); }
+.d4 { fill: var(--density-4); }
+.d5 { fill: var(--density-5); }
+
+.ward:hover {
+    fill-opacity: 1;
+    stroke: var(--ink);
+    stroke-width: 1.5;
+}
+
+.highlight {
+    stroke: var(--seal);
+    stroke-width: 2.5;
+    fill-opacity: 0.15;
+}
+
+.tooltip {
+    font: var(--t-data);
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    box-shadow: var(--shadow-overlay);
+}
+
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-2) var(--space-4);
+    border-top: 1px solid var(--rule);
+    background: var(--surface);
+}
+
+.legendTitle {
+    font: var(--t-micro);
+    color: var(--ink-muted);
+}
+
+.legendSteps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.legendStep {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font: var(--t-data);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+}
+
+/* The swatch mirrors the mark: a filled rect, like the polygons. */
+.swatch {
+    display: inline-block;
+    width: 14px;
+    height: 10px;
+    border-radius: 2px;
+}
+
+.swatch.d1 { background: var(--density-1); }
+.swatch.d2 { background: var(--density-2); }
+.swatch.d3 { background: var(--density-3); }
+.swatch.d4 { background: var(--density-4); }
+.swatch.d5 { background: var(--density-5); }
+
+.swatchNone {
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+}

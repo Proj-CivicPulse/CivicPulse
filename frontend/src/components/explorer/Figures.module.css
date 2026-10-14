@@ -1,0 +1,86 @@
+/* ------------------------------------------------------- distribution */
+
+.bars {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.barRow {
+    display: grid;
+    grid-template-columns: minmax(96px, 9rem) minmax(0, 1fr) 3.5rem;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.barLabel {
+    font: var(--t-data);
+    color: var(--ink-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.track {
+    height: 12px;
+}
+
+/* Thin mark; 4px rounded data-end, square at the baseline. */
+.bar {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: 0 4px 4px 0;
+}
+
+.seal { background: var(--seal); }
+.low { background: var(--priority-low); }
+.medium { background: var(--priority-medium); }
+.high { background: var(--priority-high); }
+.critical { background: var(--priority-critical); }
+
+.barValue {
+    font: var(--t-data);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    text-align: end;
+}
+
+/* ------------------------------------------------------------- tiles */
+
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--space-3);
+    margin: 0;
+}
+
+.tile {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-panel);
+}
+
+.tileLabel {
+    font: var(--t-micro);
+    color: var(--ink-muted);
+}
+
+.tileValue {
+    margin: 0;
+    font: var(--t-section);
+    font-family: var(--font-sans);
+    color: var(--ink);
+}
+
+.tileNote {
+    margin: 0;
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-faint);
+}

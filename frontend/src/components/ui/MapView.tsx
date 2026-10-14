@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { CircleMarker, MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import type { PriorityBand } from '@/lib/priority';
@@ -36,6 +36,16 @@ interface Props {
     /** `inline` is the 320px submit-form map; `fill` expands to its container. */
     size?: 'inline' | 'fill';
     ariaLabel: string;
+    /**
+     * Extra layers drawn under the markers — the Explorer's ward shapes. They
+     * render inside the MapContainer, so they can use react-leaflet hooks.
+     */
+    children?: ReactNode;
+    /**
+     * Frame the markers whenever the SET of markers changes (a new filter),
+     * not when the selection does — so picking a row never yanks the view.
+     */
+    fitToMarkers?: boolean;
 }
 
 /** Bengaluru. Only used before geolocation resolves or when there is nothing to show. */
@@ -58,6 +68,8 @@ export default function MapView({
     zoom = 13,
     size = 'fill',
     ariaLabel,
+    children,
+    fitToMarkers = false,
 }: Props) {
     const initialCenter = center ?? (pin ? [pin.lat, pin.long] : null) ?? FALLBACK_CENTER;
 
@@ -71,6 +83,9 @@ export default function MapView({
                 // zoom and double-click zoom just cause accidental jumps here.
                 doubleClickZoom={false}
                 boxZoom={false}
+                // Quarter steps, so fitting a city or a ward frames it tightly
+                // instead of snapping a whole zoom level out.
+                zoomSnap={0.25}
                 scrollWheelZoom
             >
                 {/*
@@ -86,6 +101,8 @@ export default function MapView({
                     subdomains="abcd"
                     maxZoom={20}
                 />
+
+                {children}
 
                 {markers.map((marker) => {
                     const isSelected = marker.id === selectedId;
@@ -110,6 +127,8 @@ export default function MapView({
                         </CircleMarker>
                     );
                 })}
+
+                {fitToMarkers && <FitMarkers markers={markers} />}
 
                 {pin && <DraggablePin lat={pin.lat} long={pin.long} onMove={onPinMove} />}
                 {pin && <Recenter lat={pin.lat} long={pin.long} />}
@@ -160,6 +179,22 @@ function DraggablePin({
             }}
         />
     );
+}
+
+/**
+ * Fits the view to the markers. Keyed on the ids, so it runs when the filtered
+ * set changes and stays put while the officer pans or selects.
+ */
+function FitMarkers({ markers }: { markers: readonly MapMarker[] }) {
+    const map = useMap();
+    const ids = markers.map((m) => m.id).join(',');
+    useEffect(() => {
+        if (markers.length === 0) return;
+        const bounds = L.latLngBounds(markers.map((m) => [m.lat, m.long] as [number, number]));
+        map.fitBounds(bounds, { padding: [32, 32], maxZoom: 15 });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- refit on a new set, not a new array
+    }, [map, ids]);
+    return null;
 }
 
 /** Tapping the map is faster than dragging on a phone. */

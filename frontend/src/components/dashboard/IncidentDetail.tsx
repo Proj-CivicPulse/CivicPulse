@@ -4,11 +4,13 @@ import { incidentService, type Incident } from '@/services/incident.service';
 import { queryKeys } from '@/lib/queryKeys';
 import { describeError } from '@/lib/errors';
 import { formatCount, formatCoordinates, truncate } from '@/lib/format';
-import { daysSince, formatRelative } from '@/lib/datetime';
+import { daysSince, formatAbsolute, formatRelative } from '@/lib/datetime';
+import { useDepartmentNames } from '@/lib/useRegistry';
 import Button from '@/components/ui/Button';
 import PriorityChip from '@/components/ui/PriorityChip';
 import Skeleton from '@/components/ui/Skeleton';
 import StatusChip from '@/components/ui/StatusChip';
+import { incidentName } from '@/components/explorer/IncidentList';
 import styles from './IncidentDetail.module.css';
 
 interface Props {
@@ -28,6 +30,11 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
     // Age of the problem, from its first report — not of the grouping.
     const age = incident.firstReportedAt ? daysSince(incident.firstReportedAt) : null;
 
+    // Whose queue: the officer's assignment, else the category's default.
+    const departmentName = useDepartmentNames();
+    const owner = departmentName(incident.owningDepartmentId);
+    const ownerIsDefault = incident.departmentId === null && owner !== null;
+
     return (
         // Keyed on the incident id so the crossfade replays on every swap —
         // motion moment 2 of 3, a 100ms opacity fade and nothing else.
@@ -35,7 +42,7 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
             <div className={styles.header}>
                 <div className={styles.headerTop}>
                     <h2 className={styles.title}>
-                        {incident.title ?? categoryLabel(incident.category)}
+                        {incidentName(incident, categoryLabel)}
                     </h2>
                     {onClose && (
                         <Button
@@ -100,6 +107,28 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
                 <div className={styles.fact}>
                     <dt className={styles.factLabel}>Age</dt>
                     <dd className={styles.factValue}>{age === null ? '—' : `${age} days`}</dd>
+                </div>
+                <div className={styles.fact}>
+                    <dt className={styles.factLabel}>First reported</dt>
+                    <dd className={styles.factValue}>
+                        {incident.firstReportedAt ? formatAbsolute(incident.firstReportedAt) : '—'}
+                    </dd>
+                </div>
+                <div className={styles.fact}>
+                    <dt className={styles.factLabel}>Last reported</dt>
+                    <dd className={styles.factValue}>
+                        {incident.lastReportedAt ? formatRelative(incident.lastReportedAt) : '—'}
+                    </dd>
+                </div>
+                <div className={styles.fact}>
+                    <dt className={styles.factLabel}>Department</dt>
+                    <dd className={styles.factValue}>
+                        {owner === null
+                            ? 'Unassigned — triage by hand'
+                            : ownerIsDefault
+                              ? `${owner} (category default)`
+                              : owner}
+                    </dd>
                 </div>
                 {incident.lat !== null && incident.long !== null && (
                     <div className={styles.fact}>

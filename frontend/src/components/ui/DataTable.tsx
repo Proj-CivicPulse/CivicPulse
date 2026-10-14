@@ -12,6 +12,11 @@ export interface Column<T> {
     align?: 'start' | 'end';
     /** Any CSS width, e.g. '120px' or 'minmax(0, 1fr)'. */
     width?: string;
+    /**
+     * A floor the column keeps when the table is squeezed — for the column
+     * that names the row, which is useless as an ellipsis.
+     */
+    minWidth?: string;
 }
 
 interface Props<T> {
@@ -183,7 +188,11 @@ export default function DataTable<T>({
                                     scope="col"
                                     aria-sort={column.sortValue ? ariaSort : undefined}
                                     className={column.align === 'end' ? styles.thEnd : styles.th}
-                                    style={column.width !== undefined ? { width: column.width } : undefined}
+                                    style={
+                                        column.width !== undefined || column.minWidth !== undefined
+                                            ? { width: column.width, minWidth: column.minWidth }
+                                            : undefined
+                                    }
                                 >
                                     {column.sortValue ? (
                                         <button
