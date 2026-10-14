@@ -25,7 +25,8 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
         queryFn: () => incidentService.getComplaints(incident.id),
     });
 
-    const age = daysSince(incident.createdAt);
+    // Age of the problem, from its first report — not of the grouping.
+    const age = incident.firstReportedAt ? daysSince(incident.firstReportedAt) : null;
 
     return (
         // Keyed on the incident id so the crossfade replays on every swap —
@@ -140,8 +141,10 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
                                 {/* Order matters: ref and time share row 1, the
                                     description spans row 2. */}
                                 <span className={styles.complaintRef}>{complaint.referenceNo}</span>
-                                <time className={styles.complaintTime} dateTime={complaint.createdAt}>
-                                    {formatRelative(complaint.createdAt)}
+                                {/* reportedAt: the timeline is ordered by it, and for an
+                                    imported report createdAt is only when it arrived. */}
+                                <time className={styles.complaintTime} dateTime={complaint.reportedAt}>
+                                    {formatRelative(complaint.reportedAt)}
                                 </time>
                                 <span className={styles.complaintText}>
                                     {truncate(complaint.description, 70)}

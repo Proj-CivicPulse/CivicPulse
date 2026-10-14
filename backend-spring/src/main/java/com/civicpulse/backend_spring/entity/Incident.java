@@ -126,6 +126,19 @@ public class Incident {
     @Builder.Default
     private Integer complaintCount = 1;
 
+    /**
+     * {@code min(reportedAt)} over members — when the problem was first
+     * reported. Not {@link #createdAt}, which is when the grouping was made.
+     * Maintained with {@link #complaintCount} by
+     * {@code IncidentAttachmentService.recompute}.
+     */
+    @Column(name = "first_reported_at")
+    private LocalDateTime firstReportedAt;
+
+    /** {@code max(reportedAt)} over members. Maintained alongside {@link #firstReportedAt}. */
+    @Column(name = "last_reported_at")
+    private LocalDateTime lastReportedAt;
+
     @Column(name = "latitude")
     private Double latitude;
 

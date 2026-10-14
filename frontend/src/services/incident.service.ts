@@ -1,4 +1,4 @@
-import { get, patch } from './api';
+import { get, patch, type Page } from './api';
 import { SPRING_API_PATH } from '../config/constants';
 import type { Complaint } from './complaint.service';
 import type { PriorityBand } from '@/lib/priority';
@@ -44,15 +44,36 @@ export interface Incident {
      * subtraction measures the sweep. This field is the only honest answer.
      */
     resolvedAt: string | null;
+    /**
+     * When the problem was first / last reported — min/max of the members'
+     * `reportedAt`. Measure an incident's age from `firstReportedAt`:
+     * `createdAt` is when the grouping was made, which for an imported report
+     * can be months later. Null only on an incident with no members.
+     */
+    firstReportedAt: string | null;
+    lastReportedAt: string | null;
     createdAt: string;
     updatedAt: string;
 }
 
+/**
+ * GET /incidents parameters (docs/api-contract.md, E1). Every list filter is
+ * OR within itself and AND across the others; `from`/`to` select incidents
+ * with a member reported in [from, to).
+ */
 export interface IncidentFilters {
-    wardId?: string;
-    category?: string;
-    status?: IncidentStatus;
-    minPriority?: number;
+    wardIds?: string[];
+    categories?: string[];
+    statuses?: IncidentStatus[];
+    priorityBands?: PriorityBand[];
+    from?: string;
+    to?: string;
+    q?: string;
+    sort?: 'priority' | 'lastReportedAt' | 'firstReportedAt' | 'complaintCount' | 'resolvedAt';
+    dir?: 'asc' | 'desc';
+    /** Server default 50, server max 200. */
+    limit?: number;
+    offset?: number;
 }
 
 export interface UpdateIncidentInput {
@@ -64,10 +85,18 @@ export interface UpdateIncidentInput {
 
 function buildQuery(filters: IncidentFilters = {}): string {
     const params = new URLSearchParams();
-    if (filters.wardId) params.set('wardId', filters.wardId);
-    if (filters.category) params.set('category', filters.category);
-    if (filters.status) params.set('status', filters.status);
-    if (filters.minPriority !== undefined) params.set('minPriority', String(filters.minPriority));
+    // Repeatable parameters are sent repeated (?status=open&status=in_progress).
+    filters.wardIds?.forEach((id) => params.append('wardId', id));
+    filters.categories?.forEach((code) => params.append('category', code));
+    filters.statuses?.forEach((status) => params.append('status', status));
+    filters.priorityBands?.forEach((band) => params.append('priorityBand', band));
+    if (filters.from) params.set('from', filters.from);
+    if (filters.to) params.set('to', filters.to);
+    if (filters.q) params.set('q', filters.q);
+    if (filters.sort) params.set('sort', filters.sort);
+    if (filters.dir) params.set('dir', filters.dir);
+    if (filters.limit !== undefined) params.set('limit', String(filters.limit));
+    if (filters.offset !== undefined) params.set('offset', String(filters.offset));
     const query = params.toString();
     return query ? `?${query}` : '';
 }
@@ -75,7 +104,7 @@ function buildQuery(filters: IncidentFilters = {}): string {
 /** Every endpoint here requires the officer role. */
 export const incidentService = {
     list: (filters?: IncidentFilters) =>
-        get<Incident[]>(SPRING_API_PATH, `/incidents${buildQuery(filters)}`),
+        get<Page<Incident>>(SPRING_API_PATH, `/incidents${buildQuery(filters)}`),
 
     getById: (id: string) => get<Incident>(SPRING_API_PATH, `/incidents/${id}`),
 

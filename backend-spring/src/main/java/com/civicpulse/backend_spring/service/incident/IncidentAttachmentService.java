@@ -171,7 +171,8 @@ public class IncidentAttachmentService {
     }
 
     /**
-     * Recomputes membership-derived fields: count, centroid, priority, reasons.
+     * Recomputes membership-derived fields: count, report span, centroid,
+     * priority, reasons.
      *
      * Public because merge and unlink will need exactly this once they exist.
      */
@@ -183,6 +184,12 @@ public class IncidentAttachmentService {
         // Counted from scratch, never count+1, so a retried callback cannot
         // inflate the total.
         incident.setComplaintCount(members.size());
+
+        // Members arrive ordered by reportedAt, so the span is the two ends.
+        if (!members.isEmpty()) {
+            incident.setFirstReportedAt(members.get(0).getReportedAt());
+            incident.setLastReportedAt(members.get(members.size() - 1).getReportedAt());
+        }
 
         applyCentroid(incident, members);
 

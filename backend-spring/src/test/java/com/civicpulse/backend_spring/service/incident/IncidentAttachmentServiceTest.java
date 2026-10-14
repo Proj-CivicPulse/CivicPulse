@@ -263,6 +263,26 @@ class IncidentAttachmentServiceTest {
         assertThat(member.getMatchingStatus()).isEqualTo(MatchingStatus.DEGRADED);
     }
 
+    @Test
+    @DisplayName("recompute derives first/last reported from members' reportedAt, not from creation")
+    void recomputeDerivesReportSpan() {
+        Incident incident = incident(55L);
+        Complaint earliest = complaint(1L, incident);
+        earliest.setReportedAt(LocalDateTime.of(2026, 3, 1, 9, 0));
+        Complaint latest = complaint(2L, incident);
+        latest.setReportedAt(LocalDateTime.of(2026, 9, 20, 18, 30));
+        when(incidentRepository.findById(55L)).thenReturn(Optional.of(incident));
+        // The repository returns members ordered by reportedAt; recompute
+        // relies on that order.
+        when(complaintRepository.findByIncidentIdOrderByReportedAtAsc(55L))
+                .thenReturn(List.of(earliest, latest));
+
+        service.recomputeById(55L);
+
+        assertThat(incident.getFirstReportedAt()).isEqualTo(LocalDateTime.of(2026, 3, 1, 9, 0));
+        assertThat(incident.getLastReportedAt()).isEqualTo(LocalDateTime.of(2026, 9, 20, 18, 30));
+    }
+
     private IncidentMatchLog captureLog() {
         ArgumentCaptor<IncidentMatchLog> captor = ArgumentCaptor.forClass(IncidentMatchLog.class);
         verify(matchLogRepository).save(captor.capture());

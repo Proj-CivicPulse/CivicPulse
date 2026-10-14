@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { incidentService, type Incident } from '@/services/incident.service';
+import { incidentService, type Incident, type IncidentFilters } from '@/services/incident.service';
 import { categoryService } from '@/services/category.service';
 import { wardService } from '@/services/ward.service';
 import { queryKeys } from '@/lib/queryKeys';
@@ -23,11 +23,20 @@ import styles from "./IncidentDashboard.module.css";
 /**
  * Rows per page in the queue.
  *
- * Paged on the client: the endpoint returns the whole filtered set, so sorting
- * still runs over every incident rather than only the visible page — which is
- * what keeps "most urgent first" honest.
+ * Paged on the client over one server page of up to QUEUE_FETCH_LIMIT
+ * incidents, so re-sorting a column still runs over every loaded incident
+ * rather than only the visible ten.
  */
 const QUEUE_PAGE_SIZE = 10;
+
+/**
+ * How many incidents the console loads per filter combination — the server's
+ * maximum page. The map needs every marker in the filtered set, so the console
+ * asks for all of it in one page; when `total` exceeds this the queue says so
+ * instead of implying it is showing everything. Past that scale the map moves
+ * to per-ward aggregates (docs/api-contract.md, N1).
+ */
+const QUEUE_FETCH_LIMIT = 200;
 
 /**
  * Three regions, all visible at once, no tabs. The map and the queue are two
@@ -48,14 +57,18 @@ export default function IncidentDashboard() {
         staleTime: 5 * 60_000,
     });
 
-    // Ward and status are server-side filters; band and category are applied
-    // below. Keeping them in the key means each combination caches separately.
-    const serverFilters = useMemo(
+    // Every filter is applied by the server, including band — the thresholds
+    // are the model's, so the client never compares scores itself. Keeping the
+    // filters in the key means each combination caches separately.
+    const serverFilters = useMemo<IncidentFilters>(
         () => ({
-            ...(selectedWardId !== null ? { wardId: selectedWardId } : {}),
-            ...(statusFilter !== null ? { status: statusFilter } : {}),
+            ...(selectedWardId !== null ? { wardIds: [selectedWardId] } : {}),
+            ...(statusFilter !== null ? { statuses: [statusFilter] } : {}),
+            ...(bandFilter !== null ? { priorityBands: [bandFilter] } : {}),
+            ...(categoryFilter !== null ? { categories: [categoryFilter] } : {}),
+            limit: QUEUE_FETCH_LIMIT,
         }),
-        [selectedWardId, statusFilter]
+        [selectedWardId, statusFilter, bandFilter, categoryFilter]
     );
 
     const incidentsQuery = useQuery({
@@ -63,21 +76,25 @@ export default function IncidentDashboard() {
         queryFn: () => incidentService.list(serverFilters),
     });
 
-    const incidents = useMemo(() => incidentsQuery.data ?? [], [incidentsQuery.data]);
-
-    // Which categories to OFFER as filters still comes from what actually
-    // loaded — listing every registered category would show filters that match
-    // nothing. What they are CALLED comes from the registry.
-    const categories = useMemo(
-        () => [...new Set(incidents.map((i) => i.category))].sort(),
-        [incidents]
-    );
+    const incidents = useMemo(() => incidentsQuery.data?.items ?? [], [incidentsQuery.data]);
+    const total = incidentsQuery.data?.total ?? 0;
+    const hasNarrowingFilters = statusFilter !== null || bandFilter !== null || categoryFilter !== null;
 
     const categoriesQuery = useQuery({
         queryKey: queryKeys.categories.list(),
         queryFn: () => categoryService.list(),
         staleTime: 60 * 60_000,
     });
+
+    // The category facets are the registry's codes, in registry order. They can
+    // no longer come from what loaded: with category filtered on the server,
+    // the loaded set narrows to the selected category and every other chip
+    // would vanish. A chip that matches nothing lands on the "no incidents
+    // match these filters" state, which says exactly that.
+    const categories = useMemo(
+        () => (categoriesQuery.data ?? []).map((c) => c.code),
+        [categoriesQuery.data]
+    );
 
     /**
      * Canonical code -> the officer-facing name in the registry.
@@ -91,21 +108,9 @@ export default function IncidentDashboard() {
         return (code: string) => names.get(code) ?? humanizeEnum(code);
     }, [categoriesQuery.data]);
 
-    // Band has no server-side equivalent — the API takes minPriority, a number,
-    // not a band — so it is applied here rather than faked as a query param.
-    const filtered = useMemo(
-        () =>
-            incidents.filter(
-                (incident) =>
-                    (bandFilter === null || incident.priorityBand === bandFilter) &&
-                    (categoryFilter === null || incident.category === categoryFilter)
-            ),
-        [incidents, bandFilter, categoryFilter]
-    );
-
     const markers = useMemo<MapMarker[]>(
         () =>
-            filtered
+            incidents
                 .filter(
                     (i): i is Incident & { lat: number; long: number } =>
                         i.lat !== null && i.long !== null
@@ -119,10 +124,10 @@ export default function IncidentDashboard() {
                 })),
         // categoryLabel belongs here: it changes exactly once, when /categories
         // resolves, and that is precisely when these labels must be rebuilt.
-        [filtered, categoryLabel]
+        [incidents, categoryLabel]
     );
 
-    const selected = filtered.find((i) => i.id === selectedIncidentId) ?? null;
+    const selected = incidents.find((i) => i.id === selectedIncidentId) ?? null;
 
     const columns = useMemo<Column<Incident>[]>(
         () => [
@@ -157,11 +162,13 @@ export default function IncidentDashboard() {
             {
                 key: 'age',
                 header: 'Age',
+                // Age of the PROBLEM — since it was first reported — not of the
+                // grouping, which createdAt would measure.
                 cell: (row) => {
-                    const days = daysSince(row.createdAt);
+                    const days = row.firstReportedAt ? daysSince(row.firstReportedAt) : null;
                     return days === null ? '—' : `${days}d`;
                 },
-                sortValue: (row) => daysSince(row.createdAt) ?? 0,
+                sortValue: (row) => (row.firstReportedAt ? daysSince(row.firstReportedAt) : null) ?? 0,
                 align: 'end',
                 width: '80px',
             },
@@ -211,8 +218,9 @@ export default function IncidentDashboard() {
                                 Incident queue
                             </h2>
                             <span className={styles.queueCount}>
-                                {formatCount(filtered.length)}
-                                {filtered.length === 1 ? ' incident' : ' incidents'}
+                                {total > incidents.length
+                                    ? `${formatCount(incidents.length)} of ${formatCount(total)} incidents`
+                                    : `${formatCount(total)}${total === 1 ? ' incident' : ' incidents'}`}
                             </span>
                         </div>
 
@@ -235,19 +243,19 @@ export default function IncidentDashboard() {
                                     </Button>
                                 }
                             />
-                        ) : filtered.length === 0 ? (
+                        ) : incidents.length === 0 ? (
                             <EmptyState
                                 message={
-                                    incidents.length === 0
-                                        ? 'No incidents in this ward yet.'
-                                        : 'No incidents match these filters.'
+                                    hasNarrowingFilters
+                                        ? 'No incidents match these filters.'
+                                        : 'No incidents in this ward yet.'
                                 }
                             />
                         ) : (
                             <DataTable
                                 caption="Incident queue, sortable"
                                 columns={columns}
-                                rows={filtered}
+                                rows={incidents}
                                 rowKey={(row) => row.id}
                                 selectedId={selectedIncidentId}
                                 onSelect={(row) => selectIncident(row.id)}

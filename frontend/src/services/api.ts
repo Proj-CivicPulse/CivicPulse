@@ -1,6 +1,19 @@
 import { REQUEST_TIMEOUT_MS, SPRING_API_PATH } from '../config/constants';
 import { useAuthStore } from '../stores/auth.store';
 
+/**
+ * The list envelope Explorer list endpoints return (docs/api-contract.md,
+ * "Lists: pagination, sorting, size"). `total` counts every match, so a page
+ * can say "showing 200 of 1,340"; `limit` is what the server actually used
+ * after clamping.
+ */
+export interface Page<T> {
+    items: T[];
+    total: number;
+    limit: number;
+    offset: number;
+}
+
 export class ApiError extends Error {
     status: number;
     constructor(message: string, status: number) {

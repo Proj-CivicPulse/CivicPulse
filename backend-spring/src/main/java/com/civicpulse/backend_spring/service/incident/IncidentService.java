@@ -1,5 +1,6 @@
 package com.civicpulse.backend_spring.service.incident;
 
+import com.civicpulse.backend_spring.dto.PageResponse;
 import com.civicpulse.backend_spring.dto.Wire;
 import com.civicpulse.backend_spring.dto.complaint.ComplaintDto;
 import com.civicpulse.backend_spring.dto.incident.IncidentDto;
@@ -12,10 +13,11 @@ import com.civicpulse.backend_spring.exception.ValidationException;
 import com.civicpulse.backend_spring.repository.ComplaintRepository;
 import com.civicpulse.backend_spring.repository.DepartmentRepository;
 import com.civicpulse.backend_spring.repository.IncidentRepository;
+import com.civicpulse.backend_spring.repository.OffsetPageRequest;
 import com.civicpulse.backend_spring.repository.spec.IncidentSpecifications;
 import com.civicpulse.backend_spring.service.category.CategoryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,28 +35,36 @@ public class IncidentService {
     private final CategoryService categoryService;
 
     /**
-     * Default ordering is the queue's whole purpose: most urgent first, with
-     * recency breaking ties between equal scores.
+     * One page of the incident queue. Default ordering is the queue's whole
+     * purpose: most urgent first, then most recently reported, then id.
      */
     @Transactional(readOnly = true)
-    public List<IncidentDto> list(Long wardId, String category, IncidentStatus status, Double minPriority) {
-        if (minPriority != null && (minPriority < 0 || minPriority > 10)) {
-            throw new ValidationException("minPriority must be between 0 and 10");
-        }
+    public PageResponse<IncidentDto> search(IncidentQuery query) {
+        // Canonicalised so ?category=Garbage and ?category=solid%20waste both
+        // select the rows stored as 'garbage'. Unresolvable values pass through
+        // untouched — see CategoryService.canonicaliseFilter.
+        List<String> categories = query.categories().stream()
+                .map(categoryService::canonicaliseFilter)
+                .distinct()
+                .toList();
 
         Specification<Incident> spec = Specification.allOf(
-                IncidentSpecifications.hasWard(wardId),
-                // Canonicalised so ?category=Garbage and ?category=solid%20waste
-                // both select the rows stored as 'garbage'. Unresolvable values
-                // pass through untouched — see CategoryService.canonicaliseFilter.
-                IncidentSpecifications.hasCategory(categoryService.canonicaliseFilter(category)),
-                IncidentSpecifications.hasStatus(status),
-                IncidentSpecifications.minPriority(minPriority));
+                IncidentSpecifications.hasWardIn(query.wardIds()),
+                IncidentSpecifications.hasCategoryIn(categories),
+                IncidentSpecifications.hasStatusIn(query.statuses()),
+                IncidentSpecifications.hasBandIn(query.bands()),
+                IncidentSpecifications.minPriority(query.minPriority()),
+                IncidentSpecifications.hasMemberReportedBetween(query.from(), query.to()),
+                IncidentSpecifications.matchesText(query.text()));
 
-        Sort sort = Sort.by(Sort.Direction.DESC, "priorityScore")
-                .and(Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Incident> page = incidentRepository.findAll(
+                spec, new OffsetPageRequest(query.offset(), query.limit(), query.sort()));
 
-        return incidentRepository.findAll(spec, sort).stream().map(IncidentDto::from).toList();
+        return new PageResponse<>(
+                page.getContent().stream().map(IncidentDto::from).toList(),
+                page.getTotalElements(),
+                query.limit(),
+                query.offset());
     }
 
     @Transactional(readOnly = true)

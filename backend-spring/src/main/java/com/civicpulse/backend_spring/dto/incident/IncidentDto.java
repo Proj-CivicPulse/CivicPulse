@@ -72,6 +72,14 @@ public class IncidentDto {
      */
     private final String resolvedAt;
 
+    /**
+     * When the problem was first / last reported: min/max of the members'
+     * reportedAt. "Age" is measured from firstReportedAt — createdAt is when
+     * the grouping was made, which for an imported member can be much later.
+     */
+    private final String firstReportedAt;
+    private final String lastReportedAt;
+
     private final String createdAt;
     private final String updatedAt;
 
@@ -96,6 +104,8 @@ public class IncidentDto {
                 incident.getAiRecommendation(),
                 Wire.timestamp(incident.getPriorityComputedAt()),
                 Wire.timestamp(incident.getResolvedAt()),
+                Wire.timestamp(incident.getFirstReportedAt()),
+                Wire.timestamp(incident.getLastReportedAt()),
                 Wire.timestamp(incident.getCreatedAt()),
                 Wire.timestamp(incident.getUpdatedAt())
         );

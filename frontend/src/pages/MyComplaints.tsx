@@ -121,9 +121,9 @@ export default function MyComplaints() {
                                             <StatusChip status={complaint.status} />
                                             <time
                                                 className={styles.timestamp}
-                                                dateTime={complaint.createdAt}
+                                                dateTime={complaint.reportedAt}
                                             >
-                                                {formatRelative(complaint.createdAt)}
+                                                {formatRelative(complaint.reportedAt)}
                                             </time>
                                         </div>
                                     </li>
