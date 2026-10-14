@@ -86,9 +86,9 @@ class IncidentResolutionTest {
     @Test
     @DisplayName("re-resolving does not move an existing resolved_at")
     void idempotentOnRepeatedResolve() {
-        // An officer correcting the summary of a closed incident must not change
-        // when it was closed, and "resolved -> resolved" is what that request
-        // looks like from here.
+        // An officer correcting the summary of a resolved incident must not
+        // change when it was resolved, and "resolved -> resolved" is what that
+        // request looks like from here.
         LocalDateTime original = LocalDateTime.now().minusDays(3);
         Incident incident = existing(IncidentStatus.RESOLVED, original);
 
@@ -118,6 +118,32 @@ class IncidentResolutionTest {
 
         update("in_progress");
 
+        assertThat(incident.getResolvedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("closing a resolved incident clears resolved_at — closed means no fix")
+    void clearsOnClose() {
+        // CLOSED is "terminated without a fix", so RESOLVED -> CLOSED is a
+        // correction that the fix never happened. Keeping the stamp would count
+        // an unfixed problem in every resolution metric.
+        Incident incident = existing(IncidentStatus.RESOLVED, LocalDateTime.now().minusDays(1));
+
+        IncidentDto dto = update("closed");
+
+        assertThat(incident.getStatus()).isEqualTo(IncidentStatus.CLOSED);
+        assertThat(incident.getResolvedAt()).isNull();
+        assertThat(dto.getResolvedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("closing an open incident never stamps resolved_at")
+    void closeIsNotAResolution() {
+        Incident incident = existing(IncidentStatus.OPEN, null);
+
+        update("closed");
+
+        assertThat(incident.getStatus()).isEqualTo(IncidentStatus.CLOSED);
         assertThat(incident.getResolvedAt()).isNull();
     }
 

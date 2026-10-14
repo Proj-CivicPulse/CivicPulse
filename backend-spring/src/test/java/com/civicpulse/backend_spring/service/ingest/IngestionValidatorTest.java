@@ -308,6 +308,24 @@ class IngestionValidatorTest {
     }
 
     @Test
+    @DisplayName("a retired category is accepted on import — history, unlike a new report")
+    void acceptsRetiredCategory() {
+        // POST /complaints refuses a retired category; an import must not. A
+        // record filed upstream while the category was live is still true, and
+        // retiring a category later must not make its history unimportable.
+        Category retired = Category.builder()
+                .id(9L).code("legacy-kerb").name("Kerb").displayName("x").active(false).build();
+        when(categoryService.resolve(eq("legacy-kerb"))).thenReturn(Optional.of(retired));
+
+        ExternalComplaint c = valid();
+        c.setCategory("legacy-kerb");
+        IngestionValidator.Result result = validator.validate("bbmp", c, now);
+
+        assertThat(result.rejected()).isFalse();
+        assertThat(result.validated().category().getCode()).isEqualTo("legacy-kerb");
+    }
+
+    @Test
     @DisplayName("never throws, whatever arrives")
     void neverThrows() {
         // The gate's contract: a malformed record produces reasons, not an

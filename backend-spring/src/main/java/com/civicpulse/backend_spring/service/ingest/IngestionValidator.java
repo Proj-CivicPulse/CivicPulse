@@ -126,6 +126,14 @@ public class IngestionValidator {
             // something different upstream cannot borrow our meaning; falls back
             // to the internal vocabulary, which is where the shared spellings
             // live.
+            //
+            // A RETIRED category is accepted here, deliberately, though
+            // POST /complaints refuses it (decided 2026-10-13). An import is
+            // history: a report filed upstream while the category was live is
+            // still a true record of what was reported, and refusing it would
+            // drop real data over a vocabulary change made afterwards. Wards
+            // differ — a retired ward is a placeholder that never existed on
+            // the ground, so the ward lookup below stays active-only.
             Optional<Category> resolved = categoryService.resolve(rawCategory, source)
                     .or(() -> categoryService.resolve(rawCategory));
             if (resolved.isEmpty()) {

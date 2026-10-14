@@ -112,7 +112,8 @@ public class Incident {
      * transitions. Reopening clears it — a resolution time on an OPEN incident
      * would be counted by every "resolved in this period" query, and would make
      * a reopened incident look closed in exactly the reports meant to show it
-     * is not.
+     * is not. {@code CLOSED} has no resolution time either: it means terminated
+     * without a fix.
      *
      * <p>The reason this is a stored column and not a derivation: {@code
      * updatedAt} moves every time PriorityRefreshJob recomputes a score, so any

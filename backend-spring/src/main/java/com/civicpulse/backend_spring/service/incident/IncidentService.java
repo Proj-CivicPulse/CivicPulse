@@ -116,10 +116,12 @@ public class IncidentService {
      * the status it describes.
      *
      * <p>Re-sending {@code RESOLVED} on an already-resolved incident is
-     * idempotent: an officer correcting the summary of a closed incident must
+     * idempotent: an officer correcting the summary of a resolved incident must
      * not move its resolution time, which is what re-stamping on every write
-     * would do. Reopening clears the stamp — see {@link Incident#getResolvedAt}
-     * for why a resolution time on an open incident is worse than none.
+     * would do. Leaving {@code RESOLVED} for ANY status clears the stamp —
+     * reopening, because a resolution time on an open incident is worse than
+     * none (see {@link Incident#getResolvedAt}), and {@code CLOSED}, because
+     * closed means terminated without a fix ({@link IncidentStatus}).
      */
     private void applyStatus(Incident incident, IncidentStatus next) {
         boolean wasResolved = incident.getStatus() == IncidentStatus.RESOLVED;
