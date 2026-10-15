@@ -62,6 +62,48 @@ describe('matchOrCreate', () => {
         assert.equal(decision.candidateCount, 0);
     });
 
+    it('refuses a candidate whose most similar member is too far away, and says why', async () => {
+        stubCandidates([
+            { incident_id: '55', top_similarity: 0.92, top_sibling_id: '4821', top_sibling_distance_m: 930, member_count: 2 },
+        ]);
+
+        const decision = await matchOrCreate(complaint, vector);
+
+        // The same fault 930 m away is a different job: a new incident, but
+        // the log still records the score similarity alone would have used.
+        assert.equal(decision.incidentId, null);
+        assert.equal(decision.topSimilarity, 0.92);
+        assert.equal(decision.topSiblingComplaintId, '4821');
+        assert.equal(decision.refusedByDistance, 1);
+    });
+
+    it('falls through to the next candidate that is both similar and near', async () => {
+        stubCandidates([
+            { incident_id: '55', top_similarity: 0.92, top_sibling_id: '1', top_sibling_distance_m: 2100, member_count: 2 },
+            { incident_id: '56', top_similarity: 0.81, top_sibling_id: '2', top_sibling_distance_m: 120, member_count: 3 },
+            { incident_id: '57', top_similarity: 0.6, top_sibling_id: '3', top_sibling_distance_m: 10, member_count: 1 },
+        ]);
+
+        const decision = await matchOrCreate(complaint, vector);
+
+        assert.equal(decision.incidentId, '56');
+        assert.equal(decision.topSimilarity, 0.81);
+        assert.equal(decision.refusedByDistance, 1);
+    });
+
+    it('accepts at exactly the distance limit, and when coordinates are unknown', async () => {
+        stubCandidates([
+            { incident_id: '55', top_similarity: 0.8, top_sibling_id: '1', top_sibling_distance_m: 500, member_count: 1 },
+        ]);
+        assert.equal((await matchOrCreate(complaint, vector)).incidentId, '55');
+
+        mock.restoreAll();
+        stubCandidates([
+            { incident_id: '55', top_similarity: 0.8, top_sibling_id: '1', top_sibling_distance_m: null, member_count: 1 },
+        ]);
+        assert.equal((await matchOrCreate(complaint, vector)).incidentId, '55');
+    });
+
     it('treats an exact-threshold score as a join', async () => {
         stubCandidates([
             { incident_id: '55', top_similarity: 0.75, top_sibling_id: '4821', member_count: 1 },

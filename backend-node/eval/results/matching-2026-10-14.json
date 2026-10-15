@@ -1,0 +1,1243 @@
+{
+  "version": "2026-10-14",
+  "settings": "gemini-embedding-001|1536|SEMANTIC_SIMILARITY",
+  "textMode": "production",
+  "languageSummary": {
+    "english-english": {
+      "sameN": 108,
+      "sameMedian": 0.9118153064044773,
+      "sameMin": 0.8502367774301869,
+      "differentN": 324,
+      "differentMedian": 0.8127687233988177,
+      "differentMax": 0.8828054987793978
+    },
+    "english-mixed": {
+      "sameN": 108,
+      "sameMedian": 0.8938058894440679,
+      "sameMin": 0.8087608369279085,
+      "differentN": 216,
+      "differentMedian": 0.809207169514081,
+      "differentMax": 0.8860630095027381
+    },
+    "mixed-mixed": {
+      "sameN": 0,
+      "sameMedian": null,
+      "sameMin": null,
+      "differentN": 36,
+      "differentMedian": 0.840701845385146,
+      "differentMax": 0.9034298198781521
+    }
+  },
+  "productionThreshold": 0.75,
+  "pools": 12,
+  "complaints": 144,
+  "truthIncidentsPerPool": 3,
+  "distribution": {
+    "positives": {
+      "n": 216,
+      "min": 0.8087608369279085,
+      "p5": 0.8487490110661247,
+      "p10": 0.8592376890741128,
+      "median": 0.904305242091471
+    },
+    "negatives": {
+      "n": 576,
+      "median": 0.8140905899657378,
+      "p90": 0.8486666948021342,
+      "p95": 0.8604872685186136,
+      "max": 0.9034298198781521
+    }
+  },
+  "hardestNegatives": [
+    {
+      "pool": "water-basavanagudi",
+      "a": "Bull Temple Road alli pipe odedu neeru road mele hariyuttide",
+      "b": "DVG Road alli nalli neeru kesaru, ketta vaasane bartide",
+      "sim": 0.9034298198781521
+    },
+    {
+      "pool": "garbage-rajajinagar",
+      "a": "2nd Block bus stop pakka kasada raashi beLeyuttide",
+      "b": "2nd Block market hora bin tumbi horage kasa chellide",
+      "sim": 0.9026866370530665
+    },
+    {
+      "pool": "water-hebbal",
+      "a": "Hebbal flyover service road hattira valve inda neeru sorutide",
+      "b": "Hebbal kere hattira main pipe ge kalla connection kottu tanker tumbisuttaare",
+      "sim": 0.8919743166197501
+    },
+    {
+      "pool": "pothole-jayanagar",
+      "a": "11th Main nalli pipeline kelsa aada mele road kusidu hogide, trench sari maadilla",
+      "b": "temple hattira 9th Cross alli manhole mucchala odedide, road ginta mele ide",
+      "sim": 0.8865778052415899
+    },
+    {
+      "pool": "pothole-jayanagar",
+      "a": "4th Block bus stand munde dodda gundi ide, bikes skid aagtide, please repair maadi",
+      "b": "Twice this week I have seen bikes nearly crash on the manhole near the temple on 9th Cross. The lid is cracked and raised and there is no reflector or barricade. Please fix before someone is hurt.",
+      "sim": 0.8860630095027381
+    },
+    {
+      "pool": "garbage-rajajinagar",
+      "a": "2nd Block bus stop pakka kasada raashi beLeyuttide",
+      "b": "3rd Block road mele satta naayi eradu dinadinda ide, vaasane",
+      "sim": 0.8839995001963494
+    },
+    {
+      "pool": "garbage-rajajinagar",
+      "a": "rubbish heap at 2nd block bus stop growing bigger",
+      "b": "market bin full and overflowing 2nd block",
+      "sim": 0.8828054987793978
+    },
+    {
+      "pool": "footpath-mg-road",
+      "a": "Brigade Road footpath slab odedide, kaalu jaaruttide",
+      "b": "Commercial Street footpath ella angadi saamaan inda tumbide, nadeyalu jaaga illa",
+      "sim": 0.8747789040427899
+    }
+  ],
+  "weakestPositives": [
+    {
+      "pool": "drainage-hsr",
+      "a": "Yesterday's rain left cars stranded in the HSR underpass again. It happens every single time it rains — the storm water drain is clearly undersized or choked.",
+      "b": "Silk Board kade underpass male bandaaga neerininda tumbutte",
+      "sim": 0.8087608369279085
+    },
+    {
+      "pool": "noise-btm",
+      "a": "The diesel generator at the 2nd Stage complex roars from 9 am to 10 pm right outside our windows. It is unbearable and the fumes come in too.",
+      "b": "2nd Stage complex generator dina poorti shabda maadutte",
+      "sim": 0.8103996939026668
+    },
+    {
+      "pool": "water-basavanagudi",
+      "a": "The water in our taps on DVG Road is brown and smells like sewage. My children fell sick after drinking it. Sewage must be mixing into the supply line.",
+      "b": "DVG Road alli nalli neeru kesaru, ketta vaasane bartide",
+      "sim": 0.8151940517317016
+    },
+    {
+      "pool": "drainage-yelahanka",
+      "a": "A long stretch of the storm drain wall by the lake outlet has caved in. The road next to it is cracking and could fall into the drain next.",
+      "b": "kere outlet hattira raajakaaluve gODe kusidide",
+      "sim": 0.820160930581171
+    },
+    {
+      "pool": "drainage-hsr",
+      "a": "Black sewage water is bubbling out of the drain on 27th Main and flowing in front of shops. The stink is unbearable and people have to walk through it.",
+      "b": "27th Main alli charandi block aagi gaLiju neeru road mele",
+      "sim": 0.8215264284422261
+    },
+    {
+      "pool": "water-basavanagudi",
+      "a": "Tap water in the DVG Road area has been coming out muddy brown with a foul smell for the past few days.",
+      "b": "DVG Road alli nalli neeru kesaru, ketta vaasane bartide",
+      "sim": 0.8260256674623487
+    },
+    {
+      "pool": "drainage-yelahanka",
+      "a": "drain wall collapsed near lake outlet",
+      "b": "kere outlet hattira raajakaaluve gODe kusidide",
+      "sim": 0.8331265288766183
+    },
+    {
+      "pool": "drainage-yelahanka",
+      "a": "The side wall of the storm water drain near the Yelahanka lake outlet has collapsed into the channel.",
+      "b": "kere outlet hattira raajakaaluve gODe kusidide",
+      "sim": 0.8390391101430593
+    }
+  ],
+  "sweep": [
+    {
+      "threshold": 0.55,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.56,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.57,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.58,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.59,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.6,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.61,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.62,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.63,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.64,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.65,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.66,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.67,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.68,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.69,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.7,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.71,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.72,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.73,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.74,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.75,
+      "pairwise": {
+        "tp": 216,
+        "fp": 573,
+        "fn": 0,
+        "tn": 3,
+        "precision": 0.2737642585551331,
+        "recall": 1,
+        "f1": 0.4298507462686567,
+        "f2": 0.6533575317604357
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.76,
+      "pairwise": {
+        "tp": 216,
+        "fp": 567,
+        "fn": 0,
+        "tn": 9,
+        "precision": 0.27586206896551724,
+        "recall": 1,
+        "f1": 0.4324324324324324,
+        "f2": 0.6557377049180328
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.77,
+      "pairwise": {
+        "tp": 216,
+        "fp": 556,
+        "fn": 0,
+        "tn": 20,
+        "precision": 0.27979274611398963,
+        "recall": 1,
+        "f1": 0.437246963562753,
+        "f2": 0.6601466992665037
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14304,
+        "fn": 0,
+        "tn": 96,
+        "precision": 0.2740560292326431,
+        "recall": 1,
+        "f1": 0.43021032504780116,
+        "f2": 0.653689715281813,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1.01
+      }
+    },
+    {
+      "threshold": 0.78,
+      "pairwise": {
+        "tp": 216,
+        "fp": 519,
+        "fn": 0,
+        "tn": 57,
+        "precision": 0.2938775510204082,
+        "recall": 1,
+        "f1": 0.4542586750788644,
+        "f2": 0.675422138836773
+      },
+      "clustering": {
+        "tp": 5393,
+        "fp": 13624,
+        "fn": 7,
+        "tn": 776,
+        "precision": 0.28358836830204553,
+        "recall": 0.9987037037037036,
+        "f1": 0.44174140967358805,
+        "f2": 0.6638845803481299,
+        "mixedIncidentsPerPool": 1.0033333333333334,
+        "incidentsPerPool": 1.0833333333333333
+      }
+    },
+    {
+      "threshold": 0.79,
+      "pairwise": {
+        "tp": 216,
+        "fp": 472,
+        "fn": 0,
+        "tn": 104,
+        "precision": 0.313953488372093,
+        "recall": 1,
+        "f1": 0.47787610619469023,
+        "f2": 0.6958762886597939
+      },
+      "clustering": {
+        "tp": 5375,
+        "fp": 12664,
+        "fn": 25,
+        "tn": 1736,
+        "precision": 0.2979655191529464,
+        "recall": 0.9953703703703703,
+        "f1": 0.4586373138785784,
+        "f2": 0.6779938949014859,
+        "mixedIncidentsPerPool": 1.0033333333333334,
+        "incidentsPerPool": 1.1933333333333334
+      }
+    },
+    {
+      "threshold": 0.8,
+      "pairwise": {
+        "tp": 216,
+        "fp": 402,
+        "fn": 0,
+        "tn": 174,
+        "precision": 0.34951456310679613,
+        "recall": 1,
+        "f1": 0.5179856115107914,
+        "f2": 0.728744939271255
+      },
+      "clustering": {
+        "tp": 5341,
+        "fp": 11200,
+        "fn": 59,
+        "tn": 3200,
+        "precision": 0.3228946254760897,
+        "recall": 0.9890740740740741,
+        "f1": 0.486851100679094,
+        "f2": 0.7001651765816314,
+        "mixedIncidentsPerPool": 0.9966666666666667,
+        "incidentsPerPool": 1.37
+      }
+    },
+    {
+      "threshold": 0.81,
+      "pairwise": {
+        "tp": 215,
+        "fp": 318,
+        "fn": 1,
+        "tn": 258,
+        "precision": 0.40337711069418386,
+        "recall": 0.9953703703703703,
+        "f1": 0.5740987983978638,
+        "f2": 0.7695060844667143
+      },
+      "clustering": {
+        "tp": 5291,
+        "fp": 9576,
+        "fn": 109,
+        "tn": 4824,
+        "precision": 0.3558888814152149,
+        "recall": 0.9798148148148148,
+        "f1": 0.5221295702373316,
+        "f2": 0.7254504072174842,
+        "mixedIncidentsPerPool": 0.9933333333333333,
+        "incidentsPerPool": 1.57
+      }
+    },
+    {
+      "threshold": 0.82,
+      "pairwise": {
+        "tp": 213,
+        "fp": 239,
+        "fn": 3,
+        "tn": 337,
+        "precision": 0.47123893805309736,
+        "recall": 0.9861111111111112,
+        "f1": 0.6377245508982036,
+        "f2": 0.8092705167173253
+      },
+      "clustering": {
+        "tp": 5236,
+        "fp": 7723,
+        "fn": 164,
+        "tn": 6677,
+        "precision": 0.404043521876688,
+        "recall": 0.9696296296296296,
+        "f1": 0.5704014379868185,
+        "f2": 0.7575450678549728,
+        "mixedIncidentsPerPool": 0.94,
+        "incidentsPerPool": 1.8266666666666667
+      }
+    },
+    {
+      "threshold": 0.83,
+      "pairwise": {
+        "tp": 210,
+        "fp": 165,
+        "fn": 6,
+        "tn": 411,
+        "precision": 0.56,
+        "recall": 0.9722222222222222,
+        "f1": 0.7106598984771574,
+        "f2": 0.847457627118644
+      },
+      "clustering": {
+        "tp": 5191,
+        "fp": 5116,
+        "fn": 209,
+        "tn": 9284,
+        "precision": 0.5036383040651984,
+        "recall": 0.9612962962962963,
+        "f1": 0.6609791812567645,
+        "f2": 0.8134578619111794,
+        "mixedIncidentsPerPool": 0.8066666666666666,
+        "incidentsPerPool": 2.21
+      }
+    },
+    {
+      "threshold": 0.84,
+      "pairwise": {
+        "tp": 208,
+        "fp": 98,
+        "fn": 8,
+        "tn": 478,
+        "precision": 0.6797385620915033,
+        "recall": 0.9629629629629629,
+        "f1": 0.7969348659003831,
+        "f2": 0.888888888888889
+      },
+      "clustering": {
+        "tp": 5092,
+        "fp": 3187,
+        "fn": 308,
+        "tn": 11213,
+        "precision": 0.6150501268269115,
+        "recall": 0.942962962962963,
+        "f1": 0.7444988668762337,
+        "f2": 0.8521034840523445,
+        "mixedIncidentsPerPool": 0.63,
+        "incidentsPerPool": 2.6066666666666665
+      }
+    },
+    {
+      "threshold": 0.85,
+      "pairwise": {
+        "tp": 204,
+        "fp": 55,
+        "fn": 12,
+        "tn": 521,
+        "precision": 0.7876447876447876,
+        "recall": 0.9444444444444444,
+        "f1": 0.8589473684210526,
+        "f2": 0.9082813891362421
+      },
+      "clustering": {
+        "tp": 5055,
+        "fp": 1975,
+        "fn": 345,
+        "tn": 12425,
+        "precision": 0.7190611664295875,
+        "recall": 0.9361111111111111,
+        "f1": 0.8133547868061143,
+        "f2": 0.8828152287809988,
+        "mixedIncidentsPerPool": 0.47333333333333333,
+        "incidentsPerPool": 2.8566666666666665
+      }
+    },
+    {
+      "threshold": 0.86,
+      "pairwise": {
+        "tp": 190,
+        "fp": 29,
+        "fn": 26,
+        "tn": 547,
+        "precision": 0.867579908675799,
+        "recall": 0.8796296296296297,
+        "f1": 0.8735632183908046,
+        "f2": 0.8771929824561405
+      },
+      "clustering": {
+        "tp": 4873,
+        "fp": 1249,
+        "fn": 527,
+        "tn": 13151,
+        "precision": 0.7959817053250572,
+        "recall": 0.9024074074074074,
+        "f1": 0.8458600937337268,
+        "f2": 0.8789048409205686,
+        "mixedIncidentsPerPool": 0.38333333333333336,
+        "incidentsPerPool": 3.17
+      }
+    },
+    {
+      "threshold": 0.87,
+      "pairwise": {
+        "tp": 175,
+        "fp": 11,
+        "fn": 41,
+        "tn": 565,
+        "precision": 0.9408602150537635,
+        "recall": 0.8101851851851852,
+        "f1": 0.8706467661691544,
+        "f2": 0.8333333333333335
+      },
+      "clustering": {
+        "tp": 4600,
+        "fp": 559,
+        "fn": 800,
+        "tn": 13841,
+        "precision": 0.8916456677650707,
+        "recall": 0.8518518518518519,
+        "f1": 0.8712946301733119,
+        "f2": 0.8595238985014388,
+        "mixedIncidentsPerPool": 0.28,
+        "incidentsPerPool": 3.58
+      }
+    },
+    {
+      "threshold": 0.88,
+      "pairwise": {
+        "tp": 160,
+        "fp": 7,
+        "fn": 56,
+        "tn": 569,
+        "precision": 0.9580838323353293,
+        "recall": 0.7407407407407407,
+        "f1": 0.835509138381201,
+        "f2": 0.7759456838021339
+      },
+      "clustering": {
+        "tp": 4262,
+        "fp": 377,
+        "fn": 1138,
+        "tn": 14023,
+        "precision": 0.9187324854494503,
+        "recall": 0.7892592592592592,
+        "f1": 0.849088554636916,
+        "f2": 0.8121498532718472,
+        "mixedIncidentsPerPool": 0.23666666666666666,
+        "incidentsPerPool": 4.006666666666667
+      }
+    },
+    {
+      "threshold": 0.89,
+      "pairwise": {
+        "tp": 139,
+        "fp": 3,
+        "fn": 77,
+        "tn": 573,
+        "precision": 0.9788732394366197,
+        "recall": 0.6435185185185185,
+        "f1": 0.776536312849162,
+        "f2": 0.6908548707753479
+      },
+      "clustering": {
+        "tp": 3817,
+        "fp": 154,
+        "fn": 1583,
+        "tn": 14246,
+        "precision": 0.961218836565097,
+        "recall": 0.7068518518518518,
+        "f1": 0.814640913456408,
+        "f2": 0.7463532908372766,
+        "mixedIncidentsPerPool": 0.15,
+        "incidentsPerPool": 4.6866666666666665
+      }
+    },
+    {
+      "threshold": 0.9,
+      "pairwise": {
+        "tp": 116,
+        "fp": 2,
+        "fn": 100,
+        "tn": 574,
+        "precision": 0.9830508474576272,
+        "recall": 0.5370370370370371,
+        "f1": 0.6946107784431138,
+        "f2": 0.5906313645621182
+      },
+      "clustering": {
+        "tp": 3254,
+        "fp": 100,
+        "fn": 2146,
+        "tn": 14300,
+        "precision": 0.9701848539057841,
+        "recall": 0.6025925925925926,
+        "f1": 0.743431574137537,
+        "f2": 0.6519996794101146,
+        "mixedIncidentsPerPool": 0.1,
+        "incidentsPerPool": 5.446666666666666
+      }
+    },
+    {
+      "threshold": 0.91,
+      "pairwise": {
+        "tp": 93,
+        "fp": 0,
+        "fn": 123,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.4305555555555556,
+        "f1": 0.6019417475728156,
+        "f2": 0.48589341692789967
+      },
+      "clustering": {
+        "tp": 2651,
+        "fp": 0,
+        "fn": 2749,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.49092592592592593,
+        "f1": 0.6585517327040119,
+        "f2": 0.5465753989526205,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 6.41
+      }
+    },
+    {
+      "threshold": 0.92,
+      "pairwise": {
+        "tp": 64,
+        "fp": 0,
+        "fn": 152,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.2962962962962963,
+        "f1": 0.45714285714285713,
+        "f2": 0.3448275862068966
+      },
+      "clustering": {
+        "tp": 1747,
+        "fp": 0,
+        "fn": 3653,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.32351851851851854,
+        "f1": 0.48887645165803834,
+        "f2": 0.3741380048828543,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 7.823333333333333
+      }
+    },
+    {
+      "threshold": 0.93,
+      "pairwise": {
+        "tp": 43,
+        "fp": 0,
+        "fn": 173,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.19907407407407407,
+        "f1": 0.33204633204633205,
+        "f2": 0.23704520396912898
+      },
+      "clustering": {
+        "tp": 1155,
+        "fp": 0,
+        "fn": 4245,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.21388888888888888,
+        "f1": 0.35240274599542337,
+        "f2": 0.25379037574159524,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 8.903333333333334
+      }
+    },
+    {
+      "threshold": 0.94,
+      "pairwise": {
+        "tp": 25,
+        "fp": 0,
+        "fn": 191,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.11574074074074074,
+        "f1": 0.2074688796680498,
+        "f2": 0.140607424071991
+      },
+      "clustering": {
+        "tp": 679,
+        "fp": 0,
+        "fn": 4721,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.12574074074074074,
+        "f1": 0.2233920052640237,
+        "f2": 0.15238565465236317,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 10.16
+      }
+    },
+    {
+      "threshold": 0.95,
+      "pairwise": {
+        "tp": 10,
+        "fp": 0,
+        "fn": 206,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.046296296296296294,
+        "f1": 0.08849557522123894,
+        "f2": 0.05720823798627001
+      },
+      "clustering": {
+        "tp": 270,
+        "fp": 0,
+        "fn": 5130,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.05,
+        "f1": 0.09523809523809523,
+        "f2": 0.0617283950617284,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 11.216666666666667
+      }
+    }
+  ],
+  "floors": [
+    {
+      "floor": 0.45,
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "floor": 0.5,
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "floor": 0.55,
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "floor": 0.6,
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    }
+  ],
+  "bestPairwiseF1": 0.86,
+  "bestClusteringF1": 0.87,
+  "bestClusteringF2": 0.85
+}

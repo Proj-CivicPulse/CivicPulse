@@ -1,0 +1,429 @@
+{
+  "description": "Real production joins (incident_match_log, semantic matcher, top_similarity < 0.90) labelled by hand. One row per distinct pair of texts; distancesM lists each decision that joined that pair. Label rule: same = the same physical fault fixable by one repair job; ambiguous = plausibly one root cause, excluded from headline figures. Labeller: assistant, 2026-10-14, pending officer review. The texts are seed data from backend-spring/scripts/seed-dev-data.mjs, not residents.",
+  "pairs": [
+    {
+      "id": "p1",
+      "category": "water",
+      "similarity": 0.743,
+      "decisions": 2,
+      "distancesM": [
+        132,
+        155
+      ],
+      "a": "Burst pipeline near the junction, the road is flooded and the water is muddy.",
+      "b": "No water supply in this area for four days now. Tankers are not reaching us.",
+      "label": "ambiguous",
+      "reason": "A burst main can be the cause of a no-supply complaint downstream; one repair might resolve both."
+    },
+    {
+      "id": "p2",
+      "category": "water",
+      "similarity": 0.76,
+      "decisions": 1,
+      "distancesM": [
+        15
+      ],
+      "a": "No water supply in this area for four days now. Tankers are not reaching us.",
+      "b": "Water pipe has been leaking for days. Clean water running straight into the drain.",
+      "label": "ambiguous",
+      "reason": "Leak and supply loss may share a root cause."
+    },
+    {
+      "id": "p3",
+      "category": "water",
+      "similarity": 0.762,
+      "decisions": 1,
+      "distancesM": [
+        112
+      ],
+      "a": "Burst pipeline near the junction, the road is flooded and the water is muddy.",
+      "b": "Very low pressure since last week. Cannot fill even one pot in the morning.",
+      "label": "ambiguous",
+      "reason": "A burst main can cause low pressure nearby."
+    },
+    {
+      "id": "p4",
+      "category": "drainage",
+      "similarity": 0.795,
+      "decisions": 4,
+      "distancesM": [
+        145,
+        102,
+        126,
+        78
+      ],
+      "a": "Drain is completely blocked. Sewage backing up onto the road outside the houses.",
+      "b": "Storm drain cover is missing. Someone is going to fall into it at night.",
+      "label": "different",
+      "reason": "Blocked sewer and a missing drain cover are different faults and different jobs."
+    },
+    {
+      "id": "p5",
+      "category": "water",
+      "similarity": 0.796,
+      "decisions": 4,
+      "distancesM": [
+        24,
+        100,
+        81,
+        168
+      ],
+      "a": "Burst pipeline near the junction, the road is flooded and the water is muddy.",
+      "b": "Water pipe has been leaking for days. Clean water running straight into the drain.",
+      "label": "same",
+      "reason": "Both describe one leaking main flooding the road, within 170 m."
+    },
+    {
+      "id": "p6",
+      "category": "streetlight",
+      "similarity": 0.803,
+      "decisions": 1,
+      "distancesM": [
+        72
+      ],
+      "a": "No lighting at all near the park gate. It feels unsafe to walk here in the evening.",
+      "b": "Two lamps on this road are dead. Women walking back from the metro have complained.",
+      "label": "same",
+      "reason": "Dark stretch near the park gate and dead lamps on the same road, 72 m apart: one outage."
+    },
+    {
+      "id": "p7",
+      "category": "pothole",
+      "similarity": 0.804,
+      "decisions": 1,
+      "distancesM": [
+        154
+      ],
+      "a": "Deep crater near the bus stop. It fills with water and you cannot tell how deep it is.",
+      "b": "The road has broken up badly after the rain. Two-wheelers have come off here twice this week.",
+      "label": "ambiguous",
+      "reason": "A crater and broken-up road could be one damaged patch or two."
+    },
+    {
+      "id": "p8",
+      "category": "pothole",
+      "similarity": 0.811,
+      "decisions": 1,
+      "distancesM": [
+        144
+      ],
+      "a": "Surface has collapsed where they dug for the cable last month and never repaired it properly.",
+      "b": "The road has broken up badly after the rain. Two-wheelers have come off here twice this week.",
+      "label": "different",
+      "reason": "Trench collapse after cable work vs rain damage: different cause, different job."
+    },
+    {
+      "id": "p9",
+      "category": "pothole",
+      "similarity": 0.812,
+      "decisions": 2,
+      "distancesM": [
+        176,
+        110
+      ],
+      "a": "Pothole right at the junction. Autos slow to a crawl and it backs up the whole road.",
+      "b": "Surface has collapsed where they dug for the cable last month and never repaired it properly.",
+      "label": "different",
+      "reason": "Junction pothole vs collapsed cable trench."
+    },
+    {
+      "id": "p10",
+      "category": "streetlight",
+      "similarity": 0.814,
+      "decisions": 1,
+      "distancesM": [
+        130
+      ],
+      "a": "Light flickers all night and then goes out. Been like this since the storm.",
+      "b": "No lighting at all near the park gate. It feels unsafe to walk here in the evening.",
+      "label": "ambiguous",
+      "reason": "A flickering-then-dead lamp may or may not be one of the dark lamps."
+    },
+    {
+      "id": "p11",
+      "category": "streetlight",
+      "similarity": 0.814,
+      "decisions": 1,
+      "distancesM": [
+        175
+      ],
+      "a": "Light flickers all night and then goes out. Been like this since the storm.",
+      "b": "Two lamps on this road are dead. Women walking back from the metro have complained.",
+      "label": "ambiguous",
+      "reason": "As p10."
+    },
+    {
+      "id": "p12",
+      "category": "pothole",
+      "similarity": 0.818,
+      "decisions": 2,
+      "distancesM": [
+        202,
+        31
+      ],
+      "a": "Deep crater near the bus stop. It fills with water and you cannot tell how deep it is.",
+      "b": "Large pothole in the middle of the road, cars are swerving into oncoming traffic to avoid it.",
+      "label": "same",
+      "reason": "Deep crater and large pothole in the road at the same spot."
+    },
+    {
+      "id": "p13",
+      "category": "streetlight",
+      "similarity": 0.829,
+      "decisions": 2,
+      "distancesM": [
+        80,
+        81
+      ],
+      "a": "Street light has been out for three weeks. The whole stretch is pitch dark after 7pm.",
+      "b": "Two lamps on this road are dead. Women walking back from the metro have complained.",
+      "label": "same",
+      "reason": "Light out for weeks and dead lamps on the same stretch, 80 m apart."
+    },
+    {
+      "id": "p14",
+      "category": "pothole",
+      "similarity": 0.833,
+      "decisions": 2,
+      "distancesM": [
+        165,
+        98
+      ],
+      "a": "Large pothole in the middle of the road, cars are swerving into oncoming traffic to avoid it.",
+      "b": "The road has broken up badly after the rain. Two-wheelers have come off here twice this week.",
+      "label": "ambiguous",
+      "reason": "A large pothole may be part of the broken-up road or separate."
+    },
+    {
+      "id": "p15",
+      "category": "garbage",
+      "similarity": 0.835,
+      "decisions": 4,
+      "distancesM": [
+        69,
+        71,
+        146,
+        155
+      ],
+      "a": "Dumping happening at the corner every night. Smell is unbearable and there are stray dogs.",
+      "b": "Garbage has not been collected for over a week. The pile is spilling onto the footpath.",
+      "label": "different",
+      "reason": "Illegal night dumping vs missed collection: different enforcement and different crew."
+    },
+    {
+      "id": "p16",
+      "category": "garbage",
+      "similarity": 0.837,
+      "decisions": 4,
+      "distancesM": [
+        16,
+        104,
+        120,
+        23
+      ],
+      "a": "Construction debris dumped on the roadside and left there. Blocking half the lane.",
+      "b": "Garbage has not been collected for over a week. The pile is spilling onto the footpath.",
+      "label": "different",
+      "reason": "Construction debris dumping vs missed household collection."
+    },
+    {
+      "id": "p17",
+      "category": "pothole",
+      "similarity": 0.838,
+      "decisions": 2,
+      "distancesM": [
+        84,
+        55
+      ],
+      "a": "Pothole right at the junction. Autos slow to a crawl and it backs up the whole road.",
+      "b": "The road has broken up badly after the rain. Two-wheelers have come off here twice this week.",
+      "label": "ambiguous",
+      "reason": "Junction pothole vs broken-up road, 55-84 m: could be one patch."
+    },
+    {
+      "id": "p18",
+      "category": "pothole",
+      "similarity": 0.839,
+      "decisions": 1,
+      "distancesM": [
+        935
+      ],
+      "a": "Large pothole near the bus stop, has been there two weeks",
+      "b": "Surface has collapsed where they dug for the cable last month and never repaired it properly.",
+      "label": "different",
+      "reason": "935 m apart: a bus-stop pothole and a cable-trench collapse."
+    },
+    {
+      "id": "p19",
+      "category": "water",
+      "similarity": 0.841,
+      "decisions": 4,
+      "distancesM": [
+        67,
+        44,
+        102,
+        149
+      ],
+      "a": "No water supply in this area for four days now. Tankers are not reaching us.",
+      "b": "Very low pressure since last week. Cannot fill even one pot in the morning.",
+      "label": "same",
+      "reason": "No supply and very low pressure in the same area: one supply failure."
+    },
+    {
+      "id": "p20",
+      "category": "pothole",
+      "similarity": 0.843,
+      "decisions": 1,
+      "distancesM": [
+        101
+      ],
+      "a": "Large pothole in the middle of the road near the market junction, cars are swerving to avoid it.",
+      "b": "Large pothole near the bus stop, has been there two weeks",
+      "label": "different",
+      "reason": "Two named landmarks (market junction, bus stop) for two potholes."
+    },
+    {
+      "id": "p21",
+      "category": "drainage",
+      "similarity": 0.851,
+      "decisions": 4,
+      "distancesM": [
+        114,
+        62,
+        136,
+        156
+      ],
+      "a": "Drain is completely blocked. Sewage backing up onto the road outside the houses.",
+      "b": "Waterlogging every time it rains. Takes two days to clear and the whole lane is unusable.",
+      "label": "ambiguous",
+      "reason": "A blocked drain can be the cause of the waterlogging."
+    },
+    {
+      "id": "p22",
+      "category": "streetlight",
+      "similarity": 0.864,
+      "decisions": 1,
+      "distancesM": [
+        843
+      ],
+      "a": "Light flickers all night and then goes out. Been like this since the storm.",
+      "b": "Streetlight out on the corner",
+      "label": "different",
+      "reason": "843 m apart: two different lights."
+    },
+    {
+      "id": "p23",
+      "category": "pothole",
+      "similarity": 0.87,
+      "decisions": 3,
+      "distancesM": [
+        60,
+        5,
+        76
+      ],
+      "a": "Large pothole in the middle of the road, cars are swerving into oncoming traffic to avoid it.",
+      "b": "Pothole right at the junction. Autos slow to a crawl and it backs up the whole road.",
+      "label": "same",
+      "reason": "The same junction pothole described twice, 5-76 m apart."
+    },
+    {
+      "id": "p24",
+      "category": "streetlight",
+      "similarity": 0.876,
+      "decisions": 3,
+      "distancesM": [
+        96,
+        44,
+        142
+      ],
+      "a": "No lighting at all near the park gate. It feels unsafe to walk here in the evening.",
+      "b": "Street light has been out for three weeks. The whole stretch is pitch dark after 7pm.",
+      "label": "same",
+      "reason": "The same dark stretch, 44-142 m apart."
+    },
+    {
+      "id": "p25",
+      "category": "pothole",
+      "similarity": 0.877,
+      "decisions": 1,
+      "distancesM": [
+        999
+      ],
+      "a": "Pothole on the same stretch of road, getting worse",
+      "b": "The road has broken up badly after the rain. Two-wheelers have come off here twice this week.",
+      "label": "different",
+      "reason": "999 m apart: different stretches of road."
+    },
+    {
+      "id": "p26",
+      "category": "streetlight",
+      "similarity": 0.88,
+      "decisions": 4,
+      "distancesM": [
+        109,
+        110,
+        27,
+        133
+      ],
+      "a": "Light flickers all night and then goes out. Been like this since the storm.",
+      "b": "Street light has been out for three weeks. The whole stretch is pitch dark after 7pm.",
+      "label": "same",
+      "reason": "A lamp that flickered then failed, on the dark stretch, 27-133 m apart."
+    },
+    {
+      "id": "p27",
+      "category": "pothole",
+      "similarity": 0.881,
+      "decisions": 1,
+      "distancesM": [
+        987
+      ],
+      "a": "Deep crater near the bus stop. It fills with water and you cannot tell how deep it is.",
+      "b": "Large pothole near the bus stop, has been there two weeks",
+      "label": "different",
+      "reason": "987 m apart: two different bus stops."
+    },
+    {
+      "id": "p28",
+      "category": "garbage",
+      "similarity": 0.884,
+      "decisions": 4,
+      "distancesM": [
+        35,
+        121,
+        93,
+        133
+      ],
+      "a": "Bin overflowing since Monday. Crows have scattered waste across the whole street.",
+      "b": "Garbage has not been collected for over a week. The pile is spilling onto the footpath.",
+      "label": "same",
+      "reason": "Overflowing bin and missed collection on the same street: one collection failure."
+    },
+    {
+      "id": "p29",
+      "category": "pothole",
+      "similarity": 0.892,
+      "decisions": 1,
+      "distancesM": [
+        929
+      ],
+      "a": "Large pothole in the middle of the road near the market junction, cars are swerving to avoid it.",
+      "b": "Pothole right at the junction. Autos slow to a crawl and it backs up the whole road.",
+      "label": "different",
+      "reason": "929 m apart: two different junctions."
+    },
+    {
+      "id": "p30",
+      "category": "garbage",
+      "similarity": 0.898,
+      "decisions": 1,
+      "distancesM": [
+        2108
+      ],
+      "a": "Garbage has not been collected for over a week. The pile is spilling onto the footpath.",
+      "b": "No cleanup in the past few days",
+      "label": "different",
+      "reason": "2.1 km apart: unrelated streets."
+    }
+  ]
+}

@@ -1,0 +1,450 @@
+{
+  "version": "2026-10-14",
+  "description": "Labelled evaluation set for the semantic matcher. Each scenario is one ward + one category (so every pair inside it passes the matcher's hard pre-filters) containing three genuinely different problems, four complaints each, written in deliberately different voices: formal, terse with typos, long and angry, code-mixed Kannada/Hindi-English. Problems in a scenario share locality names on purpose — the adversarial case the seed data cannot produce. Ground truth: two complaints are the same incident iff they describe the same physical fault at the same place, i.e. one repair job. Authored, not field-collected; see docs/matching-evaluation.md for what that does and does not let us conclude.",
+  "scenarios": [
+    {
+      "id": "pothole-jayanagar",
+      "category": "pothole",
+      "ward": "Jayanagar (illustrative)",
+      "problems": [
+        {
+          "id": "busstand-pothole",
+          "summary": "Deep pothole in front of the Jayanagar 4th Block bus stand",
+          "complaints": [
+            "There is a deep pothole on the road directly in front of the Jayanagar 4th Block bus stand. Buses swerve to avoid it and it fills with water when it rains.",
+            "huge pothole infront of 4th block bus stop jayanagar, very dangerous pls fix",
+            "My scooter tyre burst this morning because of that enormous hole right where the buses pull in at the 4th Block bus stand. It has been there for weeks and nobody from BBMP has bothered. Someone will get killed.",
+            "4th Block bus stand munde dodda gundi ide, bikes skid aagtide, please repair maadi"
+          ]
+        },
+        {
+          "id": "trench-cavein",
+          "summary": "Road caved in over the BWSSB pipe trench on 11th Main",
+          "complaints": [
+            "The road on 11th Main, Jayanagar has caved in along the strip where BWSSB dug a trench for the water pipeline last month. The patch was never properly restored.",
+            "11th main road sunk where they dug for pipe. not repaired after digging",
+            "After the water board dug up 11th Main for their pipeline they just threw mud back in. Now the whole strip has sunk a foot and cars are bottoming out. Who is responsible for restoring roads after digging?",
+            "11th Main nalli pipeline kelsa aada mele road kusidu hogide, trench sari maadilla"
+          ]
+        },
+        {
+          "id": "manhole-cover",
+          "summary": "Raised, broken manhole cover on 9th Cross near the temple",
+          "complaints": [
+            "A manhole cover on 9th Cross near the Ganesha temple is broken and sticks up several inches above the road surface. Two-wheelers hit it at night.",
+            "broken manhole lid 9th cross jayanagar near temple, raised above road",
+            "Twice this week I have seen bikes nearly crash on the manhole near the temple on 9th Cross. The lid is cracked and raised and there is no reflector or barricade. Please fix before someone is hurt.",
+            "temple hattira 9th Cross alli manhole mucchala odedide, road ginta mele ide"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pothole-whitefield",
+      "category": "pothole",
+      "ward": "Whitefield (illustrative)",
+      "problems": [
+        {
+          "id": "itpl-junction",
+          "summary": "Cluster of potholes at the ITPL main road signal",
+          "complaints": [
+            "The ITPL Main Road signal junction has a cluster of potholes across all lanes. Traffic slows to a crawl and there are frequent near-misses.",
+            "itpl signal full of potholes, traffic jam every day because of it",
+            "Every single morning I lose 20 minutes at the ITPL signal because the entire junction is a minefield of potholes. Cars weave between them and it is a matter of time before there is an accident.",
+            "ITPL signal pe bahut saare gaddhe hain, gaadi chalana mushkil hai, jaldi theek karo"
+          ]
+        },
+        {
+          "id": "service-road-washout",
+          "summary": "Service road beside Hope Farm washed out to gravel",
+          "complaints": [
+            "The service road alongside Hope Farm junction has completely washed out — the tar is gone and it is now loose gravel and mud for about 200 metres.",
+            "hope farm service road no tar left, only stones and mud",
+            "Is anyone maintaining the Hope Farm service road? There is literally no road surface left, just gravel and slush. Autos refuse to go there and residents walk through mud.",
+            "Hope Farm service road alli tar ella hogide, bari kallu mattu mannu"
+          ]
+        },
+        {
+          "id": "speed-breaker",
+          "summary": "Unmarked broken speed breaker on Varthur Road near the school",
+          "complaints": [
+            "An unmarked speed breaker on Varthur Road near the international school has broken into jagged pieces. It is not painted and cannot be seen at night.",
+            "speed breaker near school on varthur road broken, no paint, cant see at night",
+            "I flew off my bike on the speed breaker near the school on Varthur Road last night. It is cracked, uneven and completely unpainted. There is no warning sign at all.",
+            "Varthur road school hattira speed breaker odedide, paint illa, raatri kaanalla"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "streetlight-malleshwaram",
+      "category": "streetlight",
+      "ward": "Malleshwaram (illustrative)",
+      "problems": [
+        {
+          "id": "park-dark",
+          "summary": "All lights out along the Sankey Tank walking path",
+          "complaints": [
+            "All the street lights along the Sankey Tank walking path have been off for ten days. The path is pitch dark after 7 pm.",
+            "sankey tank walking track lights not working, totally dark",
+            "Women walkers have stopped using the Sankey Tank path in the evenings because every single light along it is dead. It has been over a week. This is a safety issue.",
+            "Sankey Tank walking path alli ella deepagalu off, kattale"
+          ]
+        },
+        {
+          "id": "daytime-on",
+          "summary": "Street lights on 8th Cross stay on all day",
+          "complaints": [
+            "The street lights on 8th Cross, Malleshwaram remain switched on throughout the day. This has been happening for two weeks and wastes electricity.",
+            "8th cross lights on in day time also",
+            "Every afternoon at 2 pm the lights on 8th Cross are blazing away. The timer must be broken. What a waste of public money while other streets have no light at all.",
+            "8th Cross nalli hagalu kooda street light urithide, timer kettide"
+          ]
+        },
+        {
+          "id": "exposed-wires",
+          "summary": "Street light pole with exposed live wires near the market",
+          "complaints": [
+            "A street light pole near Malleshwaram market has its junction box open with exposed live wires at hand height. Children play nearby.",
+            "light pole near market has open wires, danger, shock risk",
+            "The metal box on the light pole beside the market entrance is hanging open and bare wires are sticking out. If it rains someone will be electrocuted. Please send someone urgently.",
+            "market hattira light pole alli wire horage ide, current hodiyabahudu, apaaya"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "streetlight-indiranagar",
+      "category": "streetlight",
+      "ward": "Indiranagar (illustrative)",
+      "problems": [
+        {
+          "id": "flicker-100ft",
+          "summary": "Flickering light on 100 Feet Road near the metro pillar",
+          "complaints": [
+            "A street light on 100 Feet Road next to metro pillar 112 flickers on and off constantly, which is distracting for drivers.",
+            "100 ft road light near metro pillar keeps flickering",
+            "The light by the metro pillar on 100 Feet Road strobes like a disco all night. It gives me a headache driving past and it is clearly about to fail completely.",
+            "100 feet road metro pillar paas wali light baar baar band chalu ho rahi hai"
+          ]
+        },
+        {
+          "id": "fallen-pole",
+          "summary": "Street light pole leaning dangerously after a truck hit it on 12th Main",
+          "complaints": [
+            "A street light pole on 12th Main was hit by a truck and is now leaning at a dangerous angle over the footpath.",
+            "pole on 12th main bent after accident, may fall",
+            "Since the truck hit it on Sunday, the light pole on 12th Main is tilted badly over the footpath. People walk under it every day. It could come down any time.",
+            "12th Main alli truck hodedu light kamba baagide, beelabahudu"
+          ]
+        },
+        {
+          "id": "lane-dark",
+          "summary": "No street lights at all in the lane behind Indiranagar club",
+          "complaints": [
+            "The lane behind the Indiranagar club has no working street lights at all; residents have to use phone torches to walk home.",
+            "lane behind club no lights, very dark",
+            "Our lane behind the club has been dark for a month. Two chain-snatching incidents have already happened. We have complained before and nothing was done.",
+            "club hinde iro lane alli ondu light kooda illa, tumba kattale"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "garbage-koramangala",
+      "category": "garbage",
+      "ward": "Koramangala (illustrative)",
+      "problems": [
+        {
+          "id": "not-collected",
+          "summary": "Door-to-door garbage collection stopped on 6th Cross",
+          "complaints": [
+            "Door-to-door garbage collection on 6th Cross, Koramangala has not happened for a week. Waste is piling up in front of houses.",
+            "no garbage pickup on 6th cross for 1 week",
+            "The garbage van has not come to 6th Cross for seven days. Every house has bags rotting at the gate and the smell is unbearable. Why are we paying the SWM cess?",
+            "6th Cross ge kasa tagoLLokke yaaru bandilla, ondu vaara aaytu"
+          ]
+        },
+        {
+          "id": "burning",
+          "summary": "Garbage being burnt every evening on 6th Cross corner plot",
+          "complaints": [
+            "Someone burns garbage every evening on the empty corner plot at 6th Cross, Koramangala. The smoke enters all the nearby homes.",
+            "garbage burning at 6th cross corner, smoke every night",
+            "Every evening around 8 pm the dump on the corner plot of 6th Cross is set on fire. The toxic smoke fills our flat and my father has asthma. This is illegal.",
+            "6th Cross corner nalli pratidina saayankala kasa suttaare, hoge mane olage barutte"
+          ]
+        },
+        {
+          "id": "debris",
+          "summary": "Construction debris dumped by the lake bund",
+          "complaints": [
+            "Large amounts of construction debris — broken concrete and tiles — have been dumped along the Koramangala lake bund.",
+            "construction waste dumped near lake",
+            "Trucks are coming at night and dumping building rubble on the lake bund. It is choking the lake edge and nobody stops them. Please catch them and clear it.",
+            "lake bund hattira construction kasa haakidaare, raatri truck bandu haakuttare"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "garbage-rajajinagar",
+      "category": "garbage",
+      "ward": "Rajajinagar (illustrative)",
+      "problems": [
+        {
+          "id": "blackspot",
+          "summary": "Garbage black spot growing at the Rajajinagar 2nd Block bus stop",
+          "complaints": [
+            "A garbage black spot has formed next to the 2nd Block bus stop in Rajajinagar, with a growing heap of mixed waste.",
+            "rubbish heap at 2nd block bus stop growing bigger",
+            "People waiting for buses at 2nd Block have to stand next to a mountain of rotting garbage. Stray dogs tear the bags open. It gets bigger every day.",
+            "2nd Block bus stop pakka kasada raashi beLeyuttide"
+          ]
+        },
+        {
+          "id": "carcass",
+          "summary": "Dead dog lying on the road in 3rd Block for two days",
+          "complaints": [
+            "A dead dog has been lying on the road in 3rd Block, Rajajinagar for two days and has started to decompose.",
+            "dead dog on road 3rd block not removed",
+            "There is a dog carcass on our road in 3rd Block that nobody has removed for 48 hours. The stench is horrible and it is a health hazard for the children.",
+            "3rd Block road mele satta naayi eradu dinadinda ide, vaasane"
+          ]
+        },
+        {
+          "id": "bin-overflow",
+          "summary": "Community bin outside the 2nd Block market overflowing",
+          "complaints": [
+            "The large community waste bin outside the 2nd Block market is overflowing onto the road and has not been emptied.",
+            "market bin full and overflowing 2nd block",
+            "The green bin at the 2nd Block market has been overflowing for days and the waste has spilled all over the road where vendors sell vegetables. Disgusting.",
+            "2nd Block market hora bin tumbi horage kasa chellide"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "water-basavanagudi",
+      "category": "water",
+      "ward": "Basavanagudi (illustrative)",
+      "problems": [
+        {
+          "id": "main-burst",
+          "summary": "Burst water main flooding Bull Temple Road",
+          "complaints": [
+            "A water main has burst on Bull Temple Road and clean water is gushing onto the road continuously.",
+            "pipe burst bull temple road, water flowing on road",
+            "Thousands of litres of drinking water are being wasted on Bull Temple Road from a burst pipe since yesterday while half the city has no water. Please shut it off.",
+            "Bull Temple Road alli pipe odedu neeru road mele hariyuttide"
+          ]
+        },
+        {
+          "id": "no-supply",
+          "summary": "No water supply to Gandhi Bazaar lanes for three days",
+          "complaints": [
+            "There has been no BWSSB water supply to the lanes off Gandhi Bazaar for three days.",
+            "no water 3 days gandhi bazaar area",
+            "Our taps near Gandhi Bazaar have been completely dry since Monday. We are buying tanker water at 1500 rupees a load. No information from BWSSB about when it will be restored.",
+            "Gandhi Bazaar hattira mooru dinadinda neeru bandilla"
+          ]
+        },
+        {
+          "id": "contaminated",
+          "summary": "Muddy, foul-smelling tap water in the DVG Road area",
+          "complaints": [
+            "Tap water in the DVG Road area has been coming out muddy brown with a foul smell for the past few days.",
+            "dirty smelly water coming in tap dvg road",
+            "The water in our taps on DVG Road is brown and smells like sewage. My children fell sick after drinking it. Sewage must be mixing into the supply line.",
+            "DVG Road alli nalli neeru kesaru, ketta vaasane bartide"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "water-hebbal",
+      "category": "water",
+      "ward": "Hebbal (illustrative)",
+      "problems": [
+        {
+          "id": "valve-leak",
+          "summary": "Leaking valve chamber on the Hebbal flyover service road",
+          "complaints": [
+            "The water valve chamber on the Hebbal flyover service road is leaking steadily and the road there is always wet.",
+            "valve leaking near hebbal flyover service road",
+            "There is a constant leak from the valve pit on the flyover service road at Hebbal. It has been dripping for a month and has started to erode the road.",
+            "Hebbal flyover service road hattira valve inda neeru sorutide"
+          ]
+        },
+        {
+          "id": "low-pressure",
+          "summary": "Very low water pressure in Hebbal Kempapura apartments",
+          "complaints": [
+            "Apartments in Hebbal Kempapura are getting extremely low water pressure; supply barely reaches the sump.",
+            "very low pressure water in kempapura hebbal",
+            "The water comes for two hours but the pressure is so weak our sump does not even fill a quarter. Every flat in Kempapura is facing this since the new connections were given.",
+            "Kempapura alli neeru tumba kammi pressure nalli barutte"
+          ]
+        },
+        {
+          "id": "illegal-tap",
+          "summary": "Illegal connection tapping the main near the Hebbal lake",
+          "complaints": [
+            "Someone has made an illegal connection into the water main near Hebbal lake and is filling private tankers from it.",
+            "illegal pipe connection from main line near hebbal lake",
+            "Every night tankers line up near Hebbal lake and fill up from a pipe that has been illegally tapped into the BWSSB main. They then sell our water back to us.",
+            "Hebbal kere hattira main pipe ge kalla connection kottu tanker tumbisuttaare"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "drainage-hsr",
+      "category": "drainage",
+      "ward": "HSR Layout (illustrative)",
+      "problems": [
+        {
+          "id": "sewage-overflow",
+          "summary": "Sewage overflowing from a blocked drain on 27th Main",
+          "complaints": [
+            "A blocked drain on 27th Main, HSR Layout is overflowing and raw sewage is spreading across the road.",
+            "drain blocked 27th main sewage on road",
+            "Black sewage water is bubbling out of the drain on 27th Main and flowing in front of shops. The stink is unbearable and people have to walk through it.",
+            "27th Main alli charandi block aagi gaLiju neeru road mele"
+          ]
+        },
+        {
+          "id": "underpass-flood",
+          "summary": "Silk Board-side underpass floods after every rain",
+          "complaints": [
+            "The underpass on the Silk Board side of HSR floods knee-deep after every rain because the storm drain cannot cope.",
+            "underpass flooding every rain near silk board",
+            "Yesterday's rain left cars stranded in the HSR underpass again. It happens every single time it rains — the storm water drain is clearly undersized or choked.",
+            "Silk Board kade underpass male bandaaga neerininda tumbutte"
+          ]
+        },
+        {
+          "id": "open-drain",
+          "summary": "Uncovered storm drain beside the 14th Main footpath",
+          "complaints": [
+            "A section of storm drain beside the 14th Main footpath in HSR has no slab covering it, leaving an open drop of several feet.",
+            "open drain no cover 14th main hsr",
+            "There is an open, uncovered drain right next to the footpath on 14th Main. An elderly man fell into it last week. Please put the slabs back.",
+            "14th Main footpath pakka charandi ge mucchala illa, open ide"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "drainage-yelahanka",
+      "category": "drainage",
+      "ward": "Yelahanka (illustrative)",
+      "problems": [
+        {
+          "id": "choked-silt",
+          "summary": "Roadside drain choked with silt along Yelahanka New Town 4th Phase",
+          "complaints": [
+            "The roadside drain along 4th Phase, Yelahanka New Town is choked with silt and plastic and water is stagnating in it.",
+            "drain full of silt 4th phase yelahanka, water not flowing",
+            "The drain on our 4th Phase road has not been desilted in a year. It is full of plastic and mud and the stagnant water is breeding mosquitoes. Dengue cases are rising.",
+            "4th Phase alli charandi mannu plastic tumbi neeru nintide"
+          ]
+        },
+        {
+          "id": "backflow-homes",
+          "summary": "Drain water backing up into homes on Puttenahalli Road",
+          "complaints": [
+            "Drain water is backing up into the houses on Puttenahalli Road whenever it rains heavily.",
+            "drain water coming into houses puttenahalli road",
+            "For the third time this monsoon, dirty drain water came up through our bathrooms on Puttenahalli Road. Everything on the ground floor is ruined.",
+            "Puttenahalli Road manegaLige charandi neeru vaapas barutte"
+          ]
+        },
+        {
+          "id": "collapsed-wall",
+          "summary": "Storm drain side wall collapsed near the Yelahanka lake outlet",
+          "complaints": [
+            "The side wall of the storm water drain near the Yelahanka lake outlet has collapsed into the channel.",
+            "drain wall collapsed near lake outlet",
+            "A long stretch of the storm drain wall by the lake outlet has caved in. The road next to it is cracking and could fall into the drain next.",
+            "kere outlet hattira raajakaaluve gODe kusidide"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "footpath-mg-road",
+      "category": "footpath",
+      "ward": "Shivajinagar (illustrative)",
+      "problems": [
+        {
+          "id": "broken-slabs",
+          "summary": "Broken, rocking footpath slabs on Brigade Road",
+          "complaints": [
+            "Several footpath slabs on Brigade Road are broken and rock when stepped on; pedestrians keep tripping.",
+            "broken footpath tiles brigade road, people falling",
+            "My mother tripped on a loose slab on the Brigade Road footpath and fractured her wrist. Half the slabs on that stretch are cracked and wobbling.",
+            "Brigade Road footpath slab odedide, kaalu jaaruttide"
+          ]
+        },
+        {
+          "id": "encroachment",
+          "summary": "Footpath on Commercial Street fully occupied by shop goods",
+          "complaints": [
+            "Shops on Commercial Street have extended their displays onto the footpath, leaving no space to walk.",
+            "commercial street footpath blocked by shops",
+            "You cannot walk on the Commercial Street footpath at all — every shop has racks and mannequins on it. Pedestrians are forced onto the busy road.",
+            "Commercial Street footpath ella angadi saamaan inda tumbide, nadeyalu jaaga illa"
+          ]
+        },
+        {
+          "id": "parked-bikes",
+          "summary": "Two-wheelers parked across the footpath outside the metro exit",
+          "complaints": [
+            "Dozens of two-wheelers are parked across the footpath outside the MG Road metro exit every day.",
+            "bikes parked on footpath at mg road metro",
+            "People coming out of the MG Road metro have to squeeze between rows of bikes parked right on the footpath. Wheelchair users cannot pass at all.",
+            "MG Road metro exit hattira footpath mele bike nilsidaare"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "noise-btm",
+      "category": "noise",
+      "ward": "BTM Layout (illustrative)",
+      "problems": [
+        {
+          "id": "night-construction",
+          "summary": "Construction work running past midnight on 16th Main",
+          "complaints": [
+            "A construction site on 16th Main, BTM is running machinery and concrete mixers past midnight every night.",
+            "construction noise at night 16th main btm",
+            "The building site on 16th Main has been running concrete mixers till 2 am all week. Nobody in our street has slept properly. Night work is not allowed.",
+            "16th Main construction raatri 12 aadamelu machine shabda"
+          ]
+        },
+        {
+          "id": "loudspeaker",
+          "summary": "Loudspeakers from a function hall on 7th Cross late at night",
+          "complaints": [
+            "A function hall on 7th Cross is playing music through loudspeakers at full volume until late at night.",
+            "loud speaker music function hall 7th cross",
+            "Every weekend the function hall on 7th Cross blasts DJ music on huge speakers till past midnight. Old people and students in the area are suffering.",
+            "7th Cross function hall alli raatri tumba jor loudspeaker"
+          ]
+        },
+        {
+          "id": "generator",
+          "summary": "Diesel generator running all day at the 2nd Stage commercial complex",
+          "complaints": [
+            "The commercial complex in BTM 2nd Stage runs a large diesel generator all day that is very loud and smoky.",
+            "generator noise all day 2nd stage complex",
+            "The diesel generator at the 2nd Stage complex roars from 9 am to 10 pm right outside our windows. It is unbearable and the fumes come in too.",
+            "2nd Stage complex generator dina poorti shabda maadutte"
+          ]
+        }
+      ]
+    }
+  ]
+}

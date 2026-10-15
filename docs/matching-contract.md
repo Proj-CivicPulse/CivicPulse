@@ -42,8 +42,10 @@ WHERE i.ward_id  = $2
 ```
 
 Then, among those candidates, `top_similarity >= MATCH_SIMILARITY_THRESHOLD`
-(0.75) decides. Score is **single-linkage**: an incident scores the MAX
-similarity to any one of its member complaints.
+(0.75) decides — **and** the incident's most similar member must lie within
+`MATCH_MAX_SIBLING_DISTANCE_M` (500 m) of the new complaint. Score is
+**single-linkage**: an incident scores the MAX similarity to any one of its
+member complaints.
 
 So, precisely:
 
@@ -59,29 +61,29 @@ So, precisely:
   `pothole` and `drainage` still cannot merge, by design.
 - **Status — hard constraint.** Resolved and closed incidents do not attract
   new reports.
-- **Distance — NOT constrained.** Two complaints at opposite ends of a ward can
-  match on meaning alone.
+- **Distance — post-hoc check, since 2026-10-14.** A candidate that clears the
+  threshold is accepted only if its most similar member is within 500 m; a
+  too-far candidate is skipped and the next considered. Applied AFTER ranking,
+  so `incident_match_log` still records what similarity alone would have
+  decided. Coordinates missing → the check does not apply.
 - **Time — NOT constrained.** An incident that has been open for months is as
   eligible a candidate as one opened this morning.
 
-The last two are the ones most often assumed to exist. They do not.
+### Why distance is checked and time is not
 
-### Why the two unconstrained axes are left unconstrained
+**Distance** was left unconstrained until there was evidence, because a
+mistuned radius splits one real incident into several. The Phase 7 evaluation
+([matching-evaluation.md](matching-evaluation.md)) supplied it: on labelled
+production joins, every same-problem join was within 202 m, while wrong joins
+of the same kind of fault at a different place sat 843–2108 m apart. A 500 m
+check removed 6 of 22 wrong joins and lost none of 27 right ones. The bound is
+on the *matched member*, not the incident centroid, so a long incident (a
+failing water main) can still grow along its length one nearby report at a
+time.
 
-Ward and status already bound the search hard. Within one ward, "far apart" is
-a few kilometres, and two reports of *the same ongoing problem* legitimately
-can be — a failing water main is not a point. A distance cut-off tuned wrong
-splits one real incident into several, which is the failure the whole feature
-exists to prevent.
-
-Time is bounded structurally instead: an incident stops attracting reports when
-an officer resolves it. A stale-incident policy belongs to that workflow, not
-to the matcher.
-
-**This is a decision, not an oversight — but it is an unvalidated one.** See
-open question 1. It is ACCEPTED for this release: ward and status bound the
-search, and no evidence yet shows a distance- or time-distant match that an
-officer would call wrong.
+**Time** is bounded structurally instead: an incident stops attracting reports
+when an officer resolves it. A stale-incident policy belongs to that workflow,
+not to the matcher. Not evaluated yet.
 
 ---
 
@@ -167,11 +169,9 @@ below should be changed before it does.
 These need labelled data, not a decision.
 
 1. **Should the semantic matcher bound distance or time?**
-   Decide from the log: among matched pairs, what is the distribution of
-   distance and of age gap? If the tail contains matches an officer would call
-   wrong, add the bound that excludes them — and add it as *post-hoc validation
-   of a semantic candidate*, not as another pre-filter, so the log still records
-   what similarity alone would have done.
+   **Distance: ANSWERED (2026-10-14)** — yes, 500 m, as post-hoc validation of
+   a semantic candidate. Evidence in [matching-evaluation.md](matching-evaluation.md) §3.
+   **Time: still open** — not measured.
 
 2. **Is single-linkage chaining actually harming clusters?** *(the behaviour is
    DECIDED — see section 4; this is the measurement that would reopen it)*
@@ -191,8 +191,12 @@ These need labelled data, not a decision.
    explainability that single-linkage buys.
 
 3. **Is 0.75 the right threshold?**
-   The measured similarity distribution leaves a thin margin. Phase 8 must label
-   a sample before this moves.
+   **Evaluated (2026-10-14); the choice is a team decision.** On a labelled set
+   with three problems per ward + category, 0.75 merges everything — separation
+   appears only at 0.84–0.87. On real joins with the distance check, 0.84
+   removes 21 of 22 wrong joins but loses a third of right ones. Kept at 0.75
+   (over-grouping is the safer error, §4); 0.84 is the evidenced alternative if
+   precision is preferred. Full numbers: [matching-evaluation.md](matching-evaluation.md) §4.
 
 4. **Should the ingestion path share the matcher's assumptions?**
    Externally ingested complaints go through the same `ComplaintCreatedEvent`

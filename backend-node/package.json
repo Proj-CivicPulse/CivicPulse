@@ -23,6 +23,8 @@
         "build": "tsc",
         "start": "node dist/index.js",
         "test": "node --import tsx --import ./src/test.setup.ts --test \"src/**/*.test.ts\"",
+        "eval:matching": "node --import tsx eval/evaluate-matching.ts",
+        "eval:production-joins": "node --import tsx eval/evaluate-production-joins.ts",
         "typecheck": "tsc --noEmit",
         "lint": "oxlint"
     },

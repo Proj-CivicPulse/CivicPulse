@@ -571,6 +571,13 @@ Do not expose model internals that no operator can act on.
 
 # 17. Phase 7 — Matching Evaluation
 
+> **✅ First evaluation done, 2026-10-14** —
+> [matching-evaluation.md](matching-evaluation.md). Headline: at 0.75 the
+> matcher merges every problem in a ward + category into one incident; a 500 m
+> distance check on the matched member (now built) removes 6/22 wrong real
+> joins at no recall cost; the threshold itself is a team decision between
+> 0.75 (recall) and 0.84 (precision), with the numbers for both.
+
 The semantic matcher is operational. Evaluate it before changing it.
 
 Build an evaluation set:

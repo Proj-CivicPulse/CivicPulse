@@ -96,6 +96,14 @@ const EnvSchema = z.object({
     // new one. Empirical — tune it in Phase 8; every score is logged regardless.
     MATCH_SIMILARITY_THRESHOLD: z.coerce.number().min(0).max(1).default(0.75),
 
+    // Post-hoc distance check on a semantic match: a candidate incident is
+    // accepted only if its most similar member lies within this many metres of
+    // the new complaint. 0 disables it. Set from labelled production joins
+    // (docs/matching-evaluation.md): every same-problem join was within 202 m,
+    // the far wrong joins 843–2108 m apart, and at 500 m the check removed 6 of
+    // 22 wrong joins while losing none of 27 right ones.
+    MATCH_MAX_SIBLING_DISTANCE_M: z.coerce.number().min(0).default(500),
+
     // A PROCESSING claim older than this is considered abandoned (Node crashed
     // mid-run) and may be re-taken. MUST match backend-spring's
     // app.matching.processing-stale-seconds — Node's CAS is the authority, the

@@ -68,3 +68,6 @@ coverage/
 
 ### === Local editor / assistant tooling ===
 .claude/
+
+# Matching evaluation embedding cache (regenerable, model-specific)
+backend-node/eval/.cache/
