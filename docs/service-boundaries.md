@@ -58,7 +58,7 @@ The matching side has its own analytics record, `incident_match_log`, also
 Spring-written (in the attach transaction): every join/create/reconcile with
 its similarity score, candidate count, threshold, and — on a reconcile move —
 the incident it came from. Node computes those numbers and passes them in the
-attach call; it never writes the table. This is the dataset Phase 8 evaluates
+attach call; it never writes the table. This is the dataset the matching evaluation (roadmap Phase 7) uses
 the matcher on.
 
 ---
@@ -174,7 +174,7 @@ doesn't touch that: whoever decided the match, Spring still performs the write.
   and its queries are always parameterized (`$1, $2`).
 - When Node needs a schema change, it goes in as a new `V*__*.sql` in
   backend-spring — including the **Phase 2 pgvector column**. The `vector`
-  extension itself is created by `V1__init_schema.sql`, so an empty Neon
+  extension itself is created by `V1__init_schema.sql`, so an empty
   database is provisioned entirely by the migrations. Phase 2 added the column
   in `V6__phase2_matching.sql` as `vector(1536)` — Gemini `gemini-embedding-001`
   at `outputDimensionality: 1536`. `V7` drops the `incident_match_log` foreign
@@ -310,4 +310,4 @@ Treat absolute timestamps on pre-2026-09-19 rows as approximate.
 - **The model is swappable** (`COPILOT_PROVIDER`: ollama, gemini, anthropic,
   none). Safety does not depend on which: the citation check is Spring's.
 - Contract: [api-contract.md](api-contract.md), "Copilot". Plan:
-  [next-phases-plan.md](next-phases-plan.md) §2.
+  [roadmap.md](roadmap.md), Phase 12.

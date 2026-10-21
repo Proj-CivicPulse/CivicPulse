@@ -1,5 +1,5 @@
 /**
- * Matching evaluation metrics — Phase 7 (post-midsem roadmap §17).
+ * Matching evaluation metrics — Phase 7 (docs/roadmap.md, Phase 7).
  *
  * Pure functions over labelled complaints and their similarity matrix, so the
  * maths is unit-tested apart from the embedding calls. The decision rule they

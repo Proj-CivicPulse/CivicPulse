@@ -21,7 +21,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import styles from './Explorer.module.css';
 
 /**
- * Category Explorer (roadmap §13): what kinds of problems are occurring, where,
+ * Category Explorer: what kinds of problems are occurring, where,
  * and how are they changing?
  *
  * The comparison across categories is a table with a per-row sparkline —

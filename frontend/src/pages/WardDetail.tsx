@@ -35,7 +35,7 @@ const STATUS_LABEL: Record<(typeof STATUS_ORDER)[number], string> = {
 };
 
 /**
- * Ward detail (roadmap §12): metadata → incident summary → category
+ * Ward detail: metadata → incident summary → category
  * distribution → trend → priority distribution → recent incidents → map.
  *
  * Same filters as every other view; no second filtering architecture. Each

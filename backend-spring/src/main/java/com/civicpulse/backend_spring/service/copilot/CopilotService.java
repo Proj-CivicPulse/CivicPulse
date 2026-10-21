@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The officer Copilot (docs/next-phases-plan.md, Phase A): rate limit, build
+ * The officer Copilot (docs/roadmap.md, Phase 12): rate limit, build
  * the grounding packet, ask backend-node, then CHECK the answer before the
  * officer sees it.
  *

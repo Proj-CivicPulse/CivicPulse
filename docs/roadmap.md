@@ -1,154 +1,312 @@
-# CivicPulse — Implementation Roadmap
-### Requirement-driven, based on what the project actually needs
+# CivicPulse — Roadmap and Status
 
-> **This document covers the pre-midsem build-out and is kept for its stack
-> rationale.** For what happens next, see
-> [post-midsem-roadmap.md](post-midsem-roadmap.md), which supersedes the phase
-> ordering below.
+**The single source for what is done and what is left.** Updated 2026-10-21.
+It replaces the earlier phase documents (`roadmap.md` v1, `post-midsem-roadmap.md`,
+`next-phases-plan.md`, `release-readiness.md`, `audit-register.md`), which are
+in git history if anyone needs them.
+
+Reference docs, which describe how things work rather than when, stay as they
+are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
+[service-boundaries.md](service-boundaries.md), [matching-contract.md](matching-contract.md),
+[matching-evaluation.md](matching-evaluation.md), [priority-evaluation.md](priority-evaluation.md),
+[data-quality-rules.md](data-quality-rules.md), [ward-data.md](ward-data.md),
+[category-dataset-audit.md](category-dataset-audit.md),
+[photo-upload-contract.md](photo-upload-contract.md), [railway-database.md](railway-database.md).
 
 ---
 
-## Tech Stack — What's required and why
+## At a glance
 
-| Layer | Choice | Why it's actually needed |
+| # | Phase | Status |
 |---|---|---|
-| Frontend | React | Specified in scope; officer dashboard and citizen portal both benefit from shared component patterns |
-| Backend | Spring Boot (core APIs) + Node.js (AI layer) | Splits stable, transactional business logic from the fast-iterating AI/matching layer — these two genuinely evolve at different speeds during the research phase |
-| Database | PostgreSQL | System of record; the Complaint/Incident/Ward/Department relationships are inherently relational |
-| Vector search | pgvector | Core requirement, not optional — semantic incident matching has no other way to compare complaint embeddings |
-| Maps | Leaflet + OpenStreetMap | Free, lightweight, sufficient for markers and basic hotspot display; no licensing overhead |
-| Geospatial | PostGIS | **Adopted** (V13, 2026-09). The original deferral held until real ward boundaries arrived; approximating 243 wards by centroid distance put complaints in the wrong ward often enough to matter, so `ST_Contains` is now the authoritative resolver |
-| Auth | JWT | Needed for citizen vs. officer role-based access control |
-| Embeddings | Google Gemini `gemini-embedding-001`, 1536-dim | Required to convert complaint text into comparable vectors. Provider was left open by the project scope; **settled in Phase 2** on multilingual grounds — complaint text here mixes English, Hindi and Kannada |
-| LLM | External LLM API | Needed only for summaries and Copilot — not for structured complaint processing itself |
-| ML (predictive hotspots) | Python + scikit-learn/pandas | Only if Phase 7 is triggered by sufficient historical data — never assumed upfront |
-| Real-time updates (Socket.IO/WebSockets) | Not included by default | Not a stated requirement. Periodic refresh/polling is sufficient for an MVP officer dashboard; add only if the team decides staleness is a real problem |
+| 0 | Foundations | ✅ Done |
+| 1 | Complaint ingestion | ✅ Done |
+| 2 | Embeddings + incident matching | ✅ Done |
+| 3 | Explainable priority engine | ✅ Done (calibration is Phase 8) |
+| 4 | Officer dashboard + map | ✅ Done |
+| 5 | Trends + analytics | ✅ Done (delivered as the Explorer, Phase 6) |
+| S | Stabilisation + data foundation | ✅ Done |
+| 6 | Explorer (wards, categories, incidents) | ✅ Done |
+| 7 | Matching evaluation | ✅ Done — threshold set to 0.84 |
+| 8 | Priority calibration | ⬜ Not started — needs an officer |
+| 9 | Hotspots | ⬜ Not started |
+| 10 | Operational intelligence ("needs attention") | ⬜ Not started — after 9 |
+| 11 | Decision support | ⬜ Not started — after 8–10 and 12 |
+| 12 | Officer Copilot | 🟡 Backend live; panel + eval left (Manya) |
+| 13 | Paper + demo | 🟡 Matching and system sections ready |
+
+**Build order from here:** 12 (Manya) runs in parallel with 8's tooling and 9.
+Then 10 → 11, and 13 throughout.
 
 ---
 
-## Backend Service Boundary — settled
+## Done
 
-- **Spring Boot owns:** auth, users, complaint CRUD, officer CRUD, dashboard APIs, general app backend
-- **Node.js owns:** embedding generation, incident matching, Copilot/LLM orchestration
-- **All three open questions are resolved** — full reasoning in
-  [`service-boundaries.md`](service-boundaries.md):
-  - **Priority calculation → Spring Boot.** Every input is already a SQL query over tables Spring owns; nothing about it needs an embedding.
-  - **`Incident` writes → Spring Boot, always.** Node decides the match and asks Spring to write it, in one transaction. The *trigger* to Node is **asynchronous** (Phase 2), so a slow embedding call never delays a citizen's submission — with a circuit breaker, a naive fallback, and a reconciliation sweep behind it. No queue was added.
-  - **Migrations → Spring Boot, via Flyway.** Node never runs DDL; a column it needs (like `complaints.embedding`) is added there.
+### 0 — Foundations ✅
+Spring Boot core API, Node AI service, React frontend. Flyway owns the schema.
+JWT auth in httpOnly cookies with citizen and officer roles. Service boundary
+decided in writing ([service-boundaries.md](service-boundaries.md)).
 
-That agreement is what Risk Watchlist #4 exists to protect — re-read it before
-changing anything that crosses the boundary.
+### 1 — Complaint ingestion ✅
+Public anonymous submission. Reference numbers (`CP-2026-W48-00001`). Reverse
+geocoding with a cache. Ward from coordinates by PostGIS point-in-polygon over
+243 real BBMP wards; out-of-area coordinates are refused. Citizen "my
+complaints". Photo upload is **deferred**, with its contract approved
+([photo-upload-contract.md](photo-upload-contract.md)).
+
+### 2 — Embeddings + incident matching ✅
+Gemini `gemini-embedding-001` at 1536 dimensions, pgvector, single-linkage
+matching at threshold 0.84 (0.75 until 2026-10-21). Runs asynchronously after commit, with a circuit
+breaker, a naive fallback (`degraded`) and a reconcile sweep, so a citizen never
+waits on an embedding call. Every decision is logged in `incident_match_log`.
+Contract: [matching-contract.md](matching-contract.md).
+
+### 3 — Explainable priority engine ✅
+Four terms: volume, growth, age, spread (weights 40/30/20/10; bands
+3.0/5.5/7.5). Reasons are stored with the score. A 5-minute
+`PriorityRefreshJob` keeps age current. The weights are hand-set and frozen until
+Phase 8 ([priority-evaluation.md](priority-evaluation.md)).
+
+### 4 — Officer dashboard + map ✅
+Incident queue, detail panel with member complaints, status changes, Leaflet
+map coloured by priority.
+
+### 5 — Trends + analytics ✅
+Delivered inside the Explorer: trends, distributions and resolution metrics
+(Phase 6).
+
+### S — Stabilisation + data foundation ✅
+- Category registry with aliases (V11, V14): normalised on write; unknown
+  categories are rejected.
+- Real ward polygons (V13); overlap validation (V20); `dataset_validations` (V17).
+- Ingestion gate `/internal/ingest`: raw first, idempotent, one transaction per
+  record (V15).
+- Separate `reported_at` and `created_at` (V16); `resolved_at` (V18);
+  per-category default department (V19); incident report span (V21).
+- Domain rules decided: `CLOSED` = no fix, excluded from resolution metrics;
+  time to resolve starts at the first report
+  ([data-quality-rules.md](data-quality-rules.md)).
+- The September 2026 audit: all 16 issues dispositioned (table at the end).
+
+### 6 — Explorer ✅
+One shared filter state (ward, category, status, band, "reported within")
+across three views under `/dashboard`:
+- **Incidents:** paged and searched server-side.
+- **Wards:** choropleth plus a sortable table, and a ward detail page.
+- **Categories:** sparklines and resolution figures, and a category detail page.
+
+Backend: 4 new and 5 extended endpoints, listed in api-contract.md "Endpoint
+classification". Verified at 1440/1024/390 px.
+
+### 7 — Matching evaluation ✅
+Report: [matching-evaluation.md](matching-evaluation.md). The harness:
+`npm run eval:matching` and `npm run eval:production-joins`.
+- At 0.75 the matcher merges different problems in the same ward and category.
+- A **500 m distance check** on the matched member is built
+  (`MATCH_MAX_SIBLING_DISTANCE_M`). It removed 6 of 22 wrong joins and lost none
+  of 27 right ones.
+- **Decided 2026-10-21: threshold 0.84.** Best mean F2 across both datasets.
+  The recall it seemed to cost came from seed hotspots that mixed different
+  faults. With one real problem per hotspot, 36 of 36 hotspots form one
+  incident each at 0.84. Live on Railway; reasoning in matching-evaluation.md §4.
+
+### Infrastructure ✅ (2026-10-21)
+- Moved off Neon after its free quota ran out. The database now runs as a Railway
+  service built from `infra/postgres` ([railway-database.md](railway-database.md)).
+- Tests can no longer migrate production. Local development uses a Docker
+  database.
+- Production was reseeded with demo data.
 
 ---
 
-## Phase 0 — Foundations (Week 1)
-- Repo structure: Spring Boot service, Node.js AI service, React frontend
-- Postgres schema: `User`, `Ward`, `Department`, `Complaint`, `Incident`
-- Resolve the open service-boundary questions above, in writing
-- JWT auth (citizen + officer roles) in Spring Boot
-- **Deliverable:** running skeleton, both services talking to Postgres, agreed API contract between them
+## Left to do
 
-## Phase 1 — Complaint Ingestion (Weeks 2–3) — P0
-- Complaint submission API (category, ward, lat/long, description, photo) in Spring Boot
-- Structured storage in Postgres
-- **Deliverable:** citizens can submit complaints; stored and queryable
+### 12 — Officer Copilot 🟡 (owner: Manya)
+An officer asks "what's urgent in Ward 48?" and gets a short answer built only
+from CivicPulse data, with every claim citing its incident, ward or category.
+When the data can't answer, it says so plainly instead of guessing.
 
-## Phase 2 — Embeddings + Incident Matching (Weeks 3–4) — P0, core bottleneck ✅
-- On complaint creation, Node service calls embedding API, stores vector via pgvector
-- Candidate filtering first (ward + category + active status) before running similarity comparison — avoids comparing against every incident
-- Similarity threshold determined empirically; log scores for later evaluation
-- Merge into existing incident or create new one
-- **Deliverable:** working matching pipeline — this is the component your paper will evaluate on precision/recall/F1
+```text
+Browser ─POST /api/core/copilot/query─> Spring (officer session, 30/hr limit,
+   builds the grounding packet from the Explorer's own services)
+   ─POST /internal/copilot/answer─> Node ─> model (COPILOT_PROVIDER)
+   <─ answer + citations; Spring drops any citation not in the packet
+```
 
-**Delivered.** As built, with the decisions the plan left open:
+**Answer rules** (the prompt and Spring's checks enforce them):
+1. Answer only from the packet.
+2. Every factual sentence cites a packet id.
+3. If the packet cannot answer, say so and name what is missing.
+4. Explain priority with the stored reasons only.
+5. At most 150 words.
 
-| | |
+Resident complaint text is not sent to the model.
+
+| # | Milestone | State |
+|---|---|---|
+| 12.1 | Contract + service-boundary decision | ✅ api-contract.md "Copilot"; service-boundaries.md §5 |
+| 12.2 | Node `/internal/copilot/answer`, swappable provider (none / ollama / gemini / anthropic) | ✅ |
+| 12.3 | Spring `/copilot/query`: packet builder, citation check, per-officer limit | ✅ |
+| 12.4 | **Copilot panel in the Explorer** | ⬜ |
+| 12.5 | **Golden-question eval** (~20 questions, some unanswerable) | ⬜ |
+
+**Live now on Gemini** (`gemini-3.8-flash`) in production and locally. Verified
+end to end on 2026-10-21. Ollama (`qwen2.5:7b`) is the free option for
+development.
+
+**12.4 — the panel.** A drawer on the Explorer pages:
+- A question box, and the answer.
+- Each `sources` entry is a chip that links to its target: `incident` opens it in
+  the queue, `ward` goes to `/dashboard/wards/:id`, `category` to
+  `/dashboard/categories/:code`, and `metric` has no link.
+- Send the shared filters as the scope.
+- States to design:
+  - loading (answers take about 8 s);
+  - `ungrounded: true` (show a warning, not the answer as fact);
+  - `answerable: false`;
+  - `refused`;
+  - 503 `COPILOT_UNAVAILABLE`;
+  - 429 with `Retry-After`.
+
+Devansh's design system applies.
+
+**12.5 — the eval.** About 20 questions against a seeded local database,
+including unanswerable ones (weather, an out-of-scope ward, "who is the mayor").
+Check automatically that:
+- every cited id is in the packet;
+- every number in the answer appears in the packet;
+- unanswerable questions come back `answerable: false`.
+
+Run it per provider. The comparison goes in the paper.
+
+### 8 — Priority calibration ⬜
+The weights are frozen until an officer has ranked a real queue
+([priority-evaluation.md](priority-evaluation.md)).
+
+| # | Milestone |
 |---|---|
-| Provider | Gemini `gemini-embedding-001`, **1536-dim**, `SEMANTIC_SIMILARITY`, L2-normalised in Node |
-| Scoring | **Single-linkage** — an incident scores as the max cosine similarity to any one member complaint. Named honestly in the methodology: it is incremental single-linkage clustering, chaining risk and all |
-| Threshold | `MATCH_SIMILARITY_THRESHOLD`, ships at `0.75`. A starting point, not a finding |
-| Trigger | Async, `AFTER_COMMIT`. Circuit breaker → naive fallback (`degraded`) → reconciliation sweep. A citizen never waits on an embedding call |
-| Score logging | `incident_match_log` — every decision with `top_similarity`, `candidate_count`, `threshold`, the sibling complaint that won, and a `created` flag separating a join from a split. Sub-threshold scores are recorded too, so the threshold can be re-chosen from data rather than re-run |
+| 8.1 | Export the active queue as a ranking sheet (CSV). Show reasons and counts, not the score |
+| 8.2 | Import and metrics: Kendall τ and precision@10 between the formula and the officer, with per-term attribution of disagreements |
+| 8.3 | **Officer session (people):** ≥ 30 incidents ranked by one officer, ideally two |
+| 8.4 | Weight/band proposal, adopted only if τ improves on held-out incidents |
 
-Two things this hands Phase 8 for free: every naive fallback is a labelled
-baseline decision, and every reconcile move is a labelled *disagreement*
-between that baseline and the real pipeline.
+### 9 — Hotspots ⬜
+Definition first (to be ratified). A hotspot is **≥ 3 active incidents of the
+same category within 500 m of each other**, each with a report in the last
+**30 days**. Rule-based, DBSCAN-style; no ML.
 
-## Phase 3 — Explainable Priority Engine (Week 5) — P0
-- Rule-based formula: complaint volume, growth rate, incident age, geographic spread
-- Store the *reasons*, not just a score — needed for both the officer UI and the paper's explainability claims
-- **Deliverable:** every incident carries a priority and a human-readable justification
+| # | Milestone |
+|---|---|
+| 9.1 | Team ratifies the definition |
+| 9.2 | `GET /dashboard/hotspots` (category and window filters): members, centre, radius, wards |
+| 9.3 | Map layer and list on the Ward Explorer |
 
-## Phase 4 — Officer Dashboard + Map (Weeks 5–6) — P0
-- React dashboard: City → Ward → Incident → Complaints drill-down
-- Leaflet map with incident markers, colored by priority
-- Standard REST fetch/refresh — no real-time infrastructure needed for MVP
-- **Deliverable:** demo-able command-center UI
+### 10 — Operational intelligence ⬜ (after 9)
+One "needs attention" strip that turns counts into statements, each opening its
+incidents:
 
-## Phase 5 — Trends & Analytics (Week 7) — P0/P1
-- Standard SQL aggregation queries — no AI required here
-- Category/ward trend charts (any React charting library)
-- **Deliverable:** "what's increasing," "what's stale" views
+| Signal | Rule |
+|---|---|
+| High priority | Active, high or critical band |
+| Worsening | 2 or more new reports in 72 h, or score up ≥ 1.0 since yesterday |
+| Concentrated | In a Phase 9 hotspot |
+| Category spike | Last 7 days ≥ 2× the prior 4-week weekly mean, and ≥ 5 reports |
 
-## Phase 6 — Officer Copilot (Weeks 8–9) — P1
-- Grounded, not generic: intent → query CivicPulse's own data → LLM generates answer from retrieved context only
-- Node service orchestrates the LLM call with retrieved data injected
-- **Deliverable:** officer can ask "what's urgent in Ward 17" and get a grounded, data-backed answer
+| # | Milestone |
+|---|---|
+| 10.1 | `GET /dashboard/attention`, returning signals with incident ids |
+| 10.2 | "Needs attention" strip on the Incidents view |
 
-## Phase 7 — Predictive Hotspots (Week 9, conditional) — P2
-- **Gate on data first:** check volume, timestamp cleanliness, coordinate reliability before committing any time here
-- If viable: isolated Python service (scikit-learn/pandas), called from Node — doesn't touch the core stack
-- **Deliverable:** only build if the data genuinely supports it; otherwise this time goes to Phase 8
+### 11 — Decision support ⬜ (after 8, 10 and 12)
+Recommendations an officer can check, never actions taken on their behalf.
 
-## Phase 8 — Evaluation + Paper (Weeks 10–12)
-- Incident matching: precision/recall/F1 against manually labeled merges
-- Priority engine: comparison against a naive baseline (e.g., complaint-count-only), human/expert agreement check
-- Write up methodology and results in IEEE format
-- Polish demo, record a backup video in case of live-demo failure
-- **Deliverable:** paper draft + rehearsed demo
+| # | Milestone |
+|---|---|
+| 11.1 | Rule-based recommended action per incident (dispatch / consolidate / monitor / escalate / verify-and-close), showing which rule fired |
+| 11.2 | Copilot-written note grounded in the incident and its rule |
+| 11.3 | Officer accept/override logged. The override rate is the success metric |
 
-### What Phase 2 already handed you
-
-`incident_match_log` is the dataset. Every row is one decision with its
-`top_similarity`, the sibling complaint it scored against, `candidate_count`,
-the `threshold` in force, and a `created` flag separating a join from a split.
-Sub-threshold scores are recorded too, so a different threshold can be evaluated
-offline without re-running the pipeline or paying for re-embedding.
-
-Two labelled comparisons come for free: every `matcher = NAIVE` row is a
-baseline decision, and every `decision = RECONCILED` row is a case where the
-semantic matcher *disagreed* with that baseline and moved the complaint.
-
-**First measurements** (148 seeded complaints, `gemini-embedding-001` @ 1536,
-threshold 0.75):
-
-| band | decisions | created a new incident |
+### 13 — Paper + demo 🟡
+| Section | Source | Ready |
 |---|---|---|
-| no candidate | 36 | 36 |
-| 0.75–0.80 | 11 | 0 |
-| 0.80–0.90 | 39 | 0 |
-| 0.90+ | 64 | 0 |
+| System: architecture, data quality, ingestion gate | service-boundaries.md, data-quality-rules.md | ✅ now |
+| Matching: method, labelled sets, P/R/F1/F2, ablation, distance check | matching-evaluation.md, `backend-node/eval/results/` | ✅ now |
+| Copilot: grounding design and eval results | 12.5 | after 12.5 |
+| Priority: explainability and calibration vs officer | priority-evaluation.md + 8.2 | after 8.3 |
+| Demo: rehearsed run and a backup video | — | ⬜ |
 
-Nothing scored between 0.70 and 0.75, and **no scored decision was rejected** —
-the threshold turned nothing away on this corpus. A separate adversarial probe
-(construction noise vs. barking dogs, same ward and category, ~10 m apart, which
-the naive grouper *would* have merged) scored 0.7499 and was correctly split.
+### Decisions and reviews (people, not code)
+| Item | Owner |
+|---|---|
+| Review the 30 hand labels in `backend-node/eval/production-joins-labelled.json` | an officer / Devansh |
+| Review the Explorer UI and the `--density-*` tokens | Devansh |
+| Clear and reseed the live demo data: it predates 0.84 and the one-problem-per-hotspot seed | team (bulk delete on production) |
 
-**Two traps before you re-tune it.** First, fragmentation is not evidence about
-the threshold: 10 of 24 seed hotspots split, all with `candidate_count = 0` —
-the concurrency race, not similarity. Filter on `candidate_count > 0` before
-drawing any conclusion. Second, the seed corpus cannot produce a false merge at
-all, because one ward+category is one problem by construction; it will always
-flatter a low threshold. Hand-label same-ward/same-category/**different-problem**
-pairs before changing the number.
+### Backlog — deliberately deferred
+- **Photo upload.** Contract approved, not built.
+- **Officer merge / unlink of complaints.** The manual override for false
+  merges; the backend hook exists, there is no endpoint or UI.
+- **"Why are these grouped".** Explain a match in operator language (for example
+  "40 m away, same problem"), not cosine scores.
+- **`timestamptz` migration.** Touches every timestamp column
+  ([data-quality-rules.md](data-quality-rules.md) §2).
+- **First real data feed** through `/internal/ingest`. Two open points:
+  - Decide whether a changed source timestamp counts as a new record.
+  - Re-run the matching evaluation on real complaints.
+- **Code-mixed text** (Kannada/Hindi–English). Evaluate transliteration before
+  embedding, using the existing harness.
 
 ---
 
-## Risk Watchlist
-1. **Similarity threshold tuning** — budget real time, it won't be a one-shot config
-2. **False merges** — two distinct nearby issues can read as semantically similar; give officers a manual override. Single-linkage scoring (max similarity to any member) adds a chaining risk on top — mitigated by a conservative threshold, the logged scores, and that override
-3. **LLM cost/latency creep** — cache Copilot responses where reasonable, don't call the LLM on every dashboard load
-4. **Service boundary drift** — without the Phase 0 agreement holding, Spring/Node ownership tends to blur under deadline pressure
-5. **Scope creep into P2** — don't start Phase 7 until Phases 0–6 are demo-solid
-6. **`degraded` backlog during a Node outage** — a prolonged backend-node outage leaves a growing pile of `degraded`/`pending` complaints, semantically unmatched. `MatchReconciliationJob` logs the backlog count every run it is non-zero so it can't creep up unseen; watch that line during the demo
-7. **Duplicate incidents from simultaneous reports** — complaints filed seconds apart are matched concurrently and can each create an incident, because neither sees the other's embedding yet. Self-corrects on the next reconcile sweep (which runs serially), so it is transient — but it is worth knowing before a live demo, and it means incident counts taken immediately after a burst of submissions read high
+## Rules that still apply
+- Every number shown to an operator is traceable to a column written on purpose.
+- Never point a local `.env` at production: Spring startup and `./mvnw test`
+  migrate `DB_URL`.
+- No ML before evaluation data; no LLM where a deterministic rule is safer.
+- Done means all of these:
+  - contract written;
+  - backend and tests;
+  - frontend with empty and error states;
+  - verified against real data;
+  - docs updated.
+
+---
+
+## Old names → this document
+Code comments and older docs use these labels.
+
+| Old label | Now |
+|---|---|
+| Pre-midsem Phases 0–5 | Phases 0–5 |
+| Pre-midsem Phase 6 "Officer Copilot", next-phases "Phase A" | Phase 12 |
+| Pre-midsem Phase 7 "Predictive hotspots", post-midsem Phase 9, next-phases "C" | Phase 9 |
+| Pre-midsem **Phase 8 "Evaluation + paper"** (the "Phase 8 evaluation" in code comments) | Phases 7 (matching), 8 (priority), 13 (paper) |
+| Post-midsem Phases 1–2 (data foundation, API contract freeze) | Phase S |
+| Post-midsem Phases 3–6 (Explorer), "roadmap §7–§16" | Phase 6 |
+| Post-midsem Phase 7 / §17 | Phase 7 |
+| Post-midsem Phase 8, next-phases "B" | Phase 8 |
+| Post-midsem Phase 10, next-phases "D" | Phase 10 |
+| Post-midsem "decision support" / Phase 11, next-phases "E" | Phase 11 |
+| Next-phases "F" | Phase 13 |
+
+### September 2026 audit — ISSUE IDs
+Several code comments cite these.
+
+| ID | Issue | Outcome |
+|---|---|---|
+| ISSUE-01 | Requirements docs did not match the matching rules | Resolved (documented) |
+| ISSUE-02 | Copilot / hotspot stubs presented as complete | Resolved |
+| ISSUE-03 | Category governance missing | Resolved: registry + aliases |
+| ISSUE-04 | Exact category matching too strict | Resolved via ISSUE-03 |
+| ISSUE-05 | Ward data was placeholder | Resolved: 243 BBMP wards |
+| ISSUE-06 | Nearest-centroid ward assignment | Resolved: PostGIS containment |
+| ISSUE-07 | Priority scores go stale | Resolved: `PriorityRefreshJob` |
+| ISSUE-08 | Priority not calibrated | Measured; decision recorded, so the weights stay frozen → **Phase 8** |
+| ISSUE-09 | O(N²) geographic spread | Measured; deliberately not optimised |
+| ISSUE-10 | No ingestion validation gate | Resolved: `/internal/ingest` |
+| ISSUE-11 | External/internal ward ID governance | Resolved: crosswalk view |
+| ISSUE-12 | Frontend category list hardcoded | Resolved: served by the API |
+| ISSUE-13 | Matcher lacks spatial/temporal bounds | Resolved (documented); 500 m check added in Phase 7 |
+| ISSUE-14 | Single-linkage chaining | Demonstrated; kept as an explicit decision |
+| ISSUE-15 | Seed data insufficient | Mitigated (seed script; Phase 7 eval set) |
+| ISSUE-16 | Photo upload unresolved | Deferred, contract approved → backlog |

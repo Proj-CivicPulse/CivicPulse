@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 
 /**
  * Builds the Copilot's grounding packet: everything the model may use to
- * answer, and nothing else (docs/next-phases-plan.md §2).
+ * answer, and nothing else (docs/roadmap.md, Phase 12).
  *
  * <p>Every figure comes from the service that serves the same figure to the
  * Explorer, so "active", "high priority" and "last 30 days" mean exactly what

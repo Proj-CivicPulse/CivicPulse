@@ -7,7 +7,7 @@ import type { WindowDays } from '@/lib/reportWindow';
  * Officer console and Explorer CLIENT state only — which ward is selected,
  * which incident is open, and what the filters are set to.
  *
- * One filter state for every Explorer view (roadmap §8): the incident queue,
+ * One filter state for every Explorer view: the incident queue,
  * the ward and category explorers and their detail pages all read these, so
  * moving between them keeps the slice the officer was looking at. Each view
  * applies the subset its endpoint accepts.

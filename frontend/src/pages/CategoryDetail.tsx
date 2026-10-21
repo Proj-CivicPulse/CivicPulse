@@ -25,7 +25,7 @@ import styles from './Explorer.module.css';
 const TOP_WARDS = 10;
 
 /**
- * Category detail (roadmap §14): trend → incident count → ward distribution →
+ * Category detail: trend → incident count → ward distribution →
  * recent incidents. Display name and default department come from the server;
  * no category semantics live in this file.
  */

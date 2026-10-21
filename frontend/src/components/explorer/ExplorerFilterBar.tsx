@@ -6,7 +6,7 @@ import styles from './ExplorerFilterBar.module.css';
 
 /**
  * The officer Explorer's sections. One shell, three views of the same filter
- * state — not three dashboards (roadmap §7).
+ * state — not three dashboards.
  */
 export const EXPLORER_NAV: readonly NavItem[] = [
     { label: 'Incidents', to: '/dashboard', end: true },

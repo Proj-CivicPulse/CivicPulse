@@ -24,7 +24,7 @@ import styles from './Explorer.module.css';
 const BENGALURU: [number, number] = [12.9716, 77.5946];
 
 /**
- * Ward Explorer (roadmap §11): what is happening across each ward?
+ * Ward Explorer: what is happening across each ward?
  *
  * One request (GET /dashboard/wards) feeds both the map and the table, so
  * the two can never disagree. The map shades by active incidents; the table

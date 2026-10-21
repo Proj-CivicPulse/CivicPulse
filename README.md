@@ -261,42 +261,19 @@ provisioned the first time you run the Spring service.
 
 ## Project status
 
-Following a phased roadmap (see [`docs/roadmap.md`](docs/roadmap.md) for the
-full detail):
+**[docs/roadmap.md](docs/roadmap.md) is the single list of what is done and
+what is left.** In short (2026-10-21):
 
-- [x] Phase 0 — Foundations. Running skeleton: Neon Postgres + pgvector,
-      Flyway-owned schema, JWT auth (cookie-based) in Spring, both services
-      health-checked against the database and reachable through the frontend
-      proxy, service-boundary decisions written down.
-- [x] Phase 1 — Complaint ingestion. Public anonymous submission, ward derived
-      from coordinates by real point-in-polygon against the 243 imported BBMP
-      wards, gap-free reference numbers allocated in-transaction, optional
-      server-side reverse geocoding, officer/citizen read paths, a canonical
-      category registry with aliases so equivalent labels cannot fragment into
-      incidents that never merge, and a validating gate for bulk external feeds
-      (raw preserved, every rejection reasoned, idempotent on re-run).
-- [x] Phase 2 — Embeddings + incident matching. Gemini `gemini-embedding-001`
-      (1536-dim, L2-normalised) into pgvector; ward+category+status candidate
-      pre-filter then single-linkage cosine similarity; async trigger with a
-      circuit breaker, naive fallback, and a reconciliation sweep. Every
-      decision — semantic, naive, and reconcile move — is recorded in
-      `incident_match_log` with its scores, which is the dataset Phase 8
-      evaluates precision/recall/F1 on.
-- [x] Phase 3 — Explainable priority engine. Rule-based score over volume,
-      growth, age and geographic spread, stored with the human-readable
-      reasons, recomputed in the same transaction as any membership change —
-      plus a scheduled sweep that keeps the time-dependent age term honest for
-      incidents that have gone quiet.
-- [x] Phase 4 — Officer dashboard + map. Ward rail → incident queue → incident
-      detail drill-down, Leaflet markers coloured by priority band.
-- [ ] Phase 5 — Trends & analytics
-- [ ] Phase 6 — Officer Copilot
-- [ ] Phase 7 — Predictive hotspots (conditional on data quality)
-- [ ] Phase 8 — Evaluation + paper
-
-Next up is **threshold tuning**: `MATCH_SIMILARITY_THRESHOLD` ships at `0.75`
-as a starting point, and `incident_match_log` now has the raw scores needed to
-choose a better one against labelled data.
+- [x] 0–5 — Foundations, complaint ingestion, embeddings + incident matching,
+      explainable priority, officer dashboard + map, trends
+- [x] Stabilisation + data foundation — category registry, 243 real BBMP
+      wards, ingestion gate, dataset validation
+- [x] 6 — Explorer: wards, categories and incidents on one shared filter state
+- [x] 7 — Matching evaluation (threshold set to 0.84)
+- [ ] 12 — Officer Copilot — backend live on Gemini; panel and eval left
+- [ ] 8 — Priority calibration (needs an officer to rank a real queue)
+- [ ] 9 — Hotspots → 10 — "Needs attention" → 11 — Decision support
+- [ ] 13 — Paper + demo (matching and system sections ready)
 
 ---
 

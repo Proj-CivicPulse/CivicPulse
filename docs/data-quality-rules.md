@@ -180,7 +180,7 @@ fixed before the Explorer reads through it.
 |---|---|---|---|---|
 | 1 | Date windows use `reported_at` | ~~`DashboardService` windows counted `createdAt`~~ | | **Fixed 2026-10-13**, `DashboardServiceTest` |
 | 2 | Ranked queues are of active incidents | ~~`DashboardService.topIncidents` ranked any status~~ | | **Fixed 2026-10-13**, `DashboardServiceTest` |
-| 3 | ~~Every list endpoint is bounded (roadmap §29)~~ | ~~both lists were unbounded~~ | | **Fixed**: `GET /incidents` 2026-10-13 (E1), `GET /complaints` 2026-10-14 (E4) |
+| 3 | ~~Every list endpoint is bounded~~ | ~~both lists were unbounded~~ | | **Fixed**: `GET /incidents` 2026-10-13 (E1), `GET /complaints` 2026-10-14 (E4) |
 | 4 | Ward lookup is unique | 26 sliver overlaps between ward boundaries | no complaint sits in one | a point in a sliver resolves to the lower ward id — deterministic, documented in [ward-data.md](ward-data.md#overlap-check), not fixed |
 | 5 | ~~Results are persisted, not just observed~~ | ~~the ward overlap check was not in `dataset_validations`~~ | | **Fixed by V20** (`boundary-overlap`, PASS) once applied |
 

@@ -154,7 +154,7 @@ Classified 2026-10-13 — see "Endpoint classification" in `api-contract.md`.
 ### Analytics — Phase 5
 
 - ~~`GET /analytics/trends`~~ — superseded by `GET /dashboard/trends`; aggregates
-  live on `DashboardController` (roadmap §6.1)
+  live on `DashboardController`
 - [ ] `GET /analytics/stale-incidents` — Milestone 5; classify REUSE/EXTEND/NEW then
 - [ ] `GET /analytics/rising-categories` — Milestone 5; classify then
 
@@ -185,7 +185,7 @@ All require the `X-Internal-Token` header, and **fail closed** when
       `?force` / `?reembed`. Requires `X-Internal-Token`. Driven by Spring's
       async trigger and its `MatchReconciliationJob`.
 
-### Copilot — Phase A (docs/next-phases-plan.md)
+### Copilot — Phase 12 (docs/roadmap.md)
 - [x] Spring `POST /copilot/query` — officer; builds the grounding packet, checks citations, 30 questions/officer/hour
 - [x] Node `POST /internal/copilot/answer` — `X-Internal-Token`; model chosen by `COPILOT_PROVIDER` (ollama | gemini | anthropic | none)
 - ~~Node `POST /copilot/query`~~ — removed: it took `officer_id` from the body on a service with no sessions

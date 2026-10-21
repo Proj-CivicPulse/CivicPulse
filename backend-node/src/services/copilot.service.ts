@@ -1,5 +1,5 @@
 /**
- * copilot.service — Phase A of docs/next-phases-plan.md.
+ * copilot.service — Phase 12 of docs/roadmap.md.
  *
  * Answers an officer's question from a GROUNDING PACKET that backend-spring
  * built from its own services, and from nothing else. Node's job here is the
@@ -29,7 +29,7 @@ export interface CopilotAnswer extends CopilotOutput {
 /**
  * Stable across requests (it never contains the packet or the question), so a
  * provider-side prompt cache can reuse it. The rules are the ones in
- * docs/next-phases-plan.md §2 "Answer rules".
+ * docs/roadmap.md, Phase 12 "Answer rules".
  */
 export const SYSTEM_PROMPT = `You are the CivicPulse Copilot, an assistant for municipal officers in Bengaluru who triage civic complaints (potholes, garbage, street lights, water, drainage, footpaths, noise).
 

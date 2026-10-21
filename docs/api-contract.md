@@ -329,8 +329,8 @@ ambiguity; these two keep their names because the frontend reads them.
 
 The rules every Explorer-facing endpoint follows — new ones, and existing ones
 as they are extended. Written before the endpoints so that they are defined
-once; which endpoints are REUSE / EXTEND / NEW is roadmap §35 step 2, and lands
-in this section when it is done. Domain definitions behind these rules are in
+once; which endpoints are REUSE / EXTEND / NEW is the "Endpoint classification"
+below. Domain definitions behind these rules are in
 [data-quality-rules.md](data-quality-rules.md) §3.
 
 ### Where it lives
@@ -383,7 +383,7 @@ them; the change is breaking, so it ships with the frontend change in one PR.
 
 - **No matching data is `200` with an empty list / zero counts**, never `404`.
   The Explorer must be able to tell "widen your filters" from "something
-  broke" (roadmap §9).
+  broke".
 - `404` only for a path resource that does not exist (`/dashboard/wards/999/summary`).
 - Errors use the standard envelope above. A metric that cannot be computed yet
   — resolution time before any incident has been resolved — is `null`, not `0`.
@@ -413,8 +413,8 @@ through it. Detail in [data-quality-rules.md](data-quality-rules.md) §5.
 
 ### Endpoint classification
 
-Roadmap §35 step 2, done 2026-10-13. Every Explorer data requirement in roadmap
-§11–16 is mapped to an existing endpoint before anything is built:
+Done 2026-10-13. Every Explorer data requirement (roadmap Phase 6) is mapped
+to an existing endpoint before anything is built:
 **REUSE** as-is, **EXTEND** an existing endpoint, **NEW** only where no
 existing endpoint has the same domain responsibility, **DEFER** with a reason.
 
@@ -431,27 +431,27 @@ Who reads what today matters for EXTEND, because some changes are breaking:
 
 #### Requirement → endpoint
 
-| Requirement (roadmap §) | Class | Endpoint |
+| Requirement | Class | Endpoint |
 |---|---|---|
-| Ward table: complaints, active, high-priority, dominant category, last activity (§11) | **NEW** | N1 `GET /dashboard/wards` |
-| Ward map: boundaries (§11) | **NEW** | N4 `GET /wards/boundaries` |
-| Ward map: density / priority overlay (§11) | REUSE N1 | choropleth from per-ward counts, not markers (§29) |
-| Ward detail: metadata (§12) | REUSE | `GET /wards/{id}` |
-| Ward detail: incident summary, priority + status distribution (§12) | **EXTEND** | E6 `GET /dashboard/wards/{wardId}/summary` |
-| Ward detail: category distribution (§12) | REUSE N2 | `GET /dashboard/categories?wardId=` — one answer to that question, not two |
-| Ward detail: trend (§12) | **NEW** | N3 `GET /dashboard/trends?wardId=` |
-| Ward detail: recent incidents (§12) | EXTEND | E1 `GET /incidents?wardId=&sort=lastReportedAt` |
-| Category table: volume, active, high-priority, resolution metrics (§13) | **NEW** | N2 `GET /dashboard/categories` |
-| Category trend (§13–14) | NEW | N3 `GET /dashboard/trends?groupBy=category` |
-| Category → ward distribution (§13–14) | REUSE N1 | `GET /dashboard/wards?category=` |
-| Category display names (§14) | REUSE | `GET /categories` |
-| Incident list with shared filters (§15) | **EXTEND** | E1 `GET /incidents` |
-| First / last reported (§15) | **EXTEND** | E2 `Incident` shape |
-| Incident detail + timeline (§16) | REUSE | `GET /incidents/{id}`, `GET /incidents/{id}/complaints` (already ordered by `reported_at`) |
+| Ward table: complaints, active, high-priority, dominant category, last activity | **NEW** | N1 `GET /dashboard/wards` |
+| Ward map: boundaries | **NEW** | N4 `GET /wards/boundaries` |
+| Ward map: density / priority overlay | REUSE N1 | choropleth from per-ward counts, not markers |
+| Ward detail: metadata | REUSE | `GET /wards/{id}` |
+| Ward detail: incident summary, priority + status distribution | **EXTEND** | E6 `GET /dashboard/wards/{wardId}/summary` |
+| Ward detail: category distribution | REUSE N2 | `GET /dashboard/categories?wardId=` — one answer to that question, not two |
+| Ward detail: trend | **NEW** | N3 `GET /dashboard/trends?wardId=` |
+| Ward detail: recent incidents | EXTEND | E1 `GET /incidents?wardId=&sort=lastReportedAt` |
+| Category table: volume, active, high-priority, resolution metrics | **NEW** | N2 `GET /dashboard/categories` |
+| Category trend | NEW | N3 `GET /dashboard/trends?groupBy=category` |
+| Category → ward distribution | REUSE N1 | `GET /dashboard/wards?category=` |
+| Category display names | REUSE | `GET /categories` |
+| Incident list with shared filters | **EXTEND** | E1 `GET /incidents` |
+| First / last reported | **EXTEND** | E2 `Incident` shape |
+| Incident detail + timeline | REUSE | `GET /incidents/{id}`, `GET /incidents/{id}/complaints` (already ordered by `reported_at`) |
 | Complaint drill-down outside an incident | **EXTEND** | E4 `GET /complaints` |
 | Dashboard headline figures | **EXTEND** (fix) | E5 `GET /dashboard/summary` |
-| "Why are these grouped" — `incident_match_log` (§16) | **DEFER** to Milestone 4 | needs operator language ("40 m away, same problem"), not cosine scores; design with the matching evaluation |
-| Last ingestion freshness (§10) | **DEFER** | no feed exists; add when the first one is onboarded |
+| "Why are these grouped" — `incident_match_log` | **DEFER** (roadmap backlog) | needs operator language ("40 m away, same problem"), not cosine scores; design with the matching evaluation |
+| Last ingestion freshness | **DEFER** | no feed exists; add when the first one is onboarded |
 | Officer-facing ward strip | **not** `GET /wards/summary` | that endpoint is public and counts-only; the Explorer uses N1 |
 
 Net: **4 new endpoints, 5 extended, 0 new controllers** — all implemented by 2026-10-14. N1–N3 sit on
@@ -662,7 +662,7 @@ one is recomputed, and deleted if it is now empty.
   "topSimilarity": 0.87,
   "topSiblingComplaintId": "4821",
   "candidateCount": 3,
-  "threshold": 0.75,
+  "threshold": 0.84,
   "model": "gemini-embedding-001",
   "embeddingDim": 1536
 }

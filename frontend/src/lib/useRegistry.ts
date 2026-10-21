@@ -11,7 +11,7 @@ import { humanizeEnum } from '@/lib/format';
  * cached for as long as it plausibly stays the same, so moving between views
  * never refetches a vocabulary.
  *
- * Category semantics stay on the server (roadmap §14): the code is the
+ * Category semantics stay on the server: the code is the
  * identity, the registry's name is the label, and nothing here derives one
  * from the other beyond humanising a code the registry does not know.
  */

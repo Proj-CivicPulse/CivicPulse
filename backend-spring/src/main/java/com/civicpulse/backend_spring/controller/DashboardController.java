@@ -21,7 +21,7 @@ import java.util.List;
  * OFFICER-gated by the /dashboard/** matcher in SecurityConfig.
  *
  * <p>The Explorer's aggregates live here rather than under a family of
- * /ward-stats, /ward-analytics style paths (roadmap §6.1). Shapes and filter
+ * /ward-stats, /ward-analytics style paths. Shapes and filter
  * semantics: docs/api-contract.md, E5, E6 and N1–N3.
  */
 @RestController

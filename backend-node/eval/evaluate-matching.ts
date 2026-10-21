@@ -1,6 +1,6 @@
 /* eslint-disable no-console -- a command-line report: printing is its output */
 /**
- * Phase 7 matching evaluation (post-midsem roadmap §17).
+ * Phase 7 matching evaluation (docs/roadmap.md, Phase 7).
  *
  *   npm run eval:matching            # from backend-node/
  *
