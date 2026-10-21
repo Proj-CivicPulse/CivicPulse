@@ -35,8 +35,30 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | 12 | Officer Copilot | 🟡 Backend live; panel + eval left (Manya) |
 | 13 | Paper + demo | 🟡 Matching and system sections ready |
 
-**Build order from here:** 12 (Manya) runs in parallel with 8's tooling and 9.
-Then 10 → 11, and 13 throughout.
+**All code-only work is done.** Three things are left, and none of them is
+code I can write alone:
+
+1. **12.4–12.5:** the Copilot panel and its question set (Manya).
+2. **8.3–8.4:** one officer ranking session, then the weight decision.
+3. **13:** the paper and a rehearsed demo.
+
+### Deployment status (2026-10-21)
+- **GitHub:** `main` at `4cd2721`, with every phase through 11.
+- **Frontend (Vercel):** live with the new code.
+- **Backends (Railway):** still on the build before Phases 9–11. Railway had a
+  platform outage the same day, with builds paused in every region, so the
+  push did not deploy. Until the backends are redeployed, the hotspot list,
+  the "needs attention" strip and the suggested next step fail quietly on the
+  live site; everything else works. Once Railway builds again, run from the
+  repo:
+
+  ```bash
+  railway redeploy -s backend-spring --from-source -y
+  railway redeploy -s backend-node --from-source -y
+  ```
+
+  The Spring deploy applies migration V22, which adds one table and changes
+  nothing that exists.
 
 ---
 
@@ -110,16 +132,65 @@ Report: [matching-evaluation.md](matching-evaluation.md). The harness:
   faults. With one real problem per hotspot, 36 of 36 hotspots form one
   incident each at 0.84. Live on Railway; reasoning in matching-evaluation.md §4.
 
+### 9 — Hotspots ✅ (2026-10-21)
+A hotspot is **≥ 3 active incidents of one category within 500 m of each other**
+(DBSCAN over incident centres, done by PostGIS), each reported in the window
+(default: the last 30 days). Rule-based; no ML.
+
+| # | Milestone | State |
+|---|---|---|
+| 9.1 | Definition, written with its reasons | ✅ api-contract.md "GET /dashboard/hotspots" |
+| 9.2 | `GET /dashboard/hotspots` (category, ward, window filters) | ✅ DB-backed tests: cluster, too-small pair, far incident, resolved incident, ward/category/window filters |
+| 9.3 | Rings on the Ward Explorer map plus a hotspot list; every member opens in the queue | ✅ checked at 1440 and 390 px |
+
+The demo seed adds three clusters of different problems chosen to stay
+separate incidents at 0.84, so the live site has hotspots to show.
+
+### 10 — Operational intelligence ✅ (2026-10-21)
+A "needs attention" strip over the incident queue: four statements, each
+opening the incidents behind it, narrowed by the queue's ward and category.
+
+| Signal | Rule |
+|---|---|
+| High priority | Active, high or critical band |
+| Getting worse | 2 or more new reports in 72 h |
+| In a hotspot | Member of a Phase 9 hotspot |
+| Category spiking | Last 7 days ≥ 2× the prior 4-week weekly mean, and ≥ 5 reports |
+
+| # | Milestone | State |
+|---|---|---|
+| 10.1 | `GET /dashboard/attention`, signals with their incidents | ✅ DB-backed tests with a fixed clock, one per rule plus filters |
+| 10.2 | Strip on the Incidents view; each item opens in the queue | ✅ checked at 1440 and 390 px |
+
+"Score up ≥ 1.0 since yesterday" was dropped: scores are not historised.
+
+### 11 — Decision support ✅ (2026-10-21)
+A suggested next step in the incident panel, with the rule that fired and the
+facts it read. The officer accepts or overrides it, and the decision is
+logged. These are recommendations an officer can check, never actions taken
+on their behalf.
+
+| # | Milestone | State |
+|---|---|---|
+| 11.1 | Rule-based action per incident: escalate, then dispatch, then verify-and-close, then consolidate, then monitor (first match wins), naming the rule | ✅ unit tests per rule and their order; DB-backed service tests |
+| 11.2 | Copilot-written note | ✂️ cut to finish sooner. The panel still shows `aiRecommendation` if one is ever written |
+| 11.3 | Accept/override log (V22), and `GET /dashboard/recommendations` with the override rate per action | ✅ tested; checked over HTTP and at 1440/390 px |
+
+The rules use the calibrated priority bands once Phase 8.3–8.4 has run. Until
+then they read the shipped formula, as everything else does.
+
 ### Infrastructure ✅ (2026-10-21)
 - Moved off Neon after its free quota ran out. The database now runs as a Railway
   service built from `infra/postgres` ([railway-database.md](railway-database.md)).
 - Tests can no longer migrate production. Local development uses a Docker
   database.
-- Production was reseeded with demo data.
+- Production was reseeded with demo data at 0.84: one real problem per hotspot
+  (36 hotspots, 36 incidents), plus 3 clusters so hotspots have something to
+  show.
 
 ---
 
-## Copilot, intelligence and the paper (12, 8–11, 13)
+## Left to do
 
 ### 12 — Officer Copilot 🟡 (owner: Manya)
 An officer asks "what's urgent in Ward 48?" and gets a short answer built only
@@ -191,53 +262,6 @@ officer session".
 | 8.3 | **Officer session (people):** ≥ 30 incidents ranked by one officer, ideally two | ⬜ |
 | 8.4 | Adopt a variant only if it beats the shipped formula on both halves | ⬜ after 8.3 |
 
-### 9 — Hotspots ✅ (2026-10-21)
-A hotspot is **≥ 3 active incidents of one category within 500 m of each other**
-(DBSCAN over incident centres, done by PostGIS), each reported in the window
-(default: the last 30 days). Rule-based; no ML.
-
-| # | Milestone | State |
-|---|---|---|
-| 9.1 | Definition, written with its reasons | ✅ api-contract.md "GET /dashboard/hotspots" |
-| 9.2 | `GET /dashboard/hotspots` (category, ward, window filters) | ✅ DB-backed tests: cluster, too-small pair, far incident, resolved incident, ward/category/window filters |
-| 9.3 | Rings on the Ward Explorer map plus a hotspot list; every member opens in the queue | ✅ checked at 1440 and 390 px |
-
-The demo seed adds three clusters of different problems chosen to stay
-separate incidents at 0.84, so the live site has hotspots to show.
-
-### 10 — Operational intelligence ✅ (2026-10-21)
-A "needs attention" strip over the incident queue: four statements, each
-opening the incidents behind it, narrowed by the queue's ward and category.
-
-| Signal | Rule |
-|---|---|
-| High priority | Active, high or critical band |
-| Getting worse | 2 or more new reports in 72 h |
-| In a hotspot | Member of a Phase 9 hotspot |
-| Category spiking | Last 7 days ≥ 2× the prior 4-week weekly mean, and ≥ 5 reports |
-
-| # | Milestone | State |
-|---|---|---|
-| 10.1 | `GET /dashboard/attention`, signals with their incidents | ✅ DB-backed tests with a fixed clock, one per rule plus filters |
-| 10.2 | Strip on the Incidents view; each item opens in the queue | ✅ checked at 1440 and 390 px |
-
-"Score up ≥ 1.0 since yesterday" was dropped: scores are not historised.
-
-### 11 — Decision support ✅ (2026-10-21)
-A suggested next step in the incident panel, with the rule that fired and the
-facts it read. The officer accepts or overrides it, and the decision is
-logged. These are recommendations an officer can check, never actions taken
-on their behalf.
-
-| # | Milestone | State |
-|---|---|---|
-| 11.1 | Rule-based action per incident: escalate, then dispatch, then verify-and-close, then consolidate, then monitor (first match wins), naming the rule | ✅ unit tests per rule and their order; DB-backed service tests |
-| 11.2 | Copilot-written note | ✂️ cut to finish sooner. The panel still shows `aiRecommendation` if one is ever written |
-| 11.3 | Accept/override log (V22), and `GET /dashboard/recommendations` with the override rate per action | ✅ tested; checked over HTTP and at 1440/390 px |
-
-The rules use the calibrated priority bands once Phase 8.3–8.4 has run. Until
-then they read the shipped formula, as everything else does.
-
 ### 13 — Paper + demo 🟡
 | Section | Source | Ready |
 |---|---|---|
@@ -251,8 +275,9 @@ then they read the shipped formula, as everything else does.
 | Item | Owner |
 |---|---|
 | Review the 30 hand labels in `backend-node/eval/production-joins-labelled.json` | an officer / Devansh |
-| Review the Explorer UI and the `--density-*` tokens | Devansh |
-| Clear and reseed the live demo data: it predates 0.84 and the one-problem-per-hotspot seed | team (bulk delete on production) |
+| Review the Explorer UI and the `--density-*` tokens, plus the new hotspot rings and list, the attention strip and the suggestion box | Devansh |
+| Redeploy both backends once Railway builds again (commands in "Deployment status") | team |
+| Book the officer ranking session (8.3) | team |
 
 ### Backlog — deliberately deferred
 - **Photo upload.** Contract approved, not built.
