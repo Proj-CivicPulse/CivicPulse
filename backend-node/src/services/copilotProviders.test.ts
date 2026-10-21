@@ -74,13 +74,13 @@ describe('gemini provider', () => {
     it('asks for JSON against the response schema and reads the first candidate', async () => {
         const { impl, calls } = fakeFetch(200, {
             candidates: [{ content: { parts: [{ text: JSON.stringify(good) }] }, finishReason: 'STOP' }],
-            modelVersion: 'gemini-2.5-flash',
+            modelVersion: 'gemini-3.8-flash',
         });
 
         const result = await geminiProvider(impl).answer('SYSTEM', 'USER');
 
-        assert.deepEqual(result, { output: good, refused: false, truncated: false, model: 'gemini-2.5-flash' });
-        assert.match(calls[0]!.url, /models\/gemini-2\.5-flash:generateContent\?key=/);
+        assert.deepEqual(result, { output: good, refused: false, truncated: false, model: 'gemini-3.8-flash' });
+        assert.match(calls[0]!.url, /models\/gemini-3.8-flash:generateContent\?key=/);
         const body = JSON.parse(String(calls[0]!.init.body));
         assert.equal(body.generationConfig.responseMimeType, 'application/json');
         assert.equal(body.generationConfig.temperature, 0);

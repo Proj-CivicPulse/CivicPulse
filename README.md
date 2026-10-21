@@ -110,13 +110,14 @@ racing — is decision 2 in `service-boundaries.md`.
   needed — the repo ships the Maven wrapper (`./mvnw`).
 - Node.js (**latest LTS** — e.g. 22) for `backend-node` and `frontend`
 - Python (**latest LTS/stable** — e.g. 3.12) for `ml-hotspots`, if/when Phase 7 is triggered
-- A **[Neon](https://neon.com)** account — the project uses Neon's hosted
-  serverless PostgreSQL with `pgvector`. Nothing to install locally.
+- **Docker Desktop** — the local database is PostgreSQL 16 + `pgvector` +
+  PostGIS, built from [`infra/postgres`](infra/postgres/Dockerfile).
 - A **Google AI Studio API key** for embeddings
-  ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)) — free tier
-  is enough for development. This is a *different* key from the optional Google
-  geocoding key, which lives in `backend-spring`. An LLM key is only needed from
-  Phase 6. See `.env.example` in each service.
+  ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)). Billed per
+  call, but complaint embeddings cost a fraction of a rupee each. This is a
+  *different* key from the optional Google geocoding key, which lives in
+  `backend-spring`. The officer Copilot runs on a free local model (Ollama) or
+  a billed one — see `COPILOT_PROVIDER` in `backend-node/.env.example`.
 
 > **Version policy:** this project uses **LTS versions only** for all
 > runtimes (Java, Node.js, Python). Do not use bleeding-edge/current
@@ -129,17 +130,20 @@ racing — is decision 2 in `service-boundaries.md`.
 git clone https://github.com/Proj-CivicPulse/CivicPulse.git
 cd CivicPulse
 
-# 1. Database — nothing to install. Create a Neon project and copy your
-#    connection string (see the next section).
+# 1. Database — a local container, once (see "Database" below).
+docker build -t civicpulse-postgres:local infra/postgres
+docker run -d --name civicpulse-pg --restart unless-stopped -p 55432:5432 \
+  -e POSTGRES_PASSWORD=localdev -e POSTGRES_DB=civicpulse \
+  -v civicpulse-pgdata:/var/lib/postgresql/data civicpulse-postgres:local
 
 # 2. Spring Boot service (core API). Applies the schema migrations on boot.
 cd backend-spring
-cp .env.example .env   # Neon DB_URL; JWT_SECRET (32+ chars); INTERNAL_TOKEN
+cp .env.example .env   # DB_* already match the container; JWT_SECRET (32+ chars); INTERNAL_TOKEN
 ./mvnw spring-boot:run # no local Maven install needed
 
 # 3. Node.js AI service
 cd ../backend-node
-cp .env.example .env   # Neon DATABASE_URL; the SAME INTERNAL_TOKEN; EMBEDDING_API_KEY
+cp .env.example .env   # DATABASE_URL already matches; the SAME INTERNAL_TOKEN; EMBEDDING_API_KEY
 npm install
 npm run dev
 
@@ -176,11 +180,15 @@ cd backend-spring && node scripts/seed-dev-data.mjs
 
 Then give yourself an officer account. Registration **always** creates a
 citizen — there is no public path to an officer, and no seeded credentials in
-the repo. Sign up normally, then promote yourself in the Neon SQL Editor:
+the repo. Sign up normally, then promote yourself:
 
-```sql
-UPDATE users SET role='OFFICER' WHERE email='you@example.com';
+```bash
+docker exec civicpulse-pg psql -U postgres -d civicpulse \
+  -c "UPDATE users SET role='OFFICER' WHERE email='you@example.com';"
 ```
+
+(On the deployed database, the same `psql` command runs through
+`railway ssh` — see [docs/railway-database.md](docs/railway-database.md).)
 
 Log out and back in; the role is baked into the token. Citizens land on
 `/complaints`, officers on `/dashboard`.
@@ -197,91 +205,57 @@ Each service's own `README.md` (inside its folder) has service-specific details:
 
 ---
 
-## Database (Neon)
+## Database
 
-The project uses **[Neon](https://neon.com)** — hosted serverless PostgreSQL
-with `pgvector`. There is nothing to install locally, and everyone on the
-team can share one database or take their own branch of it.
+PostgreSQL 16 with two extensions: `pgvector` (complaint embeddings) and
+PostGIS (ward polygons). No stock image ships both, so the repo builds one:
+[`infra/postgres/Dockerfile`](infra/postgres/Dockerfile).
 
-**The schema is not created by hand.** `backend-spring` owns every
-migration (Flyway) and applies them on startup — including
-`CREATE EXTENSION vector`. A brand-new, empty Neon database is fully
+- **Locally:** that image in Docker (the commands in *Local setup* above), on
+  port 55432 so it never collides with another Postgres.
+- **Production:** the same image as a Railway service, reached over Railway's
+  private network — [docs/railway-database.md](docs/railway-database.md).
+  (Until 2026-10-20 production ran on Neon; its free compute quota ran out
+  because the backend's scheduled sweeps never let it suspend.)
+
+**The schema is not created by hand.** `backend-spring` owns every migration
+(Flyway) and applies them on startup — including both extensions, all 243
+wards and the category registry. A brand-new, empty database is fully
 provisioned the first time you run the Spring service.
 
-### First-time setup
-
-1. Create a free account at [neon.com](https://neon.com) and create a
-   project. Pick a region near you.
-2. From the project dashboard, copy the **connection string**. Neon shows
-   two; use the **direct** one — the host *without* `-pooler` in it. Both
-   backends run their own connection pool, so Neon's PgBouncer pooler would
-   just be a second pool in front. (Switch to `-pooler` only for a
-   serverless deployment.)
-3. Put it in each service's `.env` — note the two formats differ:
-
-   | Service | Var | Format |
-   |---|---|---|
-   | `backend-spring` | `DB_URL` + `DB_USERNAME` + `DB_PASSWORD` | **JDBC**: `jdbc:postgresql://HOST/neondb?sslmode=require`, credentials as separate properties, no `channel_binding` |
-   | `backend-node` | `DATABASE_URL` | **libpq**: `postgres://USER:PASS@HOST/neondb?sslmode=require` |
-
-   Both `.env.example` files spell this out. `sslmode=require` is mandatory —
-   Neon refuses plaintext connections.
-4. Start `backend-spring` once (`./mvnw spring-boot:run`). Flyway creates the
-   `pgvector` extension, every table, and seeds reference wards/departments.
+| Service | Var | Format |
+|---|---|---|
+| `backend-spring` | `DB_URL` + `DB_USERNAME` + `DB_PASSWORD` | **JDBC**: `jdbc:postgresql://localhost:55432/civicpulse`, credentials as separate properties |
+| `backend-node` | `DATABASE_URL` | **libpq**: `postgres://postgres:localdev@localhost:55432/civicpulse` |
 
 ### Working with the database
 
-Use the **SQL Editor** in the Neon Console for ad-hoc queries — no `psql`
-install required. If you do want a local client:
-
-```bash
-psql "postgres://USER:PASS@HOST/neondb?sslmode=require"
-```
-
 | Task | How |
 |---|---|
-| Inspect data | Neon Console → SQL Editor, or `psql` with the connection string |
+| Ad-hoc SQL, locally | `docker exec -it civicpulse-pg psql -U postgres -d civicpulse` |
+| Ad-hoc SQL, production | `railway ssh -s civicpulse-db -- psql -U civicpulse -d civicpulse -c "…"` |
 | Apply new migrations | Add `V*__*.sql` in `backend-spring/src/main/resources/db/migration/`, restart the service |
-| Reset the schema | Neon Console → SQL Editor → `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` then restart `backend-spring` |
-| Give yourself an isolated copy | Neon Console → Branches → **New branch** (see below) |
-
-### Branches — use them
-
-Neon branches are copy-on-write clones: instant, and free on the starter
-plan. This is the main reason Neon suits a team project.
-
-- **Per developer.** Branch off `main`, point your `.env` at it, and you can
-  break things without affecting anyone else.
-- **For tests.** `./mvnw verify` is a real integration test — it runs the
-  migrations against whatever your `.env` points at. Aim it at a throwaway
-  branch with `TEST_DB_URL` / `TEST_DB_USERNAME` / `TEST_DB_PASSWORD`
-  (see `backend-spring/src/test/resources/application-test.yaml`) rather
-  than at shared data.
+| Reset your local schema | `docker rm -f civicpulse-pg && docker volume rm civicpulse-pgdata`, re-run the `docker run`, restart `backend-spring` |
+| Demo data | `node backend-spring/scripts/seed-dev-data.mjs` (*Seeing something on the screen*) |
 
 ### Things to know
 
-- **The compute suspends when idle** (a few minutes on the free plan). The
-  next request wakes it, which takes a second or two. Both services size
-  their timeouts for this — `HEALTH_TIMEOUT_SECONDS` / `HEALTHCHECK_TIMEOUT_MS`
-  default to 10s, and connection timeouts to 15s. A local database can use
-  much tighter values.
-- **Never commit a connection string.** Neon credentials live only in
-  `.env` files, which are gitignored. If one is ever exposed, rotate it:
-  Neon Console → your project → **Roles** → *Reset password*.
-- **Free-tier limits** are compute-hours and storage. Leaving a service
-  running with an idle connection pool keeps the compute awake, so both
-  backends deliberately release idle connections.
+- **Never point a local `.env` at production.** Every Spring start and every
+  `./mvnw test` runs Flyway against `DB_URL`. For tests, `TEST_DB_URL` /
+  `TEST_DB_USERNAME` / `TEST_DB_PASSWORD` move both the test connection and
+  Flyway to a throwaway database (docs/railway-database.md §7).
+- **Never commit a connection string.** Credentials live only in `.env`
+  files, which are gitignored.
 
 **Troubleshooting**
 
 | Symptom | Fix |
 |---|---|
-| `password authentication failed` | Password was rotated or mistyped. Copy a fresh connection string from the Neon Console. |
-| `no pg_hba.conf entry ... no encryption` | `sslmode=require` is missing from the URL. |
-| JDBC: `The connection attempt failed` / unknown parameter | You pasted the libpq URL into `DB_URL`. It must start `jdbc:postgresql://`, carry no credentials, and drop `channel_binding`. |
-| First request after a break is slow, or `/health` returns `error` once | Neon compute waking from suspend. Retry; if it persists, raise `HEALTH_TIMEOUT_SECONDS`. |
+| `Connection refused` on 55432 | The container is not running: `docker start civicpulse-pg` (Docker Desktop must be up). |
+| `extension "postgis" is not available` | The database is a stock Postgres image. Use the one built from `infra/postgres`. |
+| JDBC: `The connection attempt failed` / unknown parameter | You pasted the libpq URL into `DB_URL`. It must start `jdbc:postgresql://` and carry no credentials. |
 | `relation "users" does not exist` | Migrations have not run. Start `backend-spring` once. |
-| Flyway: `Migration checksum mismatch` | An already-applied migration file was edited. Never edit one — add a new `V*__*.sql` (or reset the schema on a scratch branch). |
+| Flyway: `Migration checksum mismatch` | An already-applied migration file was edited. Never edit one — add a new `V*__*.sql` (or reset your local schema). |
 
 ---
 

@@ -127,7 +127,7 @@ backend-node, default `none` (Copilot off):
 | Provider | Cost | Use |
 |---|---|---|
 | `ollama` (default model `qwen2.5:7b`) | free, runs locally | development, demos, the paper's eval |
-| `gemini` (`gemini-2.5-flash`) | billed on the project's Google key | deployed use if the team accepts the cost |
+| `gemini` (`gemini-3.8-flash`) | billed on the project's Google key | deployed use if the team accepts the cost |
 | `anthropic` (`claude-opus-5-5`, refusal fallback on) | billed | strongest answers; optional |
 
 Safety does not depend on the choice: Spring's citation check applies to every

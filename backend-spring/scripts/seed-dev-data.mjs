@@ -39,10 +39,26 @@
  * "semantic match" entries that never happened and corrupt the dataset Phase 8
  * evaluates precision/recall on.
  *
- * Requires INTERNAL_TOKEN to be set in backend-spring/.env and the app running.
+ * Local: needs the app running, INTERNAL_TOKEN in backend-spring/.env and
+ * DATABASE_URL in backend-node/.env.
+ *
+ * DEPLOYED (Railway): run from the repo root after `railway link` and with an
+ * SSH key registered (`railway ssh keys add`):
+ *
+ *   SEED_API=https://<spring-domain> SEED_DB=railway node backend-spring/scripts/seed-dev-data.mjs
+ *
+ * SEED_DB=railway sends the SQL steps through `railway ssh` into the
+ * civicpulse-db service, so the database needs no public proxy and no password
+ * here. The rescore step needs the deployed INTERNAL_TOKEN (SEED_INTERNAL_TOKEN);
+ * without it the script marks the incidents stale instead, and Spring's
+ * PriorityRefreshJob rescores them on its next 5-minute sweep.
+ *
+ * SEED_WARDS (default 6) picks that many wards spread across the ward list.
+ * Since V13 there are 243 real wards; seeding all of them is ~9,000 complaints.
  */
 
-import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -54,33 +70,87 @@ const require = createRequire(join(springDir, '..', 'backend-node', 'package.jso
 const { Client } = require('pg');
 
 const API = process.env.SEED_API ?? 'http://localhost:8080';
+const VIA_RAILWAY = process.env.SEED_DB === 'railway';
+const WARD_COUNT = Number(process.env.SEED_WARDS ?? 6);
 
 /**
  * How long to wait for asynchronous matching to finish before giving up.
  *
- * A full seed is ~150 complaints, each costing one embedding round trip through
- * backend-node. Generous on purpose: exceeding it is a warning, not a failure.
+ * At the default ward count a seed is ~230 complaints, each costing one
+ * embedding round trip through backend-node. Generous on purpose: exceeding it
+ * is a warning, not a failure.
  */
 const SETTLE_TIMEOUT_MS = Number(process.env.SEED_SETTLE_TIMEOUT_MS ?? 300_000);
 
 function envValue(file, key) {
+    if (!existsSync(file)) return null;
     const match = readFileSync(file, 'utf8').match(new RegExp(`^${key}=(.*)$`, 'm'));
     return match ? match[1].trim() : null;
 }
 
-const INTERNAL_TOKEN = envValue(join(springDir, '.env'), 'INTERNAL_TOKEN');
-const DATABASE_URL = envValue(join(springDir, '..', 'backend-node', '.env'), 'DATABASE_URL');
+// A deployed backend never shares the local .env's token, so it is not read
+// from there when seeding Railway.
+const INTERNAL_TOKEN =
+    process.env.SEED_INTERNAL_TOKEN ?? (VIA_RAILWAY ? null : envValue(join(springDir, '.env'), 'INTERNAL_TOKEN'));
+const DATABASE_URL =
+    process.env.SEED_DATABASE_URL ?? envValue(join(springDir, '..', 'backend-node', '.env'), 'DATABASE_URL');
 
-if (!INTERNAL_TOKEN) throw new Error('INTERNAL_TOKEN missing from backend-spring/.env');
-if (!DATABASE_URL) throw new Error('DATABASE_URL missing from backend-node/.env');
+if (!VIA_RAILWAY && !INTERNAL_TOKEN) throw new Error('INTERNAL_TOKEN missing from backend-spring/.env');
+if (!VIA_RAILWAY && !DATABASE_URL) throw new Error('DATABASE_URL missing from backend-node/.env');
+
+/**
+ * SQL access: direct (pg), or through `railway ssh` + psql inside the database
+ * container. Every value the queries interpolate is an integer this script
+ * produced, so they carry no bind parameters and both paths run identical
+ * text. Rows come back as arrays.
+ */
+async function openDb() {
+    if (VIA_RAILWAY) {
+        return { query: async (sql) => railwaySql(sql), end: async () => {} };
+    }
+    // SSL only where the server demands it (Neon); a local container has none.
+    const ssl = /sslmode=require/.test(DATABASE_URL) ? { rejectUnauthorized: false } : false;
+    const client = new Client({ connectionString: DATABASE_URL, ssl });
+    await client.connect();
+    return {
+        query: async (sql) => {
+            const result = await client.query({ text: sql, rowMode: 'array' });
+            return (Array.isArray(result) ? result.at(-1) : result).rows;
+        },
+        end: () => client.end(),
+    };
+}
+
+function railwaySql(sql) {
+    // base64 so the SQL crosses both shells (local and remote) untouched.
+    const encoded = Buffer.from(sql, 'utf8').toString('base64');
+    const remote = `echo ${encoded} | base64 -d | psql -U "\${POSTGRES_USER:-civicpulse}" -d "\${POSTGRES_DB:-civicpulse}" -At -v ON_ERROR_STOP=1`;
+    const out = execSync(`railway ssh -s civicpulse-db -- '${remote}'`, {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'inherit'],
+        maxBuffer: 16 * 1024 * 1024,
+        // A POSIX shell on every platform, so the quoting above means one thing.
+        shell: process.platform === 'win32' ? 'bash' : '/bin/sh',
+    });
+    // psql -At prints one row per line, columns joined by '|'. Anything else
+    // (a banner, an UPDATE tag) is not a data row.
+    return out
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => /^-?\d+(\|-?\d+)*$/.test(line))
+        .map((line) => line.split('|').map(Number));
+}
+
+/** Integers only — the one thing these queries ever interpolate. */
+const ints = (values) => values.map((v) => Number.parseInt(v, 10)).filter(Number.isFinite).join(',');
 
 /* ------------------------------------------------------------------ data */
 
 /**
  * One hotspot becomes one incident. Categories are unique per ward so the
  * ward+category grouper cannot accidentally merge two of them, and offsets stay
- * under ~1.2 km so every point still resolves to its own ward centroid rather
- * than drifting into the neighbouring ward.
+ * under ~0.5 km of the ward's centre: since V13 wards are real BBMP polygons,
+ * often only 1–2 km across, so a wider ring drifts into the neighbouring ward.
  */
 const CATEGORIES = ['pothole', 'streetlight', 'garbage', 'water', 'drainage', 'other'];
 
@@ -168,10 +238,10 @@ const SHAPES = [
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pick = (arr, i) => arr[i % arr.length];
 
-/** ~0.009 degrees is roughly 1 km. Directions differ per hotspot. */
+/** ~0.0045 degrees is roughly 500 m. Directions differ per hotspot. */
 function hotspotOffset(index) {
     const angle = (index / CATEGORIES.length) * Math.PI * 2;
-    const radiusDeg = 0.009;
+    const radiusDeg = 0.0045;
     return { dLat: Math.sin(angle) * radiusDeg, dLon: Math.cos(angle) * radiusDeg };
 }
 
@@ -198,55 +268,72 @@ async function api(path, options = {}) {
 /* ------------------------------------------------------------------ main */
 
 async function main() {
-    const wards = await api('/wards');
-    console.log(`Seeding across ${wards.length} wards\n`);
+    // Evenly spaced through the list, so the seed lands across the city map
+    // instead of in one corner of it.
+    const allWards = await api('/wards');
+    const count = Math.min(WARD_COUNT, allWards.length);
+    const wards = Array.from({ length: count }, (_, i) => allWards[Math.floor((i * allWards.length) / count)]);
+    console.log(`Seeding ${wards.length} of ${allWards.length} wards: ${wards.map((w) => w.name).join(', ')}\n`);
 
-    // One entry per hotspot: the complaints it produced, and how old it should
+    // One entry per hotspot: where it is, its reports, and how old it should
     // look. Which incident(s) they land in is not known until matching settles.
     const hotspots = [];
-    let created = 0;
-
     for (const ward of wards) {
         for (let c = 0; c < CATEGORIES.length; c++) {
-            const category = CATEGORIES[c];
             const [reportCount, ageDays] = SHAPES[c];
             const { dLat, dLon } = hotspotOffset(c);
-            const lat = ward.lat + dLat;
-            const long = ward.long + dLon;
-
-            const complaintIds = [];
-            for (let r = 0; r < reportCount; r++) {
-                const complaint = await api('/complaints', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        description: pick(DESCRIPTIONS[category], r),
-                        // Deliberately NOT the canonical code every time: each
-                        // report in a hotspot uses a different accepted
-                        // spelling, so the registry's normalisation is on the
-                        // path every run rather than only in unit tests.
-                        category: pick(CATEGORY_SPELLINGS[category], r),
-                        // wardId omitted on purpose: this exercises the real
-                        // coordinate-to-ward derivation rather than bypassing it.
-                        lat: lat + jitter(),
-                        long: long + jitter(),
-                    }),
-                });
-                created++;
-                complaintIds.push(Number(complaint.id));
-            }
-
-            hotspots.push({ label: `${ward.name.padEnd(9)} ${category.padEnd(12)}`, ageDays, complaintIds });
-            console.log(`  ${hotspots.at(-1).label} ${String(reportCount).padStart(2)} reports submitted`);
+            hotspots.push({
+                label: `${ward.name.padEnd(9)} ${CATEGORIES[c].padEnd(12)}`,
+                category: CATEGORIES[c],
+                lat: ward.lat + dLat,
+                long: ward.long + dLon,
+                reportCount,
+                ageDays,
+                complaintIds: [],
+            });
         }
     }
 
+    async function submit(hotspot, r) {
+        const complaint = await api('/complaints', {
+            method: 'POST',
+            body: JSON.stringify({
+                description: pick(DESCRIPTIONS[hotspot.category], r),
+                // Deliberately NOT the canonical code every time: each report in
+                // a hotspot uses a different accepted spelling, so the registry's
+                // normalisation is on the path every run rather than only in
+                // unit tests.
+                category: pick(CATEGORY_SPELLINGS[hotspot.category], r),
+                // wardId omitted on purpose: this exercises the real
+                // coordinate-to-ward derivation rather than bypassing it.
+                lat: hotspot.lat + jitter(),
+                long: hotspot.long + jitter(),
+            }),
+        });
+        hotspot.complaintIds.push(Number(complaint.id));
+    }
+
+    const db = await openDb();
+
+    // Two waves. Matching is asynchronous, so a burst of reports about one
+    // problem all embed in parallel, each finds no committed sibling yet, and
+    // each starts its own incident — a hotspot of 14 used to land as two or
+    // three. Seeding each hotspot's FIRST report and letting it settle gives
+    // every later report an incident to join, which is also how real reports
+    // arrive: one at a time.
+    for (const hotspot of hotspots) await submit(hotspot, 0);
+    console.log(`Wave 1: ${hotspots.length} first reports submitted, one per hotspot.`);
+    await settleMatching(db, hotspots.map((h) => h.complaintIds[0]));
+
+    for (const hotspot of hotspots) {
+        for (let r = 1; r < hotspot.reportCount; r++) await submit(hotspot, r);
+        console.log(`  ${hotspot.label} ${String(hotspot.reportCount).padStart(2)} reports submitted`);
+    }
+
     const allIds = hotspots.flatMap((h) => h.complaintIds);
-    console.log(`\n${created} complaints created (all matching_status=pending).`);
+    console.log(`\n${allIds.length} complaints created.`);
 
     /* ----------------------------------------------- wait for matching */
-
-    const db = new Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
-    await db.connect();
 
     await settleMatching(db, allIds);
 
@@ -258,13 +345,16 @@ async function main() {
     const incidentAges = new Map(); // incidentId -> ageDays
     let fragmented = 0;
 
+    // One round trip for every hotspot: each row is complaint id | incident id.
+    const membership = new Map(
+        (await db.query(
+            `SELECT id, incident_id FROM complaints
+             WHERE id IN (${ints(allIds)}) AND incident_id IS NOT NULL`
+        )).map(([complaintId, incidentId]) => [Number(complaintId), Number(incidentId)])
+    );
+
     for (const hotspot of hotspots) {
-        const { rows } = await db.query(
-            `SELECT DISTINCT incident_id FROM complaints
-             WHERE id = ANY($1::bigint[]) AND incident_id IS NOT NULL`,
-            [hotspot.complaintIds]
-        );
-        const ids = rows.map((r) => Number(r.incident_id));
+        const ids = [...new Set(hotspot.complaintIds.map((id) => membership.get(id)).filter(Boolean))];
         for (const id of ids) incidentAges.set(id, hotspot.ageDays);
         if (ids.length > 1) fragmented++;
         console.log(
@@ -291,23 +381,43 @@ async function main() {
 
     console.log('\nBackdating so the age term of the priority formula has something to bite on…');
 
-    for (const [incidentId, ageDays] of incidentAges) {
-        // The incident opened ageDays ago; its reports are spread from then
-        // until now, so recent arrivals still register as growth.
-        await db.query(
-            `UPDATE incidents SET created_at = NOW() - ($2 || ' days')::interval WHERE id = $1`,
-            [incidentId, ageDays]
-        );
-        await db.query(
-            `UPDATE complaints
-             SET created_at = NOW() - (random() * $2 || ' days')::interval
-             WHERE incident_id = $1`,
-            [incidentId, ageDays]
-        );
+    // The incident opened ageDays ago; its reports are spread from then until
+    // now, so recent arrivals still register as growth. reported_at (V16) is
+    // what every reader uses, so it moves with created_at, and the incident's
+    // report span (V21) is re-derived from its members the way recompute
+    // does it. One transaction, so a failure leaves nothing half-backdated.
+    if (incidentAges.size > 0) {
+        const ages = [...incidentAges].map(([id, days]) => `(${ints([id])}, ${ints([days])})`).join(', ');
+        await db.query(`
+            BEGIN;
+            CREATE TEMP TABLE seed_ages (incident_id bigint, days int) ON COMMIT DROP;
+            INSERT INTO seed_ages VALUES ${ages};
+            UPDATE incidents i SET created_at = NOW() - make_interval(days => a.days)
+              FROM seed_ages a WHERE i.id = a.incident_id;
+            UPDATE complaints c SET created_at = NOW() - random() * make_interval(days => a.days)
+              FROM seed_ages a WHERE c.incident_id = a.incident_id;
+            UPDATE complaints c SET reported_at = c.created_at
+              FROM seed_ages a WHERE c.incident_id = a.incident_id;
+            UPDATE incidents i
+               SET first_reported_at    = span.first_reported,
+                   last_reported_at     = span.last_reported,
+                   priority_computed_at = NULL
+              FROM (SELECT incident_id, MIN(reported_at) AS first_reported, MAX(reported_at) AS last_reported
+                      FROM complaints WHERE incident_id IN (SELECT incident_id FROM seed_ages)
+                     GROUP BY incident_id) span
+             WHERE i.id = span.incident_id;
+            COMMIT;`);
     }
     await db.end();
 
-    await rescoreAll();
+    if (INTERNAL_TOKEN) {
+        await rescoreAll();
+    } else {
+        console.log(
+            'No SEED_INTERNAL_TOKEN: the incidents are marked stale instead, and the deployed\n' +
+            "PriorityRefreshJob rescores them on its next sweep (within 5 minutes)."
+        );
+    }
 
     console.log('');
     console.log('Done.');
@@ -327,18 +437,18 @@ async function settleMatching(db, complaintIds) {
 
     process.stdout.write('Waiting for the matching pipeline to settle');
     while (Date.now() < deadline) {
-        const { rows } = await db.query(
-            `SELECT count(*)::int AS pending FROM complaints
-             WHERE id = ANY($1::bigint[]) AND matching_status IN ('PENDING', 'PROCESSING')`,
-            [complaintIds]
+        const rows = await db.query(
+            `SELECT count(*)::int FROM complaints
+             WHERE id IN (${ints(complaintIds)}) AND matching_status IN ('PENDING', 'PROCESSING')`
         );
-        remaining = rows[0].pending;
+        remaining = Number(rows[0][0]);
         if (remaining === 0) {
             console.log(' done.\n');
             return;
         }
         process.stdout.write('.');
-        await sleep(1000);
+        // Each Railway poll is an SSH round trip of its own; no need to hurry it.
+        await sleep(VIA_RAILWAY ? 5000 : 1000);
     }
 
     console.log('');
@@ -363,14 +473,16 @@ async function settleMatching(db, complaintIds) {
  * is what a scheduled refresh would otherwise do.
  */
 async function rescoreAll() {
-    const db = new Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
-    await db.connect();
-    const { rows } = await db.query(`SELECT id FROM incidents ORDER BY id`);
+    if (!INTERNAL_TOKEN) {
+        throw new Error('--rescore needs SEED_INTERNAL_TOKEN (or INTERNAL_TOKEN in backend-spring/.env)');
+    }
+    const db = await openDb();
+    const rows = await db.query(`SELECT id FROM incidents ORDER BY id`);
     await db.end();
 
     console.log(`Recomputing priority for ${rows.length} incidents through the real service…`);
-    for (const row of rows) {
-        await api(`/internal/incidents/${row.id}/recompute`, {
+    for (const [id] of rows) {
+        await api(`/internal/incidents/${id}/recompute`, {
             method: 'POST',
             headers: { 'X-Internal-Token': INTERNAL_TOKEN },
         });

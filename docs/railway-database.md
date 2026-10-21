@@ -90,19 +90,30 @@ citizen), then promote the account — see "Creating an officer" in
 `backend-spring/README.md`. To run that SQL, use the database service's
 **Data** tab in Railway, or connect with a temporary TCP proxy.
 
-## 6. Optional: seed demo data
+## 6. Seed demo data
 
-`backend-spring/scripts/seed-dev-data.mjs` creates hotspot complaints through
-the API (`SEED_API`) and then backdates them directly in the database
-(`DATABASE_URL` from `backend-node/.env`), so it needs both: the deployed API,
-and a temporary TCP proxy on the database service. Two things to know:
+The old Neon data was itself this seed, so re-running it recreates the same
+kind of dataset. From the repo root, after `railway link` and
+`railway ssh keys add`:
 
-- It opens the database connection with SSL forced on
-  (`ssl: { rejectUnauthorized: false }`). This image serves plain TCP, so for a
-  Railway database remove that option or the connection is refused.
-- Semantic grouping needs backend-node's embedding key (Gemini; billed).
-  Without it, complaints are grouped by the naive fallback and marked
-  `degraded`, which still makes a usable demo.
+```bash
+SEED_API=https://<spring-domain> SEED_DB=railway node backend-spring/scripts/seed-dev-data.mjs
+```
+
+- `SEED_DB=railway` runs the script's SQL (wait for matching, backdate) through
+  `railway ssh` inside the database service — no TCP proxy, no password.
+- `SEED_WARDS` (default 6) wards, spread across the city: ~230 complaints.
+- `SEED_INTERNAL_TOKEN` (the deployed `INTERNAL_TOKEN`) rescores priorities at
+  once; without it the script marks them stale and Spring's 5-minute
+  PriorityRefreshJob does it.
+- Grouping uses backend-node's Gemini key: one embedding per complaint, a
+  fraction of a rupee for the whole seed.
+
+**Running SQL by hand** (no Data tab on a custom-image service):
+
+```bash
+railway ssh -s civicpulse-db -- psql -U civicpulse -d civicpulse -c "select count(*) from complaints"
+```
 
 ## 7. Tests never touch this database
 

@@ -114,7 +114,7 @@ const EnvSchema = z.object({
     OLLAMA_BASE_URL: z.string().url().default('http://localhost:11434'),
     // Small enough for a laptop, and good at following a JSON schema.
     COPILOT_OLLAMA_MODEL: z.string().min(1).default('qwen2.5:7b'),
-    COPILOT_GEMINI_MODEL: z.string().min(1).default('gemini-2.5-flash'),
+    COPILOT_GEMINI_MODEL: z.string().min(1).default('gemini-3.8-flash'),
     GEMINI_API_KEY: z
         .string()
         .optional()
