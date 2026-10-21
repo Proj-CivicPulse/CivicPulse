@@ -1,0 +1,50 @@
+.definition {
+    margin: 0;
+    padding: var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--rule);
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-muted);
+}
+
+.where {
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-faint);
+}
+
+.members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* A link-weight button: the row is already clickable, these open one member. */
+.member {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: var(--t-data);
+    color: var(--seal);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.member:hover {
+    color: var(--seal-hover);
+}
+
+.member:focus-visible {
+    outline: 2px solid var(--seal);
+    outline-offset: 2px;
+    border-radius: var(--r-sharp);
+}
+
+.count {
+    color: var(--ink-faint);
+    text-decoration: none;
+}

@@ -1,0 +1,29 @@
+/*
+ * Hotspot rings. Edge and wash take the priority ramp's colour for the
+ * hotspot's highest band; the dash keeps a ring distinct from a ward edge.
+ */
+.ring {
+    stroke-width: 2.5;
+    stroke-dasharray: 6 4;
+    fill-opacity: 0.14;
+    cursor: pointer;
+}
+
+.ring:hover {
+    stroke-width: 3.5;
+    fill-opacity: 0.24;
+}
+
+.low { stroke: var(--priority-low); fill: var(--priority-low); }
+.medium { stroke: var(--priority-medium); fill: var(--priority-medium); }
+.high { stroke: var(--priority-high); fill: var(--priority-high); }
+.critical { stroke: var(--priority-critical); fill: var(--priority-critical); }
+
+.tooltip {
+    font: var(--t-data);
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    box-shadow: var(--shadow-overlay);
+}

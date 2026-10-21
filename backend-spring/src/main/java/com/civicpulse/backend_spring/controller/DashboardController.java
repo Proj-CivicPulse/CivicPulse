@@ -2,11 +2,13 @@ package com.civicpulse.backend_spring.controller;
 
 import com.civicpulse.backend_spring.dto.dashboard.CategoryExplorerSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.DashboardSummaryDto;
+import com.civicpulse.backend_spring.dto.dashboard.HotspotsDto;
 import com.civicpulse.backend_spring.dto.dashboard.TrendDto;
 import com.civicpulse.backend_spring.dto.dashboard.WardDashboardSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.WardExplorerSummaryDto;
 import com.civicpulse.backend_spring.service.dashboard.DashboardService;
 import com.civicpulse.backend_spring.service.explorer.ExplorerService;
+import com.civicpulse.backend_spring.service.intelligence.HotspotService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,7 +24,7 @@ import java.util.List;
  *
  * <p>The Explorer's aggregates live here rather than under a family of
  * /ward-stats, /ward-analytics style paths. Shapes and filter
- * semantics: docs/api-contract.md, E5, E6 and N1–N3.
+ * semantics: docs/api-contract.md, E5, E6, N1–N3 and Hotspots.
  */
 @RestController
 @RequestMapping("/dashboard")
@@ -31,6 +33,7 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
     private final ExplorerService explorerService;
+    private final HotspotService hotspotService;
 
     @GetMapping("/summary")
     public ResponseEntity<DashboardSummaryDto> summary() {
@@ -75,5 +78,18 @@ public class DashboardController {
             @RequestParam(required = false) List<Long> wardId,
             @RequestParam(required = false) List<String> category) {
         return ResponseEntity.ok(explorerService.trends(from, to, bucket, groupBy, wardId, category));
+    }
+
+    /**
+     * Phase 9: clusters of active same-category incidents. Without from/to the
+     * window is the last 30 days; wardId keeps hotspots touching those wards.
+     */
+    @GetMapping("/hotspots")
+    public ResponseEntity<HotspotsDto> hotspots(
+            @RequestParam(required = false) List<String> category,
+            @RequestParam(required = false) List<Long> wardId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        return ResponseEntity.ok(hotspotService.hotspots(category, wardId, from, to));
     }
 }

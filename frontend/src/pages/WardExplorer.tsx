@@ -9,10 +9,13 @@ import { formatCount } from '@/lib/format';
 import { formatRelative, parseServerDate } from '@/lib/datetime';
 import { reportWindow } from '@/lib/reportWindow';
 import { useCategoryRegistry } from '@/lib/useRegistry';
+import { useOpenIncident } from '@/lib/useOpenIncident';
 import { useDashboardStore } from '@/stores/dashboard.store';
 import AppHeader from '@/components/AppHeader';
 import ExplorerFilterBar, { EXPLORER_NAV } from '@/components/explorer/ExplorerFilterBar';
 import WardShapes, { DensityLegend } from '@/components/explorer/WardShapes';
+import HotspotLayer from '@/components/explorer/HotspotLayer';
+import HotspotList from '@/components/explorer/HotspotList';
 import Button from '@/components/ui/Button';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import EmptyState from '@/components/ui/EmptyState';
@@ -28,7 +31,8 @@ const BENGALURU: [number, number] = [12.9716, 77.5946];
  *
  * One request (GET /dashboard/wards) feeds both the map and the table, so
  * the two can never disagree. The map shades by active incidents; the table
- * is its accessible twin and carries every figure.
+ * is its accessible twin and carries every figure. Hotspots (Phase 9) are
+ * rings on the same map, with the hotspot list as their twin.
  */
 export default function WardExplorer() {
     const navigate = useNavigate();
@@ -36,6 +40,7 @@ export default function WardExplorer() {
     const categoryFilter = useDashboardStore((s) => s.categoryFilter);
     const { label: categoryLabel } = useCategoryRegistry();
     const [showQuiet, setShowQuiet] = useState(false);
+    const openIncident = useOpenIncident();
 
     const filters = useMemo(
         () => ({
@@ -48,6 +53,14 @@ export default function WardExplorer() {
     const wardsQuery = useQuery({
         queryKey: queryKeys.dashboard.wards(filters),
         queryFn: () => explorerService.wards(filters),
+        placeholderData: keepPreviousData,
+    });
+
+    // "All time" sends no window, and the server then applies the hotspot
+    // definition's own 30 days — the list says which window it used.
+    const hotspotsQuery = useQuery({
+        queryKey: queryKeys.dashboard.hotspots(filters),
+        queryFn: () => explorerService.hotspots(filters),
         placeholderData: keepPreviousData,
     });
 
@@ -164,6 +177,16 @@ export default function WardExplorer() {
                                             countLabel="active incidents"
                                             onSelect={(id) => navigate(`/dashboard/wards/${id}`)}
                                         />
+                                        {hotspotsQuery.data && (
+                                            <HotspotLayer
+                                                hotspots={hotspotsQuery.data.hotspots}
+                                                categoryLabel={categoryLabel}
+                                                onSelect={(h) => {
+                                                    const top = h.incidents[0];
+                                                    if (top) openIncident(top.id, top.wardId);
+                                                }}
+                                            />
+                                        )}
                                     </MapView>
                                 ) : boundariesQuery.isError ? (
                                     <EmptyState message="Ward boundaries could not be loaded." detail="The table below has every figure." />
@@ -172,6 +195,11 @@ export default function WardExplorer() {
                                 )}
                             </div>
                             <DensityLegend title="Active incidents" />
+                            {(hotspotsQuery.data?.hotspots.length ?? 0) > 0 && (
+                                <p className={styles.note} style={{ padding: 'var(--space-2) var(--space-4) 0' }}>
+                                    Dashed rings are hotspots, edged by their highest priority.
+                                </p>
+                            )}
                             {boundariesQuery.data && (
                                 <p className={styles.note} style={{ padding: 'var(--space-2) var(--space-4)' }}>
                                     Boundaries: {boundariesQuery.data.attribution}
@@ -219,6 +247,36 @@ export default function WardExplorer() {
                         </Panel>
                     </div>
                 )}
+
+                <Panel
+                    heading={
+                        hotspotsQuery.data
+                            ? `Hotspots (${formatCount(hotspotsQuery.data.hotspots.length)})`
+                            : 'Hotspots'
+                    }
+                    flush
+                    as="section"
+                >
+                    {hotspotsQuery.isError ? (
+                        <EmptyState
+                            tone="error"
+                            message={describeError(hotspotsQuery.error, 'hotspots').title}
+                            action={
+                                <Button variant="secondary" size="compact" onClick={() => void hotspotsQuery.refetch()}>
+                                    Try again
+                                </Button>
+                            }
+                        />
+                    ) : hotspotsQuery.data ? (
+                        <div className={hotspotsQuery.isPlaceholderData ? styles.stale : styles.fresh}>
+                            <HotspotList data={hotspotsQuery.data} categoryLabel={categoryLabel} />
+                        </div>
+                    ) : (
+                        <div style={{ padding: 'var(--space-4)' }}>
+                            <Skeleton count={3} variant="row" label="Loading hotspots" />
+                        </div>
+                    )}
+                </Panel>
             </main>
         </div>
     );

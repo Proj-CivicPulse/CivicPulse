@@ -150,6 +150,7 @@ Classified 2026-10-13 — see "Endpoint classification" in `api-contract.md`.
 - [x] `GET /dashboard/wards` — per-ward Explorer summary (N1)
 - [x] `GET /dashboard/categories` — per-category Explorer summary incl. resolution metrics (N2)
 - [x] `GET /dashboard/trends` — complaint counts over `reported_at` buckets (N3)
+- [x] `GET /dashboard/hotspots` — ≥ 3 active same-category incidents within 500 m (Phase 9)
 
 ### Analytics — Phase 5
 

@@ -29,7 +29,7 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | 6 | Explorer (wards, categories, incidents) | ✅ Done |
 | 7 | Matching evaluation | ✅ Done — threshold set to 0.84 |
 | 8 | Priority calibration | ⬜ Not started — needs an officer |
-| 9 | Hotspots | ⬜ Not started |
+| 9 | Hotspots | ✅ Done (2026-10-21) |
 | 10 | Operational intelligence ("needs attention") | ⬜ Not started — after 9 |
 | 11 | Decision support | ⬜ Not started — after 8–10 and 12 |
 | 12 | Officer Copilot | 🟡 Backend live; panel + eval left (Manya) |
@@ -190,16 +190,19 @@ The weights are frozen until an officer has ranked a real queue
 | 8.3 | **Officer session (people):** ≥ 30 incidents ranked by one officer, ideally two |
 | 8.4 | Weight/band proposal, adopted only if τ improves on held-out incidents |
 
-### 9 — Hotspots ⬜
-Definition first (to be ratified). A hotspot is **≥ 3 active incidents of the
-same category within 500 m of each other**, each with a report in the last
-**30 days**. Rule-based, DBSCAN-style; no ML.
+### 9 — Hotspots ✅ (2026-10-21)
+A hotspot is **≥ 3 active incidents of one category within 500 m of each other**
+(DBSCAN over incident centres, done by PostGIS), each reported in the window
+(default: the last 30 days). Rule-based; no ML.
 
-| # | Milestone |
-|---|---|
-| 9.1 | Team ratifies the definition |
-| 9.2 | `GET /dashboard/hotspots` (category and window filters): members, centre, radius, wards |
-| 9.3 | Map layer and list on the Ward Explorer |
+| # | Milestone | State |
+|---|---|---|
+| 9.1 | Definition, written with its reasons | ✅ api-contract.md "GET /dashboard/hotspots" |
+| 9.2 | `GET /dashboard/hotspots` (category, ward, window filters) | ✅ DB-backed tests: cluster, too-small pair, far incident, resolved incident, ward/category/window filters |
+| 9.3 | Rings on the Ward Explorer map plus a hotspot list; every member opens in the queue | ✅ checked at 1440 and 390 px |
+
+The demo seed adds three clusters of different problems chosen to stay
+separate incidents at 0.84, so the live site has hotspots to show.
 
 ### 10 — Operational intelligence ⬜ (after 9)
 One "needs attention" strip that turns counts into statements, each opening its

@@ -610,6 +610,39 @@ geometry. Public because it is open data already published under that licence,
 and the attribution must be rendered on the map. Lives under `/wards`, whose
 posture is already entirely public.
 
+#### `GET /dashboard/hotspots` — Phase 9 — ✅ implemented 2026-10-21
+
+Places where several active incidents of one category sit close together.
+
+| | |
+|---|---|
+| Auth | officer |
+| Definition | ≥ 3 **active** incidents of one category, chained within **500 m** of each other (PostGIS `ST_ClusterDBSCAN` over incident centres, in UTM 43N so the radius is metres), each with a member **reported** in the window |
+| Params | `category`, `wardId` (repeatable), `from`, `to`. No window → the last **30 days**. `wardId` keeps hotspots with any member in those wards, applied after clustering so a hotspot straddling a ward line is shown whole |
+| Response | `{ definition: { minIncidents, radiusMetres, from, to }, hotspots: [Hotspot] }`, highest priority first |
+
+```jsonc
+{
+  "id": "garbage-40",              // <category>-<lowest member incident id>
+  "category": "garbage",
+  "incidentCount": 3, "complaintCount": 9,
+  "latitude": 13.11, "longitude": 77.60,   // mean of member centres
+  "radiusMetres": 126,                      // centre to farthest member
+  "maxPriorityScore": 4.4, "maxPriorityBand": "medium",
+  "lastReportedAt": "…Z",
+  "wards": [{ "id": "1", "name": "Kempegowda Ward" }],
+  "incidents": [{ "id": "40", "wardId": "1", "priorityScore": 4.4, "priorityBand": "medium",
+                  "complaintCount": 3, "latitude": …, "longitude": …, "address": "…", "lastReportedAt": "…Z" }]
+}
+```
+
+Why 500 m and 3: 500 m is the matcher's measured same-problem radius (every
+true join within 202 m; the distance check cuts at 500 m), so a hotspot is
+several *different* problems of one kind in one walkable patch — which the
+matcher rightly keeps apart and an officer still wants to see together.
+Rule-based, no ML: the incident set is far too small to train anything, and an
+officer can check every member.
+
 ### `POST /complaints/{id}/process` — Phase 2
 
 Triggered **asynchronously** after a complaint commits (`AFTER_COMMIT`, on a

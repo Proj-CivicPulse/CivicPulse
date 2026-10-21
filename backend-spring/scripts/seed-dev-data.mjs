@@ -225,6 +225,33 @@ const SHAPES = [
     [1, 2],   // lone report        -> low, "awaiting corroboration"
 ];
 
+/**
+ * Hotspot clusters (docs/roadmap.md, Phase 9): three DIFFERENT problems of one
+ * category, 120 m apart, so the demo has hotspots to show — three active
+ * same-category incidents within 500 m is a hotspot by definition.
+ *
+ * The problems are chosen so they stay separate incidents at the 0.84
+ * threshold: by the evaluation's cached embeddings, the highest similarity
+ * between any two of their English reports is 0.816–0.829, while each
+ * problem's own reports agree at 0.856+. The code-mixed voice is left out —
+ * it is what pulls different problems together (matching-evaluation.md §2).
+ * Each cluster sits on the far side of the ward from that ward's own hotspot
+ * of the category, more than 500 m away, so no member can join it.
+ *
+ * [ward index, category, problem indices into PROBLEMS[category]]
+ */
+const CLUSTERS = [
+    [4, 'streetlight', [0, 1, 2]],
+    [0, 'garbage', [1, 2, 4]],
+    [2, 'water', [1, 4, 5]],
+];
+
+/** [reportCount, ageDays] per cluster member. */
+const CLUSTER_SHAPES = [[3, 5], [2, 9], [4, 3]];
+
+/** ~0.0011 degrees ≈ 120 m between cluster members. */
+const CLUSTER_SPACING_DEG = 0.0011;
+
 /* ------------------------------------------------------------------ util */
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -269,12 +296,12 @@ async function main() {
 
     // One entry per hotspot: where it is, its reports, and how old it should
     // look. Which incident(s) they land in is not known until matching settles.
-    const hotspots = [];
+    const base = [];
     for (const [w, ward] of wards.entries()) {
         for (let c = 0; c < CATEGORIES.length; c++) {
             const [reportCount, ageDays] = SHAPES[c];
             const { dLat, dLon } = hotspotOffset(c);
-            hotspots.push({
+            base.push({
                 label: `${ward.name.padEnd(9)} ${CATEGORIES[c].padEnd(12)}`,
                 category: CATEGORIES[c],
                 texts: pick(PROBLEMS[CATEGORIES[c]], w),
@@ -286,6 +313,32 @@ async function main() {
             });
         }
     }
+
+    const clusters = [];
+    for (const [w, category, picks] of CLUSTERS) {
+        if (w >= wards.length) continue;
+        const ward = wards[w];
+        // Unit vector pointing AWAY from the ward's own hotspot of this category.
+        const { dLat, dLon } = hotspotOffset(CATEGORIES.indexOf(category));
+        const norm = Math.hypot(dLat, dLon);
+        for (let k = 0; k < picks.length; k++) {
+            const [reportCount, ageDays] = CLUSTER_SHAPES[k];
+            const r = norm + k * CLUSTER_SPACING_DEG;
+            clusters.push({
+                label: `${ward.name.padEnd(9)} ${category.padEnd(12)} cluster ${k + 1}`,
+                category,
+                texts: PROBLEMS[category][picks[k]].slice(0, 3),
+                lat: ward.lat - (dLat / norm) * r,
+                long: ward.long - (dLon / norm) * r,
+                reportCount,
+                ageDays,
+                complaintIds: [],
+            });
+        }
+    }
+
+    // SEED_PART=clusters adds only the clusters, on top of an existing seed.
+    const hotspots = process.env.SEED_PART === 'clusters' ? clusters : [...base, ...clusters];
 
     // A report that jitters across a ward line lands in a different candidate
     // pool and can only ever start its own incident — 5 of 36 hotspots split

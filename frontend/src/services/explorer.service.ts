@@ -79,6 +79,47 @@ export interface WardDashboardSummary {
     statusDistribution: Record<IncidentStatus, number>;
 }
 
+/**
+ * Hotspots (docs/roadmap.md, Phase 9): 3+ active incidents of one category
+ * within 500 m of each other, each reported in the window (default: the last
+ * 30 days). The definition comes back with the data — show it, don't restate it.
+ */
+export interface Hotspots {
+    definition: { minIncidents: number; radiusMetres: number; from: string | null; to: string | null };
+    /** Highest priority first. */
+    hotspots: Hotspot[];
+}
+
+export interface Hotspot {
+    /** `<category>-<lowest member incident id>`. */
+    id: string;
+    category: string;
+    incidentCount: number;
+    complaintCount: number;
+    latitude: number;
+    longitude: number;
+    /** Centre to farthest member, metres. */
+    radiusMetres: number;
+    maxPriorityScore: number;
+    maxPriorityBand: PriorityBand;
+    lastReportedAt: string | null;
+    wards: { id: string; name: string }[];
+    /** Highest priority first. */
+    incidents: HotspotMember[];
+}
+
+export interface HotspotMember {
+    id: string;
+    wardId: string;
+    priorityScore: number;
+    priorityBand: PriorityBand;
+    complaintCount: number;
+    latitude: number;
+    longitude: number;
+    address: string | null;
+    lastReportedAt: string | null;
+}
+
 function query(params: Record<string, string | string[] | undefined>): string {
     const search = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -123,6 +164,18 @@ export const explorerService = {
                 groupBy: filters.groupBy,
                 wardId: filters.wardIds,
                 category: filters.categories,
+            })}`
+        ),
+
+    /** Phase 9. Without from/to the server applies its default window (30 days). */
+    hotspots: (filters: ExplorerWindow & { categories?: string[]; wardIds?: string[] } = {}) =>
+        get<Hotspots>(
+            SPRING_API_PATH,
+            `/dashboard/hotspots${query({
+                category: filters.categories,
+                wardId: filters.wardIds,
+                from: filters.from,
+                to: filters.to,
             })}`
         ),
 

@@ -64,5 +64,6 @@ export const queryKeys = {
         wards: (filters?: object) => ['dashboard', 'wards', filters ?? {}] as const,
         categories: (filters?: object) => ['dashboard', 'categories', filters ?? {}] as const,
         trends: (filters?: object) => ['dashboard', 'trends', filters ?? {}] as const,
+        hotspots: (filters?: object) => ['dashboard', 'hotspots', filters ?? {}] as const,
     },
 } as const;

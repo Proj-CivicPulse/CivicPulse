@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { Incident } from '@/services/incident.service';
 import { formatCount, truncate } from '@/lib/format';
 import { formatRelative } from '@/lib/datetime';
-import { useDashboardStore } from '@/stores/dashboard.store';
+import { useOpenIncident } from '@/lib/useOpenIncident';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import PriorityChip from '@/components/ui/PriorityChip';
 import StatusChip from '@/components/ui/StatusChip';
@@ -47,14 +46,10 @@ export function incidentName(incident: Incident, categoryLabel: (code: string) =
 
 /**
  * A short incident list for the detail pages. Selecting a row opens that
- * incident in the queue — the console is where incidents are worked, so the
- * Explorer links into it rather than growing a second incident panel.
+ * incident in the queue (useOpenIncident).
  */
 export default function IncidentList({ incidents, categoryLabel, caption, emptyMessage }: Props) {
-    const navigate = useNavigate();
-    const clearFilters = useDashboardStore((s) => s.clearFilters);
-    const selectWard = useDashboardStore((s) => s.selectWard);
-    const selectIncident = useDashboardStore((s) => s.selectIncident);
+    const openIncident = useOpenIncident();
 
     const columns = useMemo<Column<Incident>[]>(
         () => [
@@ -101,14 +96,7 @@ export default function IncidentList({ incidents, categoryLabel, caption, emptyM
             rows={incidents}
             rowKey={(row) => row.id}
             emptyMessage={emptyMessage}
-            onSelect={(row) => {
-                // Clear the queue's filters first, or the incident might be
-                // filtered out of the very list it is being opened in.
-                clearFilters();
-                selectWard(row.wardId);
-                selectIncident(row.id);
-                navigate('/dashboard');
-            }}
+            onSelect={(row) => openIncident(row.id, row.wardId)}
         />
     );
 }
