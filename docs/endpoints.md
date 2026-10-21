@@ -152,6 +152,7 @@ Classified 2026-10-13 — see "Endpoint classification" in `api-contract.md`.
 - [x] `GET /dashboard/trends` — complaint counts over `reported_at` buckets (N3)
 - [x] `GET /dashboard/hotspots` — ≥ 3 active same-category incidents within 500 m (Phase 9)
 - [x] `GET /dashboard/attention` — high priority, worsening, in a hotspot, category spike (Phase 10)
+- [x] `GET /dashboard/ranking-sheet` — CSV of the active queue for an officer to rank; `?withScores=true` is the key (Phase 8.1)
 
 ### Analytics — Phase 5
 

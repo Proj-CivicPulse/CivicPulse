@@ -108,6 +108,55 @@ approved for production as it stands.
 | First change to try | Age saturation 14 -> 30-45 days (keeps age discriminating for as long as incidents actually stay open). Only if that fails, reduce the age weight. |
 | Do NOT | re-tune from this file. It is a regression net, not evidence about the real world. |
 
+## Phase 8 — the officer session (tooling ready 2026-10-21)
+
+This is the real-world check the DECISION above waits for. Everything except
+the officer's time is built.
+
+**1. Export, both files in the same minute** (signed in as an officer; the age
+term moves daily, so a key fetched a day later no longer matches the sheet):
+
+- `/api/core/dashboard/ranking-sheet` → `ranking-sheet-<date>.csv`, for the
+  officer. It lists every active incident with the facts the formula reads
+  (reports, reports in the last 24 h and 7 days, days open, spread) and
+  nothing derived from them: no score, no band, no stored reasons (those are
+  ordered by contribution, which would give the ranking away). Rows are in a
+  fixed scrambled order. `?wardId=` narrows it to one officer's wards.
+- `/api/core/dashboard/ranking-sheet?withScores=true` → `ranking-key-<date>.csv`,
+  for the analyst. The same rows plus the formula's score and band. **Do not
+  show it to the officer.**
+
+**2. The session.** The officer fills `officer_rank`: 1 = deal with first,
+no ties, at least 30 incidents (blank rows are skipped). Two officers, ranking
+separately, is better: their agreement with each other is the ceiling the
+formula can be held to.
+
+**3. Score it:**
+
+```bash
+cd backend-node
+npm run eval:priority -- ranking-key.csv ranked-officer-a.csv [ranked-officer-b.csv]
+```
+
+It first checks that its copy of the formula (`src/eval/priorityMetrics.ts`)
+reproduces every score in the key. Then it reports:
+
+- Kendall τ-b, formula against officer;
+- precision@10;
+- each term alone against the officer;
+- the variants named above: age saturation 30 d, age saturation 45 d, and age
+  weight 10%;
+- every variant on two fixed halves of the incidents;
+- officer against officer, when two sheets are given.
+
+Paste its markdown here.
+
+**4. Decide (roadmap 8.4).** Adopt a variant only if it beats the shipped
+formula on **both** halves. A gain on one half alone is the variant fitting
+those incidents. Change `PriorityService` and the `PRODUCTION` constants in
+`priorityMetrics.ts` together. `npm test` fails if they disagree on the
+probes.
+
 ## What this does and does not establish
 
 **Established.** The model discriminates: all four bands are reachable

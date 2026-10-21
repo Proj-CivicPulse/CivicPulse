@@ -28,7 +28,7 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | S | Stabilisation + data foundation | ✅ Done |
 | 6 | Explorer (wards, categories, incidents) | ✅ Done |
 | 7 | Matching evaluation | ✅ Done — threshold set to 0.84 |
-| 8 | Priority calibration | ⬜ Not started — needs an officer |
+| 8 | Priority calibration | 🟡 Tooling done; needs an officer session |
 | 9 | Hotspots | ✅ Done (2026-10-21) |
 | 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
 | 11 | Decision support | ⬜ Not started — after 8–10 and 12 |
@@ -179,16 +179,17 @@ Check automatically that:
 
 Run it per provider. The comparison goes in the paper.
 
-### 8 — Priority calibration ⬜
-The weights are frozen until an officer has ranked a real queue
-([priority-evaluation.md](priority-evaluation.md)).
+### 8 — Priority calibration 🟡 (tooling done 2026-10-21)
+The weights stay frozen until an officer has ranked a real queue. The steps
+are in [priority-evaluation.md](priority-evaluation.md), "Phase 8 — the
+officer session".
 
-| # | Milestone |
-|---|---|
-| 8.1 | Export the active queue as a ranking sheet (CSV). Show reasons and counts, not the score |
-| 8.2 | Import and metrics: Kendall τ and precision@10 between the formula and the officer, with per-term attribution of disagreements |
-| 8.3 | **Officer session (people):** ≥ 30 incidents ranked by one officer, ideally two |
-| 8.4 | Weight/band proposal, adopted only if τ improves on held-out incidents |
+| # | Milestone | State |
+|---|---|---|
+| 8.1 | `GET /dashboard/ranking-sheet`: the active queue as a CSV with the formula's inputs, no score, in a scrambled order; `?withScores=true` is the analyst's key | ✅ DB-backed tests with hand-computed scores |
+| 8.2 | `npm run eval:priority`: Kendall τ-b, precision@10, each term alone, the age variants on two halves, officer vs officer. It first checks its copy of the formula against the key | ✅ unit tests on a stand-in officer; end-to-end on local data (the copy reproduces 45/45 scores) |
+| 8.3 | **Officer session (people):** ≥ 30 incidents ranked by one officer, ideally two | ⬜ |
+| 8.4 | Adopt a variant only if it beats the shipped formula on both halves | ⬜ after 8.3 |
 
 ### 9 — Hotspots ✅ (2026-10-21)
 A hotspot is **≥ 3 active incidents of one category within 500 m of each other**

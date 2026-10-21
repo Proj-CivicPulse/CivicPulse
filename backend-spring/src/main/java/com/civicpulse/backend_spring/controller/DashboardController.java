@@ -11,6 +11,9 @@ import com.civicpulse.backend_spring.service.dashboard.DashboardService;
 import com.civicpulse.backend_spring.service.explorer.ExplorerService;
 import com.civicpulse.backend_spring.service.intelligence.AttentionService;
 import com.civicpulse.backend_spring.service.intelligence.HotspotService;
+import com.civicpulse.backend_spring.service.priority.RankingSheetService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -37,6 +41,7 @@ public class DashboardController {
     private final ExplorerService explorerService;
     private final HotspotService hotspotService;
     private final AttentionService attentionService;
+    private final RankingSheetService rankingSheetService;
 
     @GetMapping("/summary")
     public ResponseEntity<DashboardSummaryDto> summary() {
@@ -102,5 +107,21 @@ public class DashboardController {
             @RequestParam(required = false) List<Long> wardId,
             @RequestParam(required = false) List<String> category) {
         return ResponseEntity.ok(attentionService.attention(wardId, category));
+    }
+
+    /**
+     * Phase 8.1: the active queue as a CSV an officer ranks by hand — the
+     * formula's inputs, never its answer. {@code withScores=true} is the
+     * analyst's key for backend-node's eval:priority.
+     */
+    @GetMapping(value = "/ranking-sheet", produces = "text/csv")
+    public ResponseEntity<String> rankingSheet(
+            @RequestParam(required = false) List<Long> wardId,
+            @RequestParam(defaultValue = "false") boolean withScores) {
+        String name = (withScores ? "ranking-key-" : "ranking-sheet-") + LocalDate.now() + ".csv";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + name + "\"")
+                .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
+                .body(rankingSheetService.csv(wardId, withScores));
     }
 }

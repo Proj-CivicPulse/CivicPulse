@@ -74,15 +74,31 @@ public class PriorityService {
     /** The detail panel renders these as chips; more than four stops being read. */
     private static final int MAX_REASONS = 4;
 
-    public PriorityResult compute(Incident incident, List<Complaint> complaints, LocalDateTime now) {
-        int total = complaints.size();
+    /**
+     * The formula's raw inputs for one incident, as of {@code now}. Exposed for
+     * the calibration export (docs/roadmap.md, Phase 8), so the ranking sheet
+     * and the score are read from exactly the same numbers.
+     */
+    public record Inputs(int reports, long reportsLast24h, long reportsLast7d, long daysOpen,
+                         double spreadMetres) {
+    }
 
-        long newIn24h = countSince(complaints, now.minusDays(1));
-        long newIn7d = countSince(complaints, now.minusDays(7));
-        long ageDays = incident.getCreatedAt() == null
-                ? 0
-                : Duration.between(incident.getCreatedAt(), now).toDays();
-        double spreadMetres = maxPairwiseDistanceMetres(complaints);
+    public Inputs inputs(Incident incident, List<Complaint> complaints, LocalDateTime now) {
+        return new Inputs(
+                complaints.size(),
+                countSince(complaints, now.minusDays(1)),
+                countSince(complaints, now.minusDays(7)),
+                incident.getCreatedAt() == null ? 0 : Duration.between(incident.getCreatedAt(), now).toDays(),
+                maxPairwiseDistanceMetres(complaints));
+    }
+
+    public PriorityResult compute(Incident incident, List<Complaint> complaints, LocalDateTime now) {
+        Inputs in = inputs(incident, complaints, now);
+        int total = in.reports();
+        long newIn24h = in.reportsLast24h();
+        long newIn7d = in.reportsLast7d();
+        long ageDays = in.daysOpen();
+        double spreadMetres = in.spreadMetres();
 
         double volume = saturate(Math.log10(1 + total) / Math.log10(1 + VOLUME_SATURATION));
         double growth = saturate(newIn24h / GROWTH_SATURATION_24H);

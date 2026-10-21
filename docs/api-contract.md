@@ -643,6 +643,19 @@ matcher rightly keeps apart and an officer still wants to see together.
 Rule-based, no ML: the incident set is far too small to train anything, and an
 officer can check every member.
 
+#### `GET /dashboard/ranking-sheet` — Phase 8.1 — ✅ implemented 2026-10-21
+
+The active queue as CSV (`text/csv`, `Content-Disposition: attachment`) for an
+officer to rank by hand — the formula's inputs, never its answer. Procedure:
+docs/priority-evaluation.md, "Phase 8 — the officer session".
+
+| | |
+|---|---|
+| Auth | officer |
+| Params | `wardId` (repeatable), `withScores` (default `false`) |
+| Columns | `incident_id, category, ward, place, reports, reports_last_24h, reports_last_7d, days_open, spread_m` then `officer_rank` (blank, for the officer) — or with `withScores=true`, `score, band` instead (the analyst's key) |
+| Order | fixed pseudo-random by id: by id it would be by age, by score it would be the answer |
+
 #### `GET /dashboard/attention` — Phase 10 — ✅ implemented 2026-10-21
 
 "Needs attention": four statements, each with the incidents behind it.
