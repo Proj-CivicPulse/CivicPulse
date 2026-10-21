@@ -89,7 +89,6 @@ class CopilotPacketBuilderTest {
     }
 
     /** Every "id" anywhere in the packet body. */
-    @SuppressWarnings("unchecked")
     private static List<String> idsIn(Object node) {
         List<String> ids = new ArrayList<>();
         if (node instanceof Map<?, ?> map) {

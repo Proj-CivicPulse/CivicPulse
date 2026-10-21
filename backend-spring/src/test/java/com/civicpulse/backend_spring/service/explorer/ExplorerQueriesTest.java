@@ -282,10 +282,10 @@ class ExplorerQueriesTest {
         long activeWards = ((Number) entityManager
                 .createNativeQuery("SELECT COUNT(*) FROM wards WHERE active AND boundary IS NOT NULL")
                 .getSingleResult()).longValue();
-        assertThat(root.get("type").asText()).isEqualTo("FeatureCollection");
+        assertThat(root.get("type").asString()).isEqualTo("FeatureCollection");
         assertThat(root.get("features")).hasSize((int) activeWards);
-        assertThat(root.get("attribution").asText()).contains("CC BY-SA");
-        assertThat(root.get("features").get(0).get("geometry").get("type").asText())
+        assertThat(root.get("attribution").asString()).contains("CC BY-SA");
+        assertThat(root.get("features").get(0).get("geometry").get("type").asString())
                 .isIn("Polygon", "MultiPolygon");
         // Display payload, so size matters: the full-resolution import is ~1.4 MB.
         System.out.printf("ward boundaries payload: %,d bytes%n", geoJson.length());
