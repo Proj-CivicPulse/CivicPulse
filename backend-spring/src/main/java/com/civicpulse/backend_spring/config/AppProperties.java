@@ -43,8 +43,8 @@ public class AppProperties {
     private boolean cookieSecure = false;
 
     /**
-     * Hard ceiling on the /health database probe, in seconds. Default
-     * accommodates a Neon cold start; lower it for a local database.
+     * Hard ceiling on the /health database probe, in seconds. Default leaves
+     * room for a slow first connection; lower it for a local database.
      */
     @Positive
     private long healthTimeoutSeconds = 10;
@@ -92,7 +92,7 @@ public class AppProperties {
     private final Copilot copilot = new Copilot();
 
     /**
-     * The officer Copilot (docs/next-phases-plan.md, Phase A). Spring builds the
+     * The officer Copilot (docs/roadmap.md, Phase 12). Spring builds the
      * grounding packet and calls backend-node's {@code /internal/copilot/answer};
      * the base URL is {@link Matching#getNodeBaseUrl()} — one Node, one address.
      */

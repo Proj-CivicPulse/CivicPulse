@@ -18,14 +18,12 @@ spring:
     password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
-      # Generous enough to absorb a Neon cold start (the compute suspends
-      # when idle and takes a second or two to wake), but far below the
-      # 30s default, which would pin a request thread when the database is
+      # Generous enough for a slow first connection, but far below the 30s
+      # default, which would pin a request thread when the database is
       # genuinely unreachable.
       connection-timeout: 15000
-      # Let the pool drain to nothing when idle so Neon's compute can
-      # actually suspend — holding connections open keeps it awake and
-      # burns free-tier compute hours for no benefit.
+      # Let the pool drain to nothing when idle rather than holding
+      # connections open for no work.
       minimum-idle: 0
       idle-timeout: 30000
 
@@ -45,11 +43,10 @@ spring:
     enabled: true
     locations: classpath:db/migration
     # Flyway takes a SESSION-level advisory lock for the duration of a
-    # migration run. PgBouncer in transaction-pooling mode (Neon's `-pooler`
-    # host) does not keep one client on one server session, so that lock
-    # cannot be relied on there. Point DB_MIGRATION_URL at Neon's DIRECT
-    # host (the one WITHOUT `-pooler`) while `spring.datasource.url` above
-    # uses the pooler for normal traffic.
+    # migration run. PgBouncer in transaction-pooling mode does not keep one
+    # client on one server session, so that lock cannot be relied on there.
+    # Behind such a pooler, point DB_MIGRATION_URL at the DIRECT host while
+    # `spring.datasource.url` above uses the pooler for normal traffic.
     #
     # Falls back to DB_URL when unset, which is correct for local dev and for
     # any deployment that is not going through a pooler.
@@ -93,9 +90,9 @@ app:
   frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
   # Marks auth cookies Secure. Must be true anywhere served over HTTPS.
   cookie-secure: ${COOKIE_SECURE:false}
-  # Ceiling on the /health database probe. Sized for a Neon cold start
-  # rather than a local socket — too tight and an idle database reports
-  # itself down on the first request after a quiet period.
+  # Ceiling on the /health database probe. Sized for a slow first
+  # connection rather than a local socket — too tight and an idle database
+  # can report itself down on the first request after a quiet period.
   health-timeout-seconds: ${HEALTH_TIMEOUT_SECONDS:10}
 
   # Ward derivation. "postgis" does real point-in-polygon against the BBMP ward

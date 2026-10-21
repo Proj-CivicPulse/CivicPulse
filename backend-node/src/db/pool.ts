@@ -4,10 +4,11 @@ import { logger } from '../config/logger.ts';
 
 // Single shared connection pool for the whole process.
 //
-// TLS comes from `sslmode=require` in DATABASE_URL — node-postgres parses it
-// off the connection string, so there is no `ssl` option to set here. Neon
-// refuses plaintext connections, so a URL missing that parameter fails to
-// connect rather than silently downgrading.
+// TLS, when wanted, comes from `sslmode=require` in DATABASE_URL —
+// node-postgres parses it off the connection string, so there is no `ssl`
+// option to set here. Production reaches its database over Railway's private
+// network and a local one runs in Docker; neither uses TLS, so neither URL
+// carries the parameter.
 //
 // pgvector needs no special client config. Phase 2's `complaints.embedding`
 // column is read and written through plain SQL casts (`$1::vector`,
@@ -15,11 +16,11 @@ import { logger } from '../config/logger.ts';
 export const pool = new Pool({
     connectionString: env.DATABASE_URL,
     max: 10,
-    // Neon suspends its compute when idle, so releasing connections quickly
-    // lets it actually sleep instead of being held awake for nothing.
+    // Idle connections are released after 30 s rather than held for the
+    // life of the process.
     idleTimeoutMillis: 30_000,
-    // Longer than a local socket would ever need: waking a suspended Neon
-    // compute takes a second or two, and that shows up as connection time.
+    // Generous, but bounded: a request fails within 15 s when the database is
+    // unreachable instead of hanging.
     connectionTimeoutMillis: 15_000,
     // allowExitOnIdle stays at its default (false): the pool is closed
     // explicitly by the graceful-shutdown handler in src/index.ts.
@@ -36,8 +37,8 @@ pool.on('error', (err) => {
 // black hole) — pool.query() would otherwise hang with no client-side
 // timeout. Scoped to the health check so it doesn't constrain real queries.
 //
-// Sized for a Neon cold start, not a local socket: too tight and an idle
-// database reports itself down on the first request after a quiet period.
+// Sized for a slow first connection, not a local socket: too tight and an
+// idle database can report itself down on the first request after a pause.
 const HEALTHCHECK_TIMEOUT_MS = env.HEALTHCHECK_TIMEOUT_MS;
 
 /**

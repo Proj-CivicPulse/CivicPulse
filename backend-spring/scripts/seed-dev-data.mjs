@@ -108,7 +108,7 @@ async function openDb() {
     if (VIA_RAILWAY) {
         return { query: async (sql) => railwaySql(sql), end: async () => {} };
     }
-    // SSL only where the server demands it (Neon); a local container has none.
+    // SSL only when the URL asks for it (sslmode=require); a local container has none.
     const ssl = /sslmode=require/.test(DATABASE_URL) ? { rejectUnauthorized: false } : false;
     const client = new Client({ connectionString: DATABASE_URL, ssl });
     await client.connect();
@@ -149,10 +149,10 @@ const ints = (values) => values.map((v) => Number.parseInt(v, 10)).filter(Number
 /**
  * One hotspot becomes one incident. Categories are unique per ward so the
  * ward+category grouper cannot accidentally merge two of them, and offsets stay
- * under ~0.5 km of the ward's centre: since V13 wards are real BBMP polygons,
+ * under ~300 m of the ward's centre: since V13 wards are real BBMP polygons,
  * often only 1–2 km across, so a wider ring drifts into the neighbouring ward.
  */
-const CATEGORIES = ['pothole', 'streetlight', 'garbage', 'water', 'drainage', 'other'];
+const CATEGORIES = ['pothole', 'streetlight', 'garbage', 'water', 'drainage', 'footpath'];
 
 /**
  * Alternative SPELLINGS the submit form would never send, rotated through
@@ -174,48 +174,40 @@ const CATEGORY_SPELLINGS = {
     garbage: ['garbage', 'Solid Waste', 'Uncollected Garbage', 'trash'],
     water: ['water', 'Water Supply', 'water-leak', 'burst pipe'],
     drainage: ['drainage', 'Blocked Drain', 'water logging', 'SEWAGE'],
-    other: ['other', 'Miscellaneous', 'general', 'Something Else'],
+    footpath: ['footpath', 'Sidewalk', 'broken footpath', 'pavement'],
 };
 
-const DESCRIPTIONS = {
-    pothole: [
-        'Large pothole in the middle of the road, cars are swerving into oncoming traffic to avoid it.',
-        'The road has broken up badly after the rain. Two-wheelers have come off here twice this week.',
-        'Deep crater near the bus stop. It fills with water and you cannot tell how deep it is.',
-        'Surface has collapsed where they dug for the cable last month and never repaired it properly.',
-        'Pothole right at the junction. Autos slow to a crawl and it backs up the whole road.',
-    ],
-    streetlight: [
-        'Street light has been out for three weeks. The whole stretch is pitch dark after 7pm.',
-        'Two lamps on this road are dead. Women walking back from the metro have complained.',
-        'Light flickers all night and then goes out. Been like this since the storm.',
-        'No lighting at all near the park gate. It feels unsafe to walk here in the evening.',
-    ],
-    garbage: [
-        'Garbage has not been collected for over a week. The pile is spilling onto the footpath.',
-        'Dumping happening at the corner every night. Smell is unbearable and there are stray dogs.',
-        'Bin overflowing since Monday. Crows have scattered waste across the whole street.',
-        'Construction debris dumped on the roadside and left there. Blocking half the lane.',
-    ],
-    water: [
-        'Water pipe has been leaking for days. Clean water running straight into the drain.',
-        'No water supply in this area for four days now. Tankers are not reaching us.',
-        'Burst pipeline near the junction, the road is flooded and the water is muddy.',
-        'Very low pressure since last week. Cannot fill even one pot in the morning.',
-    ],
-    drainage: [
-        'Drain is completely blocked. Sewage backing up onto the road outside the houses.',
-        'Waterlogging every time it rains. Takes two days to clear and the whole lane is unusable.',
-        'Storm drain cover is missing. Someone is going to fall into it at night.',
-        'Open drain overflowing near the school gate. Children walk past it every day.',
-    ],
-    other: [
-        'Tree branch broken and hanging over the power line after the storm.',
-        'Footpath slab is broken and lifted. An elderly resident tripped on it yesterday.',
-        'Stray cattle blocking the main road every morning, causing traffic backups.',
-        'Illegal hoarding fixed to the electric pole, leaning badly and looks unsafe.',
-    ],
-};
+/**
+ * What each hotspot's reports say: ONE real problem, described in the four
+ * voices of the matching evaluation set (formal, terse, angry, code-mixed
+ * Kannada/Hindi–English) — backend-node/eval/matching-eval-set.json.
+ *
+ * Until 2026-10-21 a hotspot rotated through four DIFFERENT problems of its
+ * category (a leak, no supply, a burst main, low pressure), so it only ever
+ * became one incident because the threshold was too low to tell them apart —
+ * the exact failure docs/matching-evaluation.md measured. At the evaluated
+ * threshold (0.84) such a hotspot correctly splits; one problem per hotspot is
+ * what a real cluster of reports looks like.
+ *
+ * Each category has six problems in the set; ward i gets problem i (mod 6), so
+ * no two seeded wards report the identical fault. The texts name illustrative
+ * Bengaluru localities; the incident's place comes from its coordinates.
+ */
+const PROBLEMS = (() => {
+    const set = JSON.parse(
+        readFileSync(join(springDir, '..', 'backend-node', 'eval', 'matching-eval-set.json'), 'utf8')
+    );
+    const byCategory = {};
+    for (const scenario of set.scenarios) {
+        for (const problem of scenario.problems) {
+            (byCategory[scenario.category] ??= []).push(problem.complaints);
+        }
+    }
+    for (const category of CATEGORIES) {
+        if (!byCategory[category]?.length) throw new Error(`matching-eval-set.json has no ${category} problems`);
+    }
+    return byCategory;
+})();
 
 /**
  * Shape of each ward's incidents: how many reports, and how many days back the
@@ -238,10 +230,10 @@ const SHAPES = [
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pick = (arr, i) => arr[i % arr.length];
 
-/** ~0.0045 degrees is roughly 500 m. Directions differ per hotspot. */
+/** ~0.0025 degrees is roughly 280 m — small wards are 1–2 km across. Directions differ per hotspot. */
 function hotspotOffset(index) {
     const angle = (index / CATEGORIES.length) * Math.PI * 2;
-    const radiusDeg = 0.0045;
+    const radiusDeg = 0.0025;
     return { dLat: Math.sin(angle) * radiusDeg, dLon: Math.cos(angle) * radiusDeg };
 }
 
@@ -278,13 +270,14 @@ async function main() {
     // One entry per hotspot: where it is, its reports, and how old it should
     // look. Which incident(s) they land in is not known until matching settles.
     const hotspots = [];
-    for (const ward of wards) {
+    for (const [w, ward] of wards.entries()) {
         for (let c = 0; c < CATEGORIES.length; c++) {
             const [reportCount, ageDays] = SHAPES[c];
             const { dLat, dLon } = hotspotOffset(c);
             hotspots.push({
                 label: `${ward.name.padEnd(9)} ${CATEGORIES[c].padEnd(12)}`,
                 category: CATEGORIES[c],
+                texts: pick(PROBLEMS[CATEGORIES[c]], w),
                 lat: ward.lat + dLat,
                 long: ward.long + dLon,
                 reportCount,
@@ -294,11 +287,30 @@ async function main() {
         }
     }
 
+    // A report that jitters across a ward line lands in a different candidate
+    // pool and can only ever start its own incident — 5 of 36 hotspots split
+    // that way, all with candidate_count = 0. So every report is placed where
+    // the real resolver puts it in the same ward as the hotspot's first one.
+    async function placeIn(hotspot) {
+        for (let attempt = 0; ; attempt++) {
+            const point = { lat: hotspot.lat + jitter(), long: hotspot.long + jitter() };
+            const ward = await api(`/wards/resolve?lat=${point.lat}&long=${point.long}`).catch(() => null);
+            if (ward && (hotspot.wardId === undefined || ward.id === hotspot.wardId)) {
+                hotspot.wardId ??= ward.id;
+                return point;
+            }
+            if (attempt === 20) {
+                throw new Error(`could not keep ${hotspot.label.trim()} inside one ward`);
+            }
+        }
+    }
+
     async function submit(hotspot, r) {
+        const point = await placeIn(hotspot);
         const complaint = await api('/complaints', {
             method: 'POST',
             body: JSON.stringify({
-                description: pick(DESCRIPTIONS[hotspot.category], r),
+                description: pick(hotspot.texts, r),
                 // Deliberately NOT the canonical code every time: each report in
                 // a hotspot uses a different accepted spelling, so the registry's
                 // normalisation is on the path every run rather than only in
@@ -306,8 +318,8 @@ async function main() {
                 category: pick(CATEGORY_SPELLINGS[hotspot.category], r),
                 // wardId omitted on purpose: this exercises the real
                 // coordinate-to-ward derivation rather than bypassing it.
-                lat: hotspot.lat + jitter(),
-                long: hotspot.long + jitter(),
+                lat: point.lat,
+                long: point.long,
             }),
         });
         hotspot.complaintIds.push(Number(complaint.id));

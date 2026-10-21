@@ -41,13 +41,13 @@ compiled `dist/` runs under plain `node`.
 
 ```bash
 cd backend-node
-cp .env.example .env      # paste your Neon DATABASE_URL
+cp .env.example .env      # DATABASE_URL already matches the local Docker database
 npm install
 npm run dev               # tsx watch, hot reload on :3001
 ```
 
-Requires a reachable PostgreSQL — the project uses **Neon**; see
-**Database (Neon)** in the [root README](../README.md). `GET /health`
+Requires a reachable PostgreSQL with pgvector — locally the Docker database
+from **Database** in the [root README](../README.md). `GET /health`
 reports `error` / 503 until the database actually answers.
 
 **Run `backend-spring` at least once first.** It owns every migration and
@@ -82,9 +82,9 @@ exits the process with a message naming the variable and the rule it broke
 |---|---|---|---|
 | `PORT` | no | `3001` | Frontend proxy forwards `/api/ai/*` here |
 | `NODE_ENV` | no | `development` | `development` \| `production` \| `test` |
-| `DATABASE_URL` | **yes** | — | Neon libpq URL; `sslmode=require` is mandatory |
+| `DATABASE_URL` | **yes** | — | libpq URL, e.g. `postgres://postgres:localdev@localhost:55432/civicpulse` |
 | `FRONTEND_ORIGIN` | **yes** | — | Single CORS origin, no wildcards |
-| `HEALTHCHECK_TIMEOUT_MS` | no | `10000` | Ceiling on the `/health` probe. Sized for a Neon cold start; lower for a local DB. |
+| `HEALTHCHECK_TIMEOUT_MS` | no | `10000` | Ceiling on the `/health` probe; lower for a local DB. |
 | `LOG_LEVEL` | no | `info` | pino level |
 | `SPRING_INTERNAL_BASE_URL` | no | `http://localhost:8080` | backend-spring, for `/internal/*` calls |
 | `INTERNAL_TOKEN` | **yes** | — | Shared secret, both directions. Must equal backend-spring's `INTERNAL_TOKEN` |
@@ -93,7 +93,7 @@ exits the process with a message naming the variable and the rule it broke
 | `EMBEDDING_DIMENSIONS` | no | `1536` | Must equal `complaints.embedding vector(<dim>)` in Spring's V6 |
 | `EMBEDDING_TASK_TYPE` | no | `SEMANTIC_SIMILARITY` | |
 | `EMBEDDING_TIMEOUT_MS` | no | `10000` | |
-| `MATCH_SIMILARITY_THRESHOLD` | no | `0.75` | Cosine cut-off for join-vs-create. Empirical — tune in Phase 8 |
+| `MATCH_SIMILARITY_THRESHOLD` | no | `0.84` | Cosine cut-off for join-vs-create. Chosen from the evaluation — docs/matching-evaluation.md §4 |
 | `PROCESSING_STALE_SECONDS` | no | `45` | Stale-claim window. Must match Spring's `MATCHING_PROCESSING_STALE_SECONDS` |
 
 ---

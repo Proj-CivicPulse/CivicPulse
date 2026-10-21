@@ -10,19 +10,12 @@
 # and validates every JPA entity against the result. It therefore needs a
 # reachable database, and by default uses whatever your .env points at.
 #
-# ⚠️ That means `./mvnw verify` runs migrations against your real Neon
-# database. Migrations are idempotent, so this is safe — but everyone on the
-# team sharing one branch will contend for the same schema, and each run
-# wakes the compute.
+# ⚠️ That means `./mvnw test` runs migrations against whatever DB_URL is.
+# Keep .env pointed at the local Docker database, never production.
 #
-# The clean fix, and the reason Neon is a good choice here: give each
-# developer (and CI) their own BRANCH. In the Neon Console → Branches →
-# "New branch" from main; it is a copy-on-write clone, instant and free on
-# the starter plan. Then point DB_* in your .env at that branch.
-#
-# TEST_DB_* below lets you aim the tests somewhere different from the app
-# without touching .env — useful for CI, which should always use a
-# throwaway branch.
+# TEST_DB_* below aims the tests at a different database from the app
+# without touching .env — a throwaway container is best, so test rows never
+# mix with dev data (docs/railway-database.md §7). CI should always use one.
 
 spring:
   datasource:

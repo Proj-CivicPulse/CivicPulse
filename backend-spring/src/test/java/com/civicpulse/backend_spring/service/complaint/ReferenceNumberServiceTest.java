@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * rolled-back submission gives its number back rather than burning it.
  *
  * Concurrency is deliberately NOT tested with threads. A racing test against a
- * shared Neon branch is flaky, and the real guarantee is the pair of
+ * shared database is flaky, and the real guarantee is the pair of
  * uq_complaints_reference_no plus the atomic upsert — not a test that happens
  * to interleave the right way on one run.
  */

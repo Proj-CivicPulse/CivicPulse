@@ -12,9 +12,8 @@ rebuild themselves — Spring's Flyway migrations (V1–V21) run on first start.
 Verified on 2026-10-21 against the image below: all 21 migrations apply to an
 empty database, and the full test suite passes on it (229 Spring, 49 Node).
 
-**What does not:** the existing complaints, incidents and user accounts stay in
-the old Neon project (unreadable until its quota resets). They are seed data;
-see step 6.
+**What does not:** the old complaints, incidents and user accounts were not
+carried over. They were seed data; step 6 recreates them.
 
 ---
 
@@ -51,8 +50,8 @@ In the Railway project that already holds backend-spring and backend-node:
 ## 3. Point the backends at it
 
 Railway's private network host is `<service-name>.railway.internal`. No
-`sslmode` — that traffic never leaves Railway's network, and Neon's
-`sslmode=require` would fail against this server.
+`sslmode` — that traffic never leaves Railway's network, and
+`sslmode=require` would fail against this server (it does not offer SSL).
 
 **backend-spring** variables:
 
@@ -61,7 +60,7 @@ Railway's private network host is `<service-name>.railway.internal`. No
 | `DB_URL` | `jdbc:postgresql://civicpulse-db.railway.internal:5432/civicpulse` |
 | `DB_USERNAME` | `civicpulse` |
 | `DB_PASSWORD` | the password from step 2 |
-| `DB_MIGRATION_URL`, `DB_MIGRATION_USERNAME`, `DB_MIGRATION_PASSWORD` | **delete** if set — they were for Neon's pooler and would point Flyway at Neon |
+| `DB_MIGRATION_URL`, `DB_MIGRATION_USERNAME`, `DB_MIGRATION_PASSWORD` | leave **unset** — only for a transaction-pooling host; set, they point Flyway elsewhere |
 
 **backend-node** variable:
 
@@ -92,8 +91,8 @@ citizen), then promote the account — see "Creating an officer" in
 
 ## 6. Seed demo data
 
-The old Neon data was itself this seed, so re-running it recreates the same
-kind of dataset. From the repo root, after `railway link` and
+The data before the move was itself this seed, so re-running it recreates the
+same kind of dataset — now with one real problem per hotspot. From the repo root, after `railway link` and
 `railway ssh keys add`:
 
 ```bash
@@ -137,8 +136,3 @@ TEST_DATABASE_URL=postgres://postgres:localtest@localhost:55432/civicpulse npm t
 Without `TEST_DB_URL` the suite still uses `DB_URL` — i.e. whatever your
 `.env` points at. Keep `.env` pointed at a local or test database, never at
 Railway's production one.
-
-## 8. The old Neon project
-
-Leave it until the move is confirmed. When its quota resets you can
-`pg_dump` the old complaints if anyone wants them; otherwise delete it.

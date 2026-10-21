@@ -1,6 +1,6 @@
 # Matching Evaluation — Phase 7
 
-**Status:** first evaluation, 2026-10-14. Post-midsem roadmap §17.
+**Status:** first evaluation, 2026-10-14. Phase 7 in [roadmap.md](roadmap.md).
 **Question:** does the semantic matcher group complaints into the right
 incidents, and is `MATCH_SIMILARITY_THRESHOLD = 0.75` the right cut-off?
 
@@ -12,10 +12,9 @@ only around 0.84–0.87, and even there the two distributions overlap. On real
 production joins, the cheapest large win is not the threshold but **distance**:
 every same-problem join was within 202 m, and a 500 m check on the matched
 member removes 6 of 22 wrong joins while losing **none** of 27 right ones. That
-check is now built (`MATCH_MAX_SIBLING_DISTANCE_M = 500`). The threshold stays
-at 0.75 pending a team decision, because raising it trades real recall for
-precision in a way the evidence does not settle — the numbers for that choice
-are in §4.
+check is now built (`MATCH_MAX_SIBLING_DISTANCE_M = 500`). **The threshold is
+now 0.84** (decided 2026-10-21, §4): the recall it appeared to cost on real
+joins came from seed texts that were themselves different problems.
 
 ---
 
@@ -165,10 +164,10 @@ the distance check (`refusedByDistance` in the Node log).
 **Takes effect on the next backend-node deploy** — Railway does not pin this
 variable, so the code default applies.
 
-### OPEN — the threshold (team decision)
+### DECIDED — the threshold is 0.84 (2026-10-21)
 
-Kept at **0.75** for now. The two datasets disagree about what raising it
-costs:
+It was kept at 0.75 on 2026-10-14 because the two datasets disagreed about
+what raising it costs:
 
 - On the **authored** set, 0.75 is no filter at all and 0.85 is best by
   recall-weighted F2 (0.883 vs 0.652).
@@ -184,6 +183,29 @@ evidence points to **0.84 + 500 m** (real precision 95%; authored F2 0.852).
 Either way it is a Railway variable change (`MATCH_SIMILARITY_THRESHOLD`), no
 code. Real resident complaints, once they exist, are what will settle it:
 re-run `npm run eval:production-joins` after labelling a fresh sample.
+
+**What settled it.** Recall-weighted F2 averaged over both datasets, with the
+distance check on:
+
+| Threshold | Real joins F2 | Authored F2 | Mean |
+|---|---|---|---|
+| 0.75 | 0.894 | 0.652 | 0.773 |
+| 0.80 | 0.804 | 0.700 | 0.752 |
+| **0.84** | 0.709 | **0.852** | **0.780** |
+| 0.85 | 0.574 | 0.883 | 0.729 |
+
+0.84 is best on the mean and best on real-join F1 (0.783 vs 0.771), and cuts
+the wrong real joins kept from 16 to 1. Then the cost side was checked. The
+"right joins lost" were all seed reports, and the seed script built each
+hotspot by rotating four **different** faults of one category: a leak, no
+supply, a burst main, low pressure. By the label rule they are not one
+incident, so 0.84 refusing them is correct. Re-seeding with one real problem
+per hotspot (the authored set's four voices) at 0.84 put 33 of 36 hotspots in
+one incident, and the 3 that split did so at a ward boundary, not on
+similarity. The seed now does this.
+
+Kept: the distance check, single-linkage, and the preference for
+over-grouping as a tie-breaker. Code-mixed text remains the weakness (below).
 
 ### KEPT — single-linkage
 

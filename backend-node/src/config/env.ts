@@ -53,9 +53,8 @@ const EnvSchema = z.object({
     LOG_LEVEL: z
         .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
         .default('info'),
-    // Ceiling on the /health database probe. Defaults high enough to absorb
-    // a Neon cold start (its compute suspends when idle); lower it for a
-    // local database.
+    // Ceiling on the /health database probe. Defaults high enough for a slow
+    // first connection after a quiet period; lower it for a local database.
     HEALTHCHECK_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
 
     // --- Phase 2: embeddings + incident matching ---------------------------
@@ -94,7 +93,8 @@ const EnvSchema = z.object({
 
     // Cosine-similarity cut-off for joining an existing incident vs. starting a
     // new one. Empirical — tune it in Phase 8; every score is logged regardless.
-    MATCH_SIMILARITY_THRESHOLD: z.coerce.number().min(0).max(1).default(0.75),
+    // 0.84 since 2026-10-21 — docs/matching-evaluation.md §4.
+    MATCH_SIMILARITY_THRESHOLD: z.coerce.number().min(0).max(1).default(0.84),
 
     // Post-hoc distance check on a semantic match: a candidate incident is
     // accepted only if its most similar member lies within this many metres of
@@ -104,7 +104,7 @@ const EnvSchema = z.object({
     // 22 wrong joins while losing none of 27 right ones.
     MATCH_MAX_SIBLING_DISTANCE_M: z.coerce.number().min(0).default(500),
 
-    // --- Officer Copilot (docs/next-phases-plan.md, Phase A) ---
+    // --- Officer Copilot (docs/roadmap.md, Phase 12) ---
     // Which model answers. Unset/none: the Copilot is off (503
     // COPILOT_UNAVAILABLE) and everything else runs normally.
     //   ollama    — local, free; needs Ollama running at OLLAMA_BASE_URL

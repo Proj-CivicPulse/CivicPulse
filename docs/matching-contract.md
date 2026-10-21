@@ -42,7 +42,7 @@ WHERE i.ward_id  = $2
 ```
 
 Then, among those candidates, `top_similarity >= MATCH_SIMILARITY_THRESHOLD`
-(0.75) decides — **and** the incident's most similar member must lie within
+(0.84) decides — **and** the incident's most similar member must lie within
 `MATCH_MAX_SIBLING_DISTANCE_M` (500 m) of the new complaint. Score is
 **single-linkage**: an incident scores the MAX similarity to any one of its
 member complaints.
@@ -145,7 +145,7 @@ matcher.
 | **Why** | It is the only linkage rule that yields an explanation an officer can check. "Matched complaint #4821 at 0.89" is a row they can open; an average or centroid score corresponds to nothing they can look at. Explainability is a headline claim of this project, not a nice-to-have. |
 | **Accepted risk** | A cluster's *diameter* can exceed the threshold that admitted each member. Reachable in three complaints. Worst realistic case: one incident that should have been two, which an officer sees as one over-broad item rather than as a missing one. |
 | **Why that risk is tolerable now** | The failure is visible and recoverable — an officer looking at the incident sees unrelated reports in it. The opposite failure (two incidents that should have been one) is invisible, and is the failure the whole feature exists to prevent. Given a forced choice, over-grouping is the safer error. |
-| **Guardrails already in place** | ward + category + status hard pre-filters; threshold 0.75; every candidate score logged above *and* below threshold, so any chain is reconstructable after the fact. |
+| **Guardrails already in place** | ward + category + status hard pre-filters; threshold 0.84 (0.75 until 2026-10-21); a 500 m distance check; every candidate score logged above *and* below threshold, so any chain is reconstructable after the fact. |
 | **Revisit trigger** | Phase 8 labelling shows chained clusters an officer calls wrong, OR an incident exceeds ~25 members with low pairwise coherence, OR an officer reports an incident containing unrelated problems. |
 | **First mitigation to try** | A bounded cluster *diameter*: admit a candidate only if its similarity to the incident's WORST-matching member clears a lower floor (say 0.55). This caps chaining while keeping the clickable top-sibling explanation intact — unlike complete-linkage, which discards it. |
 | **Do NOT** | switch to average or centroid linkage without labelled evidence. Both cost the explanation and centroid similarity decays as a legitimate long-running incident broadens. |
@@ -191,12 +191,13 @@ These need labelled data, not a decision.
    explainability that single-linkage buys.
 
 3. **Is 0.75 the right threshold?**
-   **Evaluated (2026-10-14); the choice is a team decision.** On a labelled set
-   with three problems per ward + category, 0.75 merges everything — separation
-   appears only at 0.84–0.87. On real joins with the distance check, 0.84
-   removes 21 of 22 wrong joins but loses a third of right ones. Kept at 0.75
-   (over-grouping is the safer error, §4); 0.84 is the evidenced alternative if
-   precision is preferred. Full numbers: [matching-evaluation.md](matching-evaluation.md) §4.
+   **No — DECIDED 2026-10-21: 0.84.** On a labelled set with three problems
+   per ward + category, 0.75 merges everything; separation appears only at
+   0.84–0.87. The real joins that 0.84 would have refused turned out to be
+   seed texts that describe *different* faults (a leak vs no supply), so they
+   were not right joins to protect. §4's preference for over-grouping still
+   holds as a tie-breaker; at 0.75 it was not over-grouping but no filter at
+   all. Full reasoning: [matching-evaluation.md](matching-evaluation.md) §4.
 
 4. **Should the ingestion path share the matcher's assumptions?**
    Externally ingested complaints go through the same `ComplaintCreatedEvent`

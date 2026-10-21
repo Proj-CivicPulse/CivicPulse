@@ -4,7 +4,7 @@ What the category registry contains, how it is used, and what it does not yet
 decide. The companion to [ward-data.md](ward-data.md) for the other reference
 dataset every aggregate depends on.
 
-**Measured against the live Neon database on 2026-10-13** (Flyway head V18,
+**Measured against the then-production database on 2026-10-13** (Flyway head V18,
 167 complaints, 31 incidents). Every count below is a query result, not a
 recollection; the queries are at the end so the next audit can re-run them.
 

@@ -53,14 +53,15 @@ it.
 
 ```bash
 cd backend-spring
-cp .env.example .env      # paste your Neon DB_URL; set JWT_SECRET (≥32 chars)
+cp .env.example .env      # DB_* already match the local Docker database; set JWT_SECRET (≥32 chars)
 ./mvnw spring-boot:run    # http://localhost:8080
 ```
 
 No local Maven install needed — the wrapper downloads it on first run.
-The database is **Neon** (hosted); see **Database (Neon)** in the
-[root README](../README.md). On first run Flyway provisions everything: the
-`pgvector` extension, every table, and seed wards/departments.
+The database is PostgreSQL 16 + pgvector + PostGIS (locally in Docker, in
+production on Railway); see **Database** in the [root README](../README.md).
+On first run Flyway provisions everything: both extensions, every table, and
+the wards, categories and departments.
 
 For semantic matching to actually run you also need `INTERNAL_TOKEN` set here
 **and** to the same value in `backend-node/.env`, with backend-node running.
@@ -86,13 +87,13 @@ locally, absent in production where the platform injects real env vars.
 
 | Var | Required | Default | Notes |
 |---|---|---|---|
-| `DB_URL` | **yes** | — | **JDBC** URL: `jdbc:postgresql://HOST/neondb?sslmode=require`. No credentials in it, and drop Neon's `channel_binding` (libpq-only). **Not** the same format as backend-node's `DATABASE_URL`. |
+| `DB_URL` | **yes** | — | **JDBC** URL, e.g. `jdbc:postgresql://localhost:55432/civicpulse`. No credentials in it. **Not** the same format as backend-node's `DATABASE_URL`. |
 | `DB_USERNAME` | **yes** | — | |
 | `DB_PASSWORD` | **yes** | — | |
 | `SERVER_PORT` | no | `8080` | |
 | `FRONTEND_ORIGIN` | no | `http://localhost:5173` | Single CORS origin, no wildcards |
 | `COOKIE_SECURE` | no | `false` | **Must be `true` over HTTPS** |
-| `HEALTH_TIMEOUT_SECONDS` | no | `10` | Ceiling on the `/health` probe. Sized for a Neon cold start; lower for a local DB. |
+| `HEALTH_TIMEOUT_SECONDS` | no | `10` | Ceiling on the `/health` probe; lower for a local DB. |
 | `JWT_SECRET` | **yes** | — | **≥32 characters** — startup fails otherwise. `openssl rand -base64 48` |
 | `JWT_ACCESS_EXPIRATION` | no | `900000` (15 min) | ms |
 | `JWT_REFRESH_EXPIRATION` | no | `604800000` (7 days) | ms |
@@ -291,8 +292,9 @@ Full details and error codes: [`docs/api-contract.md`](../docs/api-contract.md).
 Flyway owns the schema; Hibernate only validates it.
 
 - Migrations: `src/main/resources/db/migration/V*__*.sql`
-- `V1` also runs `CREATE EXTENSION IF NOT EXISTS vector`, so an empty Neon
-  database is fully provisioned by the migrations alone.
+- `V1` runs `CREATE EXTENSION IF NOT EXISTS vector` and `V13` creates
+  `postgis`, so an empty database built from `infra/postgres` is fully
+  provisioned by the migrations alone.
 - `ddl-auto: validate` — Hibernate creates nothing and fails startup if the
   entities have drifted from the migrations. `./mvnw verify` is what catches
   that drift.
@@ -313,14 +315,12 @@ The vector dimension is fixed at **1536** to match Gemini
 `gemini-embedding-001` at `outputDimensionality: 1536`. Changing it means
 re-embedding every complaint, so it is a deliberate decision, not a knob.
 
-Reset the schema (Neon Console → SQL Editor), then restart this service:
+Reset your local schema, then restart this service:
 
-```sql
-DROP SCHEMA public CASCADE; CREATE SCHEMA public;
+```bash
+docker rm -f civicpulse-pg && docker volume rm civicpulse-pgdata
+# then the `docker run` from the root README
 ```
-
-Prefer doing that on a **Neon branch** rather than shared data — see
-**Branches** in the root README.
 
 ### Seeding demo data
 
@@ -378,10 +378,12 @@ scores drift with no writes at all. It does what a scheduled refresh would.
 
 Self-service registration always creates a **citizen** — there is no public
 path to an officer account, and no seeded credentials in the repo. Register
-normally, then promote in the Neon SQL Editor (or any `psql`):
+normally, then promote the account (locally; for production run the same SQL
+through `railway ssh`, docs/railway-database.md):
 
-```sql
-UPDATE users SET role='OFFICER' WHERE email='you@example.com';
+```bash
+docker exec civicpulse-pg psql -U postgres -d civicpulse \
+  -c "UPDATE users SET role='OFFICER' WHERE email='you@example.com';"
 ```
 
 The change takes effect on the user's next login (the role is baked into

@@ -11,9 +11,9 @@ import org.springframework.test.context.ActiveProfiles;
  * check that catches entity/migration drift.
  *
  * Requires a reachable database. By default it uses whatever your .env
- * points at — which is the shared Neon database. Prefer aiming it at your
- * own Neon branch via TEST_DB_URL / TEST_DB_USERNAME / TEST_DB_PASSWORD;
- * see src/test/resources/application-test.yaml.
+ * points at (locally, the Docker database). Aim it at a throwaway one via
+ * TEST_DB_URL / TEST_DB_USERNAME / TEST_DB_PASSWORD; see
+ * src/test/resources/application-test.yaml.
  */
 @SpringBootTest
 @ActiveProfiles("test")

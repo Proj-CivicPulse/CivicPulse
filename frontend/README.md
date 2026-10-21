@@ -60,9 +60,10 @@ is empty and correct. To get something worth looking at:
 1. **Seed** — `cd backend-spring && node scripts/seed-dev-data.mjs` (run
    `backend-node` alongside it for real semantic grouping).
 2. **Make yourself an officer** — registration always creates a *citizen*. Sign
-   up, then in the Neon SQL Editor:
-   ```sql
-   UPDATE users SET role='OFFICER' WHERE email='you@example.com';
+   up, then:
+   ```bash
+   docker exec civicpulse-pg psql -U postgres -d civicpulse \
+     -c "UPDATE users SET role='OFFICER' WHERE email='you@example.com';"
    ```
    Log out and back in; the role is baked into the token.
 

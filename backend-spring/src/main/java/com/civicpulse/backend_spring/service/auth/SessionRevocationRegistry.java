@@ -21,8 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * compromise is noticed.
  *
  * WHY IN MEMORY: the alternative is a database read on every single request,
- * which is a real cost against a Neon instance that suspends when idle (see the
- * Hikari settings in application.yaml). Entries are needed only until the access
+ * which is a real cost for a check that almost always says "not revoked".
+ * Entries are needed only until the access
  * tokens they cover would have expired anyway, so each one lives for exactly one
  * access-token lifetime and the map stays bounded by "sessions revoked in the
  * last 15 minutes" — a handful of entries, not a cache.

@@ -25,7 +25,7 @@ cmds = ["npm run build"]
 # the platform and the app: Railway's SIGTERM is reported by npm as a failed
 # command ("npm error signal SIGTERM") and the graceful shutdown in
 # src/index.ts never completes, so the Postgres pool is never closed and the
-# connections linger until Neon times them out. Running node directly makes it
+# connections linger until the database times them out. Running node directly makes it
 # PID 1, so it receives SIGTERM itself, drains in-flight requests, closes the
 # pool, and exits 0.
 cmd = "node dist/index.js"
