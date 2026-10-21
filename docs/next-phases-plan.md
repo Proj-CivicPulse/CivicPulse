@@ -14,13 +14,13 @@ person rather than code.
 
 | # | Action | Owner | Why it matters |
 |---|---|---|---|
-| O1 | Push `e6d969c`, `673e9fe` | team | Explorer UI + matching evaluation are local only |
-| O2 | Deploy backend-spring **and** frontend together | team | `GET /incidents` changed shape in `417759f` |
+| O1 | ✅ Push `e6d969c`, `673e9fe` | team | Done 2026-10-21 |
+| O2 | ✅ Deploy backend-spring **and** frontend together | team | Done 2026-10-21 — Explorer and `/copilot/query` verified live |
 | O3 | Decide `MATCH_SIMILARITY_THRESHOLD` (0.75 vs 0.84) | team | Railway variable; evidence in matching-evaluation.md §4 |
 | O4 | Review the 30 hand labels in `backend-node/eval/production-joins-labelled.json` | an officer / Devansh | Single labeller today |
 | O5 | Review the Explorer UI and the new `--density-*` tokens | Devansh | It is his design system |
-| O6 | ~~Provision `ANTHROPIC_API_KEY`~~ → choose `COPILOT_PROVIDER` (ollama / gemini / anthropic) | Manya | Model is now swappable; see §2 status |
-| **O7** | **Move the database to Railway Postgres** — the Neon free quota ran out on 2026-10-20 and the app is down | team | Step-by-step: [railway-database.md](railway-database.md) |
+| O6 | ✅ Choose `COPILOT_PROVIDER` | team | `gemini` (`gemini-3.8-flash`) on Railway and locally, 2026-10-21; Manya may revisit |
+| O7 | ✅ Move the database to Railway Postgres | team | Done 2026-10-21 and reseeded with demo data; [railway-database.md](railway-database.md) |
 
 ---
 
