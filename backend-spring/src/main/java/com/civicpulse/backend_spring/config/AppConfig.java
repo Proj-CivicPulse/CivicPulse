@@ -55,4 +55,21 @@ public class AppConfig {
                 .requestFactory(factory)
                 .build();
     }
+
+    /**
+     * The Copilot's client to backend-node. Its own bean because its timeout is
+     * the opposite of the matching trigger's: an officer is waiting for a model
+     * answer, which takes seconds, so this waits; the trigger must not.
+     */
+    @Bean
+    public RestClient copilotRestClient() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofMillis(appProperties.getHttpConnectTimeoutMs()));
+        factory.setReadTimeout(Duration.ofMillis(appProperties.getCopilot().getReadTimeoutMs()));
+
+        return RestClient.builder()
+                .baseUrl(appProperties.getMatching().getNodeBaseUrl())
+                .requestFactory(factory)
+                .build();
+    }
 }

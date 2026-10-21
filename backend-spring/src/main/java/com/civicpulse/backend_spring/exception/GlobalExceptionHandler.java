@@ -63,6 +63,11 @@ public class GlobalExceptionHandler {
                 .body(new ApiError(ErrorCode.RATE_LIMITED, ex.getMessage()));
     }
 
+    @ExceptionHandler(CopilotException.class)
+    public ResponseEntity<ApiError> handleCopilot(CopilotException ex) {
+        return build(ex.getStatus(), ex.getCode(), ex.getMessage());
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleResourceNotFound(ResourceNotFoundException ex) {
         return build(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, ex.getMessage());

@@ -134,6 +134,15 @@ app:
   # Phase 2 semantic matching. The trigger to backend-node is async and fired
   # after the complaint commits, so a slow or dead Node never delays the
   # citizen's response.
+  # Officer Copilot: Spring builds the grounding packet and asks backend-node
+  # (at matching.node-base-url) to answer from it. Limits are per officer.
+  copilot:
+    read-timeout-ms: ${COPILOT_READ_TIMEOUT_MS:60000}
+    max-questions-per-hour: ${COPILOT_MAX_QUESTIONS_PER_HOUR:30}
+    packet-incidents: ${COPILOT_PACKET_INCIDENTS:20}
+    packet-wards: ${COPILOT_PACKET_WARDS:10}
+    trend-days: ${COPILOT_TREND_DAYS:14}
+
   matching:
     node-base-url: ${NODE_BASE_URL:http://localhost:3001}
     process-timeout-ms: ${MATCHING_PROCESS_TIMEOUT_MS:2500}

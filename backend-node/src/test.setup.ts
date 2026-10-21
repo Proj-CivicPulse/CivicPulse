@@ -16,3 +16,8 @@ process.env.EMBEDDING_API_KEY ??= 'test-embedding-key';
 process.env.EMBEDDING_DIMENSIONS ??= '4';
 process.env.MATCH_SIMILARITY_THRESHOLD ??= '0.75';
 process.env.PROCESSING_STALE_SECONDS ??= '45';
+// Pinned EMPTY, not defaulted: a developer's real key in .env must never reach
+// a unit test. dotenv leaves keys already present (even empty) untouched, and
+// env.ts reads an empty key as "not configured".
+process.env.ANTHROPIC_API_KEY = '';
+process.env.COPILOT_PROVIDER = 'none';

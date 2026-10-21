@@ -28,6 +28,12 @@ public final class ErrorCode {
      */
     public static final String RATE_LIMITED = "RATE_LIMITED";
     public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
+    /** The Copilot has no model key configured (backend-node answers the same). */
+    public static final String COPILOT_UNAVAILABLE = "COPILOT_UNAVAILABLE";
+    /** The model provider is rate-limiting the Copilot; try again shortly. */
+    public static final String COPILOT_BUSY = "COPILOT_BUSY";
+    /** backend-node or the model provider failed to produce an answer. */
+    public static final String COPILOT_UPSTREAM_ERROR = "COPILOT_UPSTREAM_ERROR";
 
     private ErrorCode() {
     }

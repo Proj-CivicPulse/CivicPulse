@@ -154,6 +154,11 @@ public class SecurityConfig {
                         .requestMatchers("/incidents/**", "/dashboard/**", "/analytics/**")
                                 .hasRole("OFFICER")
 
+                        // The Copilot reads the same officer-only data the
+                        // dashboard does, and every question is a metered
+                        // model call — officers only, rate-limited per officer.
+                        .requestMatchers("/copilot/**").hasRole("OFFICER")
+
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(

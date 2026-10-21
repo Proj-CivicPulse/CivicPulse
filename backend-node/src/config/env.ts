@@ -104,6 +104,35 @@ const EnvSchema = z.object({
     // 22 wrong joins while losing none of 27 right ones.
     MATCH_MAX_SIBLING_DISTANCE_M: z.coerce.number().min(0).default(500),
 
+    // --- Officer Copilot (docs/next-phases-plan.md, Phase A) ---
+    // Which model answers. Unset/none: the Copilot is off (503
+    // COPILOT_UNAVAILABLE) and everything else runs normally.
+    //   ollama    — local, free; needs Ollama running at OLLAMA_BASE_URL
+    //   gemini    — Google; GEMINI_API_KEY or the embedding key; billed per call
+    //   anthropic — Claude; needs ANTHROPIC_API_KEY; billed per call
+    COPILOT_PROVIDER: z.enum(['none', 'ollama', 'gemini', 'anthropic']).default('none'),
+    OLLAMA_BASE_URL: z.string().url().default('http://localhost:11434'),
+    // Small enough for a laptop, and good at following a JSON schema.
+    COPILOT_OLLAMA_MODEL: z.string().min(1).default('qwen2.5:7b'),
+    COPILOT_GEMINI_MODEL: z.string().min(1).default('gemini-2.5-flash'),
+    GEMINI_API_KEY: z
+        .string()
+        .optional()
+        .transform((v) => (v && v.trim().length > 0 ? v.trim() : undefined)),
+    // An empty value counts as unset, so a blank line in .env cannot
+    // masquerade as a key.
+    ANTHROPIC_API_KEY: z
+        .string()
+        .optional()
+        .transform((v) => (v && v.trim().length > 0 ? v.trim() : undefined)),
+    COPILOT_MODEL: z.string().min(1).default('claude-opus-5-5'),
+    // Grounded Q&A over a small packet: medium depth is the measured-cost
+    // starting point; raise only if the golden-question eval shows headroom.
+    COPILOT_EFFORT: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).default('medium'),
+    COPILOT_MAX_TOKENS: z.coerce.number().int().positive().max(16000).default(8000),
+    // Must stay below backend-spring's copilot read timeout.
+    COPILOT_TIMEOUT_MS: z.coerce.number().int().positive().default(45_000),
+
     // A PROCESSING claim older than this is considered abandoned (Node crashed
     // mid-run) and may be re-taken. MUST match backend-spring's
     // app.matching.processing-stale-seconds — Node's CAS is the authority, the

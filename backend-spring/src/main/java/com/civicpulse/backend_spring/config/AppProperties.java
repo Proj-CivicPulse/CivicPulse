@@ -89,6 +89,42 @@ public class AppProperties {
 
     private final Priority priority = new Priority();
 
+    private final Copilot copilot = new Copilot();
+
+    /**
+     * The officer Copilot (docs/next-phases-plan.md, Phase A). Spring builds the
+     * grounding packet and calls backend-node's {@code /internal/copilot/answer};
+     * the base URL is {@link Matching#getNodeBaseUrl()} — one Node, one address.
+     */
+    @Getter
+    @Setter
+    public static class Copilot {
+
+        /**
+         * Read timeout for the Node call. Above backend-node's
+         * COPILOT_TIMEOUT_MS (45 s) so Node reports its own timeout as a clean
+         * error instead of this side cutting it off mid-answer.
+         */
+        @Positive
+        private int readTimeoutMs = 60_000;
+
+        /** Questions per officer per rolling hour — each one is a metered model call. */
+        @Positive
+        private int maxQuestionsPerHour = 30;
+
+        /** Active incidents in the packet, most urgent first. */
+        @Positive
+        private int packetIncidents = 20;
+
+        /** Wards in a city-scope packet, busiest first. */
+        @Positive
+        private int packetWards = 10;
+
+        /** Days of the reported trend in the packet. */
+        @Positive
+        private int trendDays = 14;
+    }
+
     /**
      * Keeping stored priority scores honest as time passes.
      *

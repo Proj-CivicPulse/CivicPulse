@@ -290,3 +290,24 @@ was always correct UTC, so a uniform shift would corrupt exactly the rows that
 were right. The discrepancy is at most a few hours against a formula whose
 shortest meaningful window is 24 hours, so it changes no score materially.
 Treat absolute timestamps on pre-2026-09-19 rows as approximate.
+
+---
+
+## 5. Who owns the officer Copilot?
+
+- **Decision (2026-10-20):** **backend-spring owns the request; backend-node
+  owns only the model call.** Officers call Spring's `POST /copilot/query`;
+  Spring checks the session and role, builds the grounding packet from its own
+  services, calls Node's `POST /internal/copilot/answer`, and drops any
+  citation it did not put in the packet before replying.
+- **Why not Node alone (the original plan):** Node has no sessions, and the
+  planned request carried `officer_id` in its body — an identity the caller
+  typed. Sessions, roles and rate limits already live in Spring; a second
+  place deciding who an officer is would be a second answer to that question.
+- **Why the packet comes from Spring:** the numbers must mean what the Explorer
+  means — active, high priority, the reported-at window. Spring serves those;
+  a second implementation in Node would be a second answer.
+- **The model is swappable** (`COPILOT_PROVIDER`: ollama, gemini, anthropic,
+  none). Safety does not depend on which: the citation check is Spring's.
+- Contract: [api-contract.md](api-contract.md), "Copilot". Plan:
+  [next-phases-plan.md](next-phases-plan.md) §2.

@@ -185,8 +185,10 @@ All require the `X-Internal-Token` header, and **fail closed** when
       `?force` / `?reembed`. Requires `X-Internal-Token`. Driven by Spring's
       async trigger and its `MatchReconciliationJob`.
 
-### Copilot — Phase 6
-- [ ] `POST /copilot/query` — *route exists, body validated, returns 501*
+### Copilot — Phase A (docs/next-phases-plan.md)
+- [x] Spring `POST /copilot/query` — officer; builds the grounding packet, checks citations, 30 questions/officer/hour
+- [x] Node `POST /internal/copilot/answer` — `X-Internal-Token`; model chosen by `COPILOT_PROVIDER` (ollama | gemini | anthropic | none)
+- ~~Node `POST /copilot/query`~~ — removed: it took `officer_id` from the body on a service with no sessions
 
 ### Hotspots — Phase 7, conditional
 - [ ] `GET /hotspots/predict` *(proxies to `ml-hotspots`)* — *route exists, returns 501*

@@ -766,17 +766,66 @@ Ward metadata for candidate filtering.
 
 ---
 
-## Browser → Node
+## Node-served routes (and where the Copilot went)
 
-### `POST /copilot/query` — Phase 6
-```jsonc
-// request
-{ "officer_id": "7", "query": "what's urgent in Ward 17", "ward_id": "3" }
-// 200
-{ "answer": "…", "sources": ["incident:45", "incident:52"] }
+### Copilot — moved to Spring (2026-10-20)
+
+There is no browser-facing Copilot route on Node any more. The old stub took
+`officer_id` from the request body — on a service with no sessions, that is
+whoever the caller says they are. The Copilot is now:
+
+```text
+Browser ─POST /api/core/copilot/query─> Spring (officer session) ─POST /internal/copilot/answer─> Node ─> model
 ```
-Currently **501**. Body validation is already enforced, so a malformed
-request gets 400 `VALIDATION_ERROR` before the 501.
+
+#### `POST /copilot/query` (Spring, officer)
+
+```jsonc
+// request — scope fields are the Explorer's current filters; all optional
+{ "question": "what's urgent in this ward?", "wardId": "538", "category": "pothole",
+  "from": "2026-09-21T00:00:00Z", "to": "2026-10-21T00:00:00Z" }
+
+// 200
+{
+  "answer": "Two pothole incidents are high priority …",
+  "answerable": true,       // false: the data in scope cannot answer it
+  "refused": false,         // true: the model declined
+  "ungrounded": false,      // true: an answer, but no valid citation — show a warning
+  "droppedCitations": 0,    // citations the model invented; Spring removed them
+  "sources": [{ "id": "incident:45", "kind": "incident", "label": "Pothole · 5th Cross Rd", "targetId": "45" }],
+  "scope": { "wardId": "538", "wardName": "Jnana Bharathi", "category": "pothole",
+             "categoryName": "Pothole / road damage", "from": "…", "to": "…" },
+  "model": "qwen2.5:7b",
+  "generatedAt": "…Z"
+}
+```
+
+| Status | Code | Meaning |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | blank question, > 1000 chars, bad window |
+| 404 | `NOT_FOUND` | unknown or retired ward |
+| 429 | `RATE_LIMITED` | over `COPILOT_MAX_QUESTIONS_PER_HOUR` (30) for this officer; `Retry-After` set |
+| 503 | `COPILOT_UNAVAILABLE` | no model configured (`COPILOT_PROVIDER=none`) or its key is rejected |
+| 503 | `COPILOT_BUSY` | the model provider is rate-limiting |
+| 502 | `COPILOT_UPSTREAM_ERROR` | Node or the model failed, or the answer was unreadable |
+
+**`sources` is the trust boundary.** Spring builds the grounding packet from the
+same services as the Explorer (`CopilotPacketBuilder`), records every id it put
+in, and drops any citation not among them. Resident complaint text is not in
+the packet — only incident-level fields.
+
+#### `POST /internal/copilot/answer` (Node, `X-Internal-Token`)
+
+```jsonc
+// request (from Spring)
+{ "question": "…", "packet": { /* Spring's grounding packet */ } }
+// 200
+{ "answerable": true, "answer": "…", "citations": ["incident:45"], "model": "…", "refused": false }
+```
+
+Which model answers is `COPILOT_PROVIDER` on backend-node: `ollama` (local,
+free), `gemini` (Google key, billed), `anthropic` (Claude, billed), or `none`.
+Exempt from the per-IP limiter — the per-officer limit is in Spring.
 
 ### `GET /hotspots/predict` — Phase 7, conditional
 Currently **501**.

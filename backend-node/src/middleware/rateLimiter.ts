@@ -3,6 +3,8 @@ import { rateLimit } from 'express-rate-limit';
 
 /** `POST /complaints/:id/process` — the service-to-service matching trigger. */
 const INTERNAL_PROCESS_PATH = /^\/complaints\/[^/]+\/process$/;
+/** `POST /internal/copilot/answer` — called by backend-spring for every officer's question. */
+const INTERNAL_COPILOT_PATH = '/internal/copilot/answer';
 
 /**
  * Routes the public per-IP budget must not apply to.
@@ -21,6 +23,11 @@ const INTERNAL_PROCESS_PATH = /^\/complaints\/[^/]+\/process$/;
  */
 function isExempt(req: Request): boolean {
     if (req.method === 'GET' && req.path === '/health') return true;
+    // The Copilot call is the same shape: one caller (Spring), gated by
+    // internalAuth, and limited per OFFICER in Spring — the only place that
+    // knows who is asking. A per-IP budget here would pool every officer's
+    // questions into one bucket keyed on Spring's address.
+    if (req.method === 'POST' && req.path === INTERNAL_COPILOT_PATH) return true;
     return req.method === 'POST' && INTERNAL_PROCESS_PATH.test(req.path);
 }
 
@@ -28,10 +35,6 @@ function isExempt(req: Request): boolean {
  * General limiter applied to the whole API surface. `trust proxy` is set
  * to 1 in app.ts so this keys on the real client IP, not the Vite/nginx
  * proxy's address.
- *
- * TODO (Phase 6): POST /copilot/query needs its OWN, much stricter limiter
- * mounted on that route — each call fans out to an external LLM, which is
- * slow and metered. The general budget here is far too generous for it.
  */
 export const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
