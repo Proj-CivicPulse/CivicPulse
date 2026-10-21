@@ -11,6 +11,7 @@ import PriorityChip from '@/components/ui/PriorityChip';
 import Skeleton from '@/components/ui/Skeleton';
 import StatusChip from '@/components/ui/StatusChip';
 import { incidentName } from '@/components/explorer/IncidentList';
+import SuggestedAction from './SuggestedAction';
 import styles from './IncidentDetail.module.css';
 
 interface Props {
@@ -139,6 +140,8 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
                     </div>
                 )}
             </dl>
+
+            <SuggestedAction incidentId={incident.id} />
 
             {incident.aiRecommendation && (
                 <section className={styles.recommendation}>

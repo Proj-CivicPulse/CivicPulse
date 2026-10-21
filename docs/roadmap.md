@@ -31,7 +31,7 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | 8 | Priority calibration | 🟡 Tooling done; needs an officer session |
 | 9 | Hotspots | ✅ Done (2026-10-21) |
 | 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
-| 11 | Decision support | ⬜ Not started — after 8–10 and 12 |
+| 11 | Decision support | ✅ Done (2026-10-21); the Copilot note was cut |
 | 12 | Officer Copilot | 🟡 Backend live; panel + eval left (Manya) |
 | 13 | Paper + demo | 🟡 Matching and system sections ready |
 
@@ -119,7 +119,7 @@ Report: [matching-evaluation.md](matching-evaluation.md). The harness:
 
 ---
 
-## Left to do
+## Copilot, intelligence and the paper (12, 8–11, 13)
 
 ### 12 — Officer Copilot 🟡 (owner: Manya)
 An officer asks "what's urgent in Ward 48?" and gets a short answer built only
@@ -223,14 +223,20 @@ opening the incidents behind it, narrowed by the queue's ward and category.
 
 "Score up ≥ 1.0 since yesterday" was dropped: scores are not historised.
 
-### 11 — Decision support ⬜ (after 8, 10 and 12)
-Recommendations an officer can check, never actions taken on their behalf.
+### 11 — Decision support ✅ (2026-10-21)
+A suggested next step in the incident panel, with the rule that fired and the
+facts it read. The officer accepts or overrides it, and the decision is
+logged. These are recommendations an officer can check, never actions taken
+on their behalf.
 
-| # | Milestone |
-|---|---|
-| 11.1 | Rule-based recommended action per incident (dispatch / consolidate / monitor / escalate / verify-and-close), showing which rule fired |
-| 11.2 | Copilot-written note grounded in the incident and its rule |
-| 11.3 | Officer accept/override logged. The override rate is the success metric |
+| # | Milestone | State |
+|---|---|---|
+| 11.1 | Rule-based action per incident: escalate, then dispatch, then verify-and-close, then consolidate, then monitor (first match wins), naming the rule | ✅ unit tests per rule and their order; DB-backed service tests |
+| 11.2 | Copilot-written note | ✂️ cut to finish sooner. The panel still shows `aiRecommendation` if one is ever written |
+| 11.3 | Accept/override log (V22), and `GET /dashboard/recommendations` with the override rate per action | ✅ tested; checked over HTTP and at 1440/390 px |
+
+The rules use the calibrated priority bands once Phase 8.3–8.4 has run. Until
+then they read the shipped formula, as everything else does.
 
 ### 13 — Paper + demo 🟡
 | Section | Source | Ready |

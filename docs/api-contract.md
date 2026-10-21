@@ -643,6 +643,37 @@ matcher rightly keeps apart and an officer still wants to see together.
 Rule-based, no ML: the incident set is far too small to train anything, and an
 officer can check every member.
 
+#### Decision support — Phase 11 — ✅ implemented 2026-10-21
+
+A recommended next action per active incident, from fixed rules (first match
+wins), and a log of what officers do with it. Recommendations only: accepting
+one records the decision and changes nothing else.
+
+| Order | Action | Rule (`ruleId`) |
+|---|---|---|
+| 1 | `escalate` | open, high or critical, first reported ≥ 7 days ago (`urgent_unattended`) |
+| 2 | `dispatch` | open, and high or critical (`urgent_open`) or ≥ 2 reports in 72 h (`worsening_open`) |
+| 3 | `verify_and_close` | in progress, no new report for ≥ 14 days (`quiet_in_progress`) |
+| 4 | `consolidate` | part of a hotspot (`in_hotspot`) |
+| 5 | `monitor` | none of the above (`default`) |
+
+- `GET /incidents/{id}/recommendation` (officer) →
+  `{ incidentId, action, ruleId, explanation, facts: [string], asOf, lastFeedback }`.
+  `action` and `ruleId` are null for a resolved or closed incident.
+- `POST /incidents/{id}/recommendation/feedback` (officer) — body
+  `{ decision: "accepted" | "overridden", chosenAction?, note? }` → 201 with the
+  recommendation. What was recommended is recomputed on the server, and the
+  officer comes from the session. 400 when overriding without a `chosenAction`
+  or with the recommended one, when accepting with a `chosenAction`, or when
+  the incident is not active.
+- `GET /dashboard/recommendations` (officer) →
+  `{ actions: [{ action, accepted, overridden, overrideRate }], accepted, overridden, overrideRate }`
+  — the override rate per action is the measure of whether a rule helps.
+
+Log: `recommendation_feedback` (V22), append-only. It has no foreign key to
+incidents, like `incident_match_log` (V7): a decision outlives the reconcile
+job deleting an emptied incident.
+
 #### `GET /dashboard/ranking-sheet` — Phase 8.1 — ✅ implemented 2026-10-21
 
 The active queue as CSV (`text/csv`, `Content-Disposition: attachment`) for an

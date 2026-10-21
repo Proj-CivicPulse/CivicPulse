@@ -3,15 +3,22 @@ package com.civicpulse.backend_spring.controller;
 import com.civicpulse.backend_spring.dto.PageResponse;
 import com.civicpulse.backend_spring.dto.complaint.ComplaintDto;
 import com.civicpulse.backend_spring.dto.incident.IncidentDto;
+import com.civicpulse.backend_spring.dto.incident.RecommendationDto;
+import com.civicpulse.backend_spring.dto.incident.RecommendationFeedbackRequest;
 import com.civicpulse.backend_spring.dto.incident.UpdateIncidentRequest;
 import com.civicpulse.backend_spring.service.incident.IncidentQuery;
+import com.civicpulse.backend_spring.exception.UnauthorizedException;
 import com.civicpulse.backend_spring.service.incident.IncidentService;
+import com.civicpulse.backend_spring.service.intelligence.RecommendationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,6 +36,7 @@ import java.util.List;
 public class IncidentController {
 
     private final IncidentService incidentService;
+    private final RecommendationService recommendationService;
 
     /**
      * One page of the queue, most urgent first by default
@@ -75,5 +83,27 @@ public class IncidentController {
             @Valid @RequestBody UpdateIncidentRequest request) {
 
         return ResponseEntity.ok(incidentService.update(id, request));
+    }
+
+    /** Phase 11: the recommended next action, the rule that fired, and its facts. */
+    @GetMapping("/{id}/recommendation")
+    public ResponseEntity<RecommendationDto> recommendation(@PathVariable Long id) {
+        return ResponseEntity.ok(recommendationService.recommend(id));
+    }
+
+    /**
+     * Phase 11.3: the officer accepts or overrides the current recommendation.
+     * Logged only — the incident itself is not changed.
+     */
+    @PostMapping("/{id}/recommendation/feedback")
+    public ResponseEntity<RecommendationDto> recommendationFeedback(
+            @PathVariable Long id,
+            @Valid @RequestBody RecommendationFeedbackRequest request,
+            Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof Long userId)) {
+            throw new UnauthorizedException("Not authenticated");
+        }
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(recommendationService.feedback(id, userId, request));
     }
 }

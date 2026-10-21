@@ -54,6 +54,7 @@ export const queryKeys = {
         list: (filters?: IncidentFilters) => ['incidents', 'list', filters ?? {}] as const,
         detail: (id: string) => ['incidents', 'detail', id] as const,
         complaints: (id: string) => ['incidents', 'detail', id, 'complaints'] as const,
+        recommendation: (id: string) => ['incidents', 'detail', id, 'recommendation'] as const,
     },
 
     dashboard: {

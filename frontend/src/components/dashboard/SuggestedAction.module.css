@@ -1,0 +1,97 @@
+/*
+ * Suggested next step. A hairline box rather than the seal wash: the priority
+ * explanation above is the headline, this is advice beneath it.
+ */
+.box {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+}
+
+.heading {
+    font: var(--t-micro);
+    color: var(--ink-muted);
+}
+
+.action {
+    font: var(--t-ui);
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.explanation {
+    font: var(--t-data);
+    color: var(--ink);
+}
+
+.facts {
+    font: var(--t-data);
+    color: var(--ink-muted);
+}
+
+.facts summary {
+    cursor: pointer;
+    color: var(--seal);
+}
+
+.facts ul {
+    margin: var(--space-1) 0 0;
+    padding-left: var(--space-4);
+}
+
+.buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.override {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.label {
+    display: grid;
+    gap: var(--space-1);
+    font: var(--t-micro);
+    color: var(--ink-muted);
+}
+
+.select,
+.note {
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+    font: var(--t-data);
+    color: var(--ink);
+}
+
+.select:focus-visible,
+.note:focus-visible {
+    outline: 2px solid var(--seal);
+    outline-offset: 1px;
+}
+
+.note {
+    resize: vertical;
+}
+
+.answered {
+    font: var(--t-data);
+    color: var(--ink);
+}
+
+.muted {
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-faint);
+}
+
+.error {
+    font: var(--t-data);
+    color: var(--priority-critical-ink);
+}

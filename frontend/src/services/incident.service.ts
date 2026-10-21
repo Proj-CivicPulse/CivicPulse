@@ -1,4 +1,4 @@
-import { get, patch, type Page } from './api';
+import { get, patch, post, type Page } from './api';
 import { SPRING_API_PATH } from '../config/constants';
 import type { Complaint } from './complaint.service';
 import type { PriorityBand } from '@/lib/priority';
@@ -106,6 +106,34 @@ function buildQuery(filters: IncidentFilters = {}): string {
     return query ? `?${query}` : '';
 }
 
+/** Decision support (docs/roadmap.md, Phase 11). */
+export type RecommendedAction = 'escalate' | 'dispatch' | 'verify_and_close' | 'consolidate' | 'monitor';
+
+export interface Recommendation {
+    incidentId: string;
+    /** Null for a resolved or closed incident — the explanation says so. */
+    action: RecommendedAction | null;
+    ruleId: string | null;
+    explanation: string;
+    /** The facts the rules read, as short lines. */
+    facts: string[];
+    asOf: string;
+    lastFeedback: {
+        decision: 'accepted' | 'overridden';
+        recommendedAction: RecommendedAction;
+        chosenAction: RecommendedAction | null;
+        note: string | null;
+        userId: string;
+        createdAt: string;
+    } | null;
+}
+
+export interface RecommendationFeedback {
+    decision: 'accepted' | 'overridden';
+    chosenAction?: RecommendedAction;
+    note?: string;
+}
+
 /** Every endpoint here requires the officer role. */
 export const incidentService = {
     list: (filters?: IncidentFilters) =>
@@ -118,4 +146,10 @@ export const incidentService = {
 
     update: (id: string, changes: UpdateIncidentInput) =>
         patch<Incident>(SPRING_API_PATH, `/incidents/${id}`, changes),
+
+    recommendation: (id: string) => get<Recommendation>(SPRING_API_PATH, `/incidents/${id}/recommendation`),
+
+    /** Logged only: the incident itself is not changed. */
+    recommendationFeedback: (id: string, feedback: RecommendationFeedback) =>
+        post<Recommendation>(SPRING_API_PATH, `/incidents/${id}/recommendation/feedback`, feedback),
 };

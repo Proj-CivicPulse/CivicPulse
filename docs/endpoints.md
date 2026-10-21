@@ -153,6 +153,9 @@ Classified 2026-10-13 — see "Endpoint classification" in `api-contract.md`.
 - [x] `GET /dashboard/hotspots` — ≥ 3 active same-category incidents within 500 m (Phase 9)
 - [x] `GET /dashboard/attention` — high priority, worsening, in a hotspot, category spike (Phase 10)
 - [x] `GET /dashboard/ranking-sheet` — CSV of the active queue for an officer to rank; `?withScores=true` is the key (Phase 8.1)
+- [x] `GET /incidents/{id}/recommendation` — rule-based next action with its rule and facts (Phase 11)
+- [x] `POST /incidents/{id}/recommendation/feedback` — officer accepts or overrides; logged only (Phase 11.3)
+- [x] `GET /dashboard/recommendations` — accepted vs overridden per action (Phase 11.3)
 
 ### Analytics — Phase 5
 

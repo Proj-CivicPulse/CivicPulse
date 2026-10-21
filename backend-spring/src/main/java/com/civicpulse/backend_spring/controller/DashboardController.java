@@ -4,6 +4,7 @@ import com.civicpulse.backend_spring.dto.dashboard.AttentionDto;
 import com.civicpulse.backend_spring.dto.dashboard.CategoryExplorerSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.DashboardSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.HotspotsDto;
+import com.civicpulse.backend_spring.dto.dashboard.RecommendationSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.TrendDto;
 import com.civicpulse.backend_spring.dto.dashboard.WardDashboardSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.WardExplorerSummaryDto;
@@ -11,6 +12,7 @@ import com.civicpulse.backend_spring.service.dashboard.DashboardService;
 import com.civicpulse.backend_spring.service.explorer.ExplorerService;
 import com.civicpulse.backend_spring.service.intelligence.AttentionService;
 import com.civicpulse.backend_spring.service.intelligence.HotspotService;
+import com.civicpulse.backend_spring.service.intelligence.RecommendationService;
 import com.civicpulse.backend_spring.service.priority.RankingSheetService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -42,6 +44,7 @@ public class DashboardController {
     private final HotspotService hotspotService;
     private final AttentionService attentionService;
     private final RankingSheetService rankingSheetService;
+    private final RecommendationService recommendationService;
 
     @GetMapping("/summary")
     public ResponseEntity<DashboardSummaryDto> summary() {
@@ -123,5 +126,11 @@ public class DashboardController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + name + "\"")
                 .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
                 .body(rankingSheetService.csv(wardId, withScores));
+    }
+
+    /** Phase 11.3: accepted vs overridden per recommended action. */
+    @GetMapping("/recommendations")
+    public ResponseEntity<RecommendationSummaryDto> recommendations() {
+        return ResponseEntity.ok(recommendationService.summary());
     }
 }
