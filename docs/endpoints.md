@@ -151,13 +151,14 @@ Classified 2026-10-13 — see "Endpoint classification" in `api-contract.md`.
 - [x] `GET /dashboard/categories` — per-category Explorer summary incl. resolution metrics (N2)
 - [x] `GET /dashboard/trends` — complaint counts over `reported_at` buckets (N3)
 - [x] `GET /dashboard/hotspots` — ≥ 3 active same-category incidents within 500 m (Phase 9)
+- [x] `GET /dashboard/attention` — high priority, worsening, in a hotspot, category spike (Phase 10)
 
 ### Analytics — Phase 5
 
 - ~~`GET /analytics/trends`~~ — superseded by `GET /dashboard/trends`; aggregates
   live on `DashboardController`
-- [ ] `GET /analytics/stale-incidents` — Milestone 5; classify REUSE/EXTEND/NEW then
-- [ ] `GET /analytics/rising-categories` — Milestone 5; classify then
+- ~~`GET /analytics/stale-incidents`~~, ~~`GET /analytics/rising-categories`~~ —
+  superseded by `GET /dashboard/attention` (`worsening`, `category_spike`)
 
 ### Ingestion — external feeds (see `api-contract.md`)
 - [x] `POST /internal/ingest/{source}` — shared-secret; bulk, validating,

@@ -1,5 +1,6 @@
 package com.civicpulse.backend_spring.controller;
 
+import com.civicpulse.backend_spring.dto.dashboard.AttentionDto;
 import com.civicpulse.backend_spring.dto.dashboard.CategoryExplorerSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.DashboardSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.HotspotsDto;
@@ -8,6 +9,7 @@ import com.civicpulse.backend_spring.dto.dashboard.WardDashboardSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.WardExplorerSummaryDto;
 import com.civicpulse.backend_spring.service.dashboard.DashboardService;
 import com.civicpulse.backend_spring.service.explorer.ExplorerService;
+import com.civicpulse.backend_spring.service.intelligence.AttentionService;
 import com.civicpulse.backend_spring.service.intelligence.HotspotService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +26,7 @@ import java.util.List;
  *
  * <p>The Explorer's aggregates live here rather than under a family of
  * /ward-stats, /ward-analytics style paths. Shapes and filter
- * semantics: docs/api-contract.md, E5, E6, N1–N3 and Hotspots.
+ * semantics: docs/api-contract.md, E5, E6, N1–N3, Hotspots and Attention.
  */
 @RestController
 @RequestMapping("/dashboard")
@@ -34,6 +36,7 @@ public class DashboardController {
     private final DashboardService dashboardService;
     private final ExplorerService explorerService;
     private final HotspotService hotspotService;
+    private final AttentionService attentionService;
 
     @GetMapping("/summary")
     public ResponseEntity<DashboardSummaryDto> summary() {
@@ -91,5 +94,13 @@ public class DashboardController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to) {
         return ResponseEntity.ok(hotspotService.hotspots(category, wardId, from, to));
+    }
+
+    /** Phase 10: the "needs attention" signals, each with the incidents behind it. */
+    @GetMapping("/attention")
+    public ResponseEntity<AttentionDto> attention(
+            @RequestParam(required = false) List<Long> wardId,
+            @RequestParam(required = false) List<String> category) {
+        return ResponseEntity.ok(attentionService.attention(wardId, category));
     }
 }

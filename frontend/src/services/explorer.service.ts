@@ -120,6 +120,41 @@ export interface HotspotMember {
     lastReportedAt: string | null;
 }
 
+/**
+ * "Needs attention" (docs/roadmap.md, Phase 10). Always four signals, in this
+ * order, empty ones included; each carries the incidents behind it.
+ */
+export type AttentionKey = 'high_priority' | 'worsening' | 'in_hotspot' | 'category_spike';
+
+export interface Attention {
+    asOf: string;
+    signals: AttentionSignal[];
+}
+
+export interface AttentionSignal {
+    key: AttentionKey;
+    /** The rule in words, from the server. */
+    definition: string;
+    /** Highest priority first. */
+    incidents: AttentionItem[];
+    /** category_spike only. */
+    categories: { category: string; lastWeek: number; priorWeeklyMean: number }[];
+}
+
+export interface AttentionItem {
+    id: string;
+    wardId: string;
+    wardName: string;
+    category: string;
+    address: string | null;
+    priorityScore: number;
+    priorityBand: PriorityBand;
+    complaintCount: number;
+    /** Member reports in the last 72 hours. */
+    recentReports: number;
+    lastReportedAt: string | null;
+}
+
 function query(params: Record<string, string | string[] | undefined>): string {
     const search = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -177,6 +212,13 @@ export const explorerService = {
                 from: filters.from,
                 to: filters.to,
             })}`
+        ),
+
+    /** Phase 10. Filters: wardIds, categories. Each signal has its own window. */
+    attention: (filters: { wardIds?: string[]; categories?: string[] } = {}) =>
+        get<Attention>(
+            SPRING_API_PATH,
+            `/dashboard/attention${query({ wardId: filters.wardIds, category: filters.categories })}`
         ),
 
     /** E6. 404 for an unknown or retired ward. */

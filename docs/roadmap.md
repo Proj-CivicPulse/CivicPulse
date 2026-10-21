@@ -30,7 +30,7 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | 7 | Matching evaluation | ✅ Done — threshold set to 0.84 |
 | 8 | Priority calibration | ⬜ Not started — needs an officer |
 | 9 | Hotspots | ✅ Done (2026-10-21) |
-| 10 | Operational intelligence ("needs attention") | ⬜ Not started — after 9 |
+| 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
 | 11 | Decision support | ⬜ Not started — after 8–10 and 12 |
 | 12 | Officer Copilot | 🟡 Backend live; panel + eval left (Manya) |
 | 13 | Paper + demo | 🟡 Matching and system sections ready |
@@ -204,21 +204,23 @@ A hotspot is **≥ 3 active incidents of one category within 500 m of each other
 The demo seed adds three clusters of different problems chosen to stay
 separate incidents at 0.84, so the live site has hotspots to show.
 
-### 10 — Operational intelligence ⬜ (after 9)
-One "needs attention" strip that turns counts into statements, each opening its
-incidents:
+### 10 — Operational intelligence ✅ (2026-10-21)
+A "needs attention" strip over the incident queue: four statements, each
+opening the incidents behind it, narrowed by the queue's ward and category.
 
 | Signal | Rule |
 |---|---|
 | High priority | Active, high or critical band |
-| Worsening | 2 or more new reports in 72 h, or score up ≥ 1.0 since yesterday |
-| Concentrated | In a Phase 9 hotspot |
-| Category spike | Last 7 days ≥ 2× the prior 4-week weekly mean, and ≥ 5 reports |
+| Getting worse | 2 or more new reports in 72 h |
+| In a hotspot | Member of a Phase 9 hotspot |
+| Category spiking | Last 7 days ≥ 2× the prior 4-week weekly mean, and ≥ 5 reports |
 
-| # | Milestone |
-|---|---|
-| 10.1 | `GET /dashboard/attention`, returning signals with incident ids |
-| 10.2 | "Needs attention" strip on the Incidents view |
+| # | Milestone | State |
+|---|---|---|
+| 10.1 | `GET /dashboard/attention`, signals with their incidents | ✅ DB-backed tests with a fixed clock, one per rule plus filters |
+| 10.2 | Strip on the Incidents view; each item opens in the queue | ✅ checked at 1440 and 390 px |
+
+"Score up ≥ 1.0 since yesterday" was dropped: scores are not historised.
 
 ### 11 — Decision support ⬜ (after 8, 10 and 12)
 Recommendations an officer can check, never actions taken on their behalf.

@@ -643,6 +643,32 @@ matcher rightly keeps apart and an officer still wants to see together.
 Rule-based, no ML: the incident set is far too small to train anything, and an
 officer can check every member.
 
+#### `GET /dashboard/attention` — Phase 10 — ✅ implemented 2026-10-21
+
+"Needs attention": four statements, each with the incidents behind it.
+
+| | |
+|---|---|
+| Auth | officer |
+| Params | `wardId`, `category` (repeatable) — narrow every signal alike. No window: each signal has its own, below |
+| Response | `{ asOf, signals: [{ key, definition, incidents: [Item], categories: [Spike] }] }` — always all four keys, in this order, empty ones included |
+
+| Key | Rule (evaluated as of `asOf`) |
+|---|---|
+| `high_priority` | active, score in the high or critical band (`PriorityBand`, never a literal) |
+| `worsening` | active, ≥ 2 member reports in the last 72 h |
+| `in_hotspot` | a member of a hotspot above (last 30 days) |
+| `category_spike` | the category's reports in the last 7 days ≥ 2 × its weekly mean over the 4 weeks before, and ≥ 5; its incidents are the active ones reported in those 7 days. `categories` carries `{ category, lastWeek, priorWeeklyMean }` |
+
+`Item`: `{ id, wardId, wardName, category, address, priorityScore, priorityBand,
+complaintCount, recentReports (72 h), lastReportedAt }`, highest priority first.
+
+The plan also named "score up ≥ 1.0 since yesterday" for `worsening`. Scores
+are not historised, so that rule would have to be guessed; it is left out
+rather than faked. A young dataset makes `category_spike` loud — every
+category is "new" against an empty prior month — which settles once there is
+history.
+
 ### `POST /complaints/{id}/process` — Phase 2
 
 Triggered **asynchronously** after a complaint commits (`AFTER_COMMIT`, on a

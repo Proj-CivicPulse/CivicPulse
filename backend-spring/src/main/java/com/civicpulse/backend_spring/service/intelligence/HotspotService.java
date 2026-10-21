@@ -59,9 +59,15 @@ public class HotspotService {
             fromAt = LocalDateTime.now().minusDays(DEFAULT_WINDOW_DAYS);
         }
         QueryParams.requireOrderedWindow(fromAt, toAt);
+        return hotspots(canonical, wardIds, fromAt, toAt);
+    }
 
-        List<HotspotsDto.Hotspot> hotspots = group(
-                hotspotRepository.clusteredIncidents(canonical, fromAt, toAt, RADIUS_METRES, MIN_INCIDENTS));
+    /** As above, with categories already canonical and the window already parsed. */
+    @Transactional(readOnly = true)
+    public HotspotsDto hotspots(List<String> canonicalCategories, List<Long> wardIds,
+                                LocalDateTime fromAt, LocalDateTime toAt) {
+        List<HotspotsDto.Hotspot> hotspots = group(hotspotRepository.clusteredIncidents(
+                canonicalCategories, fromAt, toAt, RADIUS_METRES, MIN_INCIDENTS));
         if (wardIds != null && !wardIds.isEmpty()) {
             List<String> wanted = wardIds.stream().map(String::valueOf).toList();
             hotspots = hotspots.stream()

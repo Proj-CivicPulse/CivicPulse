@@ -12,6 +12,7 @@ import { useDashboardStore } from '@/stores/dashboard.store';
 import AppHeader from '@/components/AppHeader';
 import { EXPLORER_NAV } from '@/components/explorer/ExplorerFilterBar';
 import { incidentName } from '@/components/explorer/IncidentList';
+import AttentionStrip from '@/components/dashboard/AttentionStrip';
 import WardRail from '@/components/dashboard/WardRail';
 import IncidentDetail from '@/components/dashboard/IncidentDetail';
 import Button from '@/components/ui/Button';
@@ -227,6 +228,14 @@ export default function IncidentDashboard() {
                 </aside>
 
                 <main className={styles.center}>
+                    {/* Always rendered, so the grid rows never shift while it loads. */}
+                    <div>
+                        <AttentionStrip
+                            wardId={selectedWardId}
+                            category={categoryFilter}
+                            categoryLabel={categoryLabel}
+                        />
+                    </div>
                     <div className={styles.map}>
                         <MapView
                             ariaLabel="Incidents on a map"
