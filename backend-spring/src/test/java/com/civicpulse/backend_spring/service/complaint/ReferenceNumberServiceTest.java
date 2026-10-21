@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -38,6 +39,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * to interleave the right way on one run.
  */
 @SpringBootTest
+// The test profile, like every other database test: without it this context
+// used the APP's settings — production's DB_URL, and the reconciliation and
+// priority sweeps running against it for the length of the test.
+@ActiveProfiles("test")
 @Transactional
 class ReferenceNumberServiceTest {
 

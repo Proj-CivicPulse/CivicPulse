@@ -29,6 +29,14 @@ spring:
     url: ${TEST_DB_URL:${DB_URL}}
     username: ${TEST_DB_USERNAME:${DB_USERNAME}}
     password: ${TEST_DB_PASSWORD:${DB_PASSWORD}}
+  # Flyway has its OWN connection (DB_MIGRATION_* in application.yaml), so
+  # redirecting only the datasource above would run the tests against the
+  # test database while MIGRATING whatever DB_URL points at — production.
+  # TEST_DB_* must move both, or it is not a test database at all.
+  flyway:
+    url: ${TEST_DB_URL:${DB_MIGRATION_URL:${DB_URL}}}
+    user: ${TEST_DB_USERNAME:${DB_MIGRATION_USERNAME:${DB_USERNAME}}}
+    password: ${TEST_DB_PASSWORD:${DB_MIGRATION_PASSWORD:${DB_PASSWORD}}}
 
 app:
   frontend-origin: http://localhost:5173
