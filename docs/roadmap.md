@@ -237,7 +237,7 @@ development.
   - 503 `COPILOT_UNAVAILABLE`;
   - 429 with `Retry-After`.
 
-Devansh's design system applies.
+The project's design system applies: tokens in `tokens.css` and the shared components in `components/ui`.
 
 **12.5 — the eval.** About 20 questions against a seeded local database,
 including unanswerable ones (weather, an out-of-scope ward, "who is the mayor").
@@ -272,8 +272,8 @@ officer session".
 ### Decisions and reviews (people, not code)
 | Item | Owner |
 |---|---|
-| Review the 30 hand labels in `backend-node/eval/production-joins-labelled.json` | an officer / Devansh |
-| Review the Explorer UI and the `--density-*` tokens, plus the new hotspot rings and list, the attention strip and the suggestion box | Devansh |
+| Review the 30 hand labels in `backend-node/eval/production-joins-labelled.json` | team |
+| UI review: the Explorer and `--density-*` tokens, the hotspot rings and list, the attention strip and the suggestion box | team |
 | Redeploy both backends once Railway builds again (commands in "Deployment status") | team |
 
 ### Backlog — deliberately deferred
