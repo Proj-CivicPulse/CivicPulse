@@ -3,7 +3,6 @@ package com.civicpulse.backend_spring.service.intelligence;
 import com.civicpulse.backend_spring.dto.QueryParams;
 import com.civicpulse.backend_spring.dto.Wire;
 import com.civicpulse.backend_spring.dto.dashboard.AttentionDto;
-import com.civicpulse.backend_spring.dto.dashboard.HotspotsDto;
 import com.civicpulse.backend_spring.repository.AttentionRepository;
 import com.civicpulse.backend_spring.repository.AttentionRepository.ActiveIncident;
 import com.civicpulse.backend_spring.repository.AttentionRepository.CategoryVolume;
