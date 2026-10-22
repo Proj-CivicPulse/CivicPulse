@@ -203,6 +203,22 @@
     color: var(--ink);
 }
 
+/* Why the report is in this incident: secondary, under its text. */
+.complaintWhy {
+    grid-column: 1 / -1;
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-muted);
+}
+
+.complaintActions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
 .error {
     font: var(--t-ui);
     color: var(--priority-high-ink);

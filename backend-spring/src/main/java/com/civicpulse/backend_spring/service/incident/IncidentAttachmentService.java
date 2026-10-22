@@ -217,7 +217,7 @@ public class IncidentAttachmentService {
         incidentRepository.save(incident);
     }
 
-    private Incident createFrom(Complaint complaint) {
+    Incident createFrom(Complaint complaint) {
         Incident incident = Incident.builder()
                 .ward(complaint.getWard())
                 .category(complaint.getCategory())

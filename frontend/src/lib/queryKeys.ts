@@ -55,6 +55,7 @@ export const queryKeys = {
         detail: (id: string) => ['incidents', 'detail', id] as const,
         complaints: (id: string) => ['incidents', 'detail', id, 'complaints'] as const,
         recommendation: (id: string) => ['incidents', 'detail', id, 'recommendation'] as const,
+        grouping: (id: string) => ['incidents', 'detail', id, 'grouping'] as const,
     },
 
     dashboard: {

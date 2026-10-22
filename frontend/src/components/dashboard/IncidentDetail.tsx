@@ -1,17 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
-import { incidentService, type Incident } from '@/services/incident.service';
-import { queryKeys } from '@/lib/queryKeys';
-import { describeError } from '@/lib/errors';
-import { formatCount, formatCoordinates, truncate } from '@/lib/format';
+import type { Incident } from '@/services/incident.service';
+import { formatCount, formatCoordinates } from '@/lib/format';
 import { daysSince, formatAbsolute, formatRelative } from '@/lib/datetime';
 import { useDepartmentNames } from '@/lib/useRegistry';
 import Button from '@/components/ui/Button';
 import HazardChip from '@/components/ui/HazardChip';
 import PriorityChip from '@/components/ui/PriorityChip';
-import Skeleton from '@/components/ui/Skeleton';
 import StatusChip from '@/components/ui/StatusChip';
 import { incidentName } from '@/components/explorer/IncidentList';
+import IncidentReports from './IncidentReports';
+import MergeIncident from './MergeIncident';
 import SuggestedAction from './SuggestedAction';
 import UpdateIncident from './UpdateIncident';
 import styles from './IncidentDetail.module.css';
@@ -25,11 +23,6 @@ interface Props {
 }
 
 export default function IncidentDetail({ incident, categoryLabel, onClose }: Props) {
-    const complaintsQuery = useQuery({
-        queryKey: queryKeys.incidents.complaints(incident.id),
-        queryFn: () => incidentService.getComplaints(incident.id),
-    });
-
     // Age of the problem, from its first report — not of the grouping.
     const age = incident.firstReportedAt ? daysSince(incident.firstReportedAt) : null;
 
@@ -168,6 +161,8 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
                 incident={incident}
             />
 
+            <MergeIncident incident={incident} categoryLabel={categoryLabel} />
+
             <SuggestedAction incidentId={incident.id} />
 
             {incident.aiRecommendation && (
@@ -177,42 +172,7 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
                 </section>
             )}
 
-            <section className={styles.complaints} aria-labelledby={`reports-${incident.id}`}>
-                <h3 className={styles.complaintsHeading} id={`reports-${incident.id}`}>
-                    Reports
-                    <span className={styles.complaintsCount}>
-                        {formatCount(incident.complaintCount)}
-                    </span>
-                </h3>
-
-                {complaintsQuery.isPending ? (
-                    <Skeleton count={3} variant="row" label="Loading reports" />
-                ) : complaintsQuery.isError ? (
-                    <p className={styles.error}>
-                        {describeError(complaintsQuery.error, 'reports').title}
-                    </p>
-                ) : complaintsQuery.data.length === 0 ? (
-                    <p className={styles.noReasons}>No individual reports recorded.</p>
-                ) : (
-                    <ul className={styles.complaintList}>
-                        {complaintsQuery.data.map((complaint) => (
-                            <li key={complaint.id} className={styles.complaintRow}>
-                                {/* Order matters: ref and time share row 1, the
-                                    description spans row 2. */}
-                                <span className={styles.complaintRef}>{complaint.referenceNo}</span>
-                                {/* reportedAt: the timeline is ordered by it, and for an
-                                    imported report createdAt is only when it arrived. */}
-                                <time className={styles.complaintTime} dateTime={complaint.reportedAt}>
-                                    {formatRelative(complaint.reportedAt)}
-                                </time>
-                                <span className={styles.complaintText}>
-                                    {truncate(complaint.description, 70)}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </section>
+            <IncidentReports incident={incident} />
         </div>
     );
 }
