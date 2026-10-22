@@ -71,7 +71,7 @@ describe('evaluateRanking on a fake officer session', () => {
         assert.deepEqual(ev.port, { checked: 30, exact: 30, within01: 30 });
         assert.ok(ev.shipped.tau > 0.3, `formula should broadly agree, got ${ev.shipped.tau}`);
         assert.ok(ev.perTerm.growth > ev.perTerm.age, 'this officer weighs recency over age');
-        assert.equal(ev.variants.length, 4);
+        assert.equal(ev.variants.length, 5);
         assert.ok(ev.variants.every((v) => Number.isFinite(v.tauHalfA) && Number.isFinite(v.tauHalfB)));
     });
 

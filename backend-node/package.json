@@ -26,6 +26,7 @@
         "eval:matching": "node --import tsx eval/evaluate-matching.ts",
         "eval:production-joins": "node --import tsx eval/evaluate-production-joins.ts",
         "eval:priority": "node --import tsx eval/evaluate-priority.ts",
+        "eval:priority-proxy": "node --import tsx eval/proxy-rank-priority.ts",
         "typecheck": "tsc --noEmit",
         "lint": "oxlint"
     },

@@ -113,6 +113,15 @@ export const VARIANTS: Variant[] = [
         name: 'age weight 10% (to volume)',
         params: { ...PRODUCTION, weights: { volume: 0.5, growth: 0.3, age: 0.1, spread: 0.1 } },
     },
+    {
+        // The pre-midsem plan's naive baseline. Volume alone with a saturation
+        // far above any real count, so it stays a pure "more reports first".
+        name: 'reports only (naive baseline)',
+        params: {
+            weights: { volume: 1, growth: 0, age: 0, spread: 0 },
+            saturation: { ...PRODUCTION.saturation, reports: 1_000_000 },
+        },
+    },
 ];
 
 export interface Evaluation {

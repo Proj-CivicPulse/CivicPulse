@@ -1,0 +1,46 @@
+incident_id,category,ward,place,reports,reports_last_24h,reports_last_7d,days_open,spread_m,officer_rank
+16,Water supply,Babusab Palya,"9, Bank Eve Main Rd, Chikka Nanjunda Reddy Layout, Bank Avenue Colony, Horamavu, Bengaluru, Karnataka 560113, India",4,0,2,30,169,15
+21,Solid waste,New Thippasandra,"Lake View Building, Bagmane Tech Park Rd, Krishnappa Garden, C V Raman Nagar, Bengaluru, Karnataka 560093, India",6,0,5,8,105,35
+23,Drainage,New Thippasandra,"XMF6+C82, Krishnappa Garden, C V Raman Nagar, Bengaluru, Karnataka 560075, India",3,0,3,4,134,10
+18,Footpath,Babusab Palya,"19, 2nd Main Rd, Anjanappa Layout, Babusapalya, Mallappa Layout, Kalyan Nagar, Bengaluru, Karnataka 560113, India",1,0,1,2,0,44
+41,Solid waste,Kempegowda Ward,"246/1, K B Sandra, Maruthi Nagar, Yelahanka, Bengaluru, Karnataka 560064, India",4,0,4,3,168,37
+13,Pothole / road damage,Babusab Palya,"2MF4+8FC, 7th A Cross Rd, Asheervad Colony, Horamavu Banaswadi, Horamavu, Bengaluru, Karnataka 560113, India",14,0,2,21,211,7
+45,Water supply,Babusab Palya,"124/2 Horamavu Main Road, Ashirwad Colony Main Rd, opposite Udupi Gardenia, Asheervad Colony, Munireddy Layout, Horamavu, Bengaluru, Karnataka 560113, India",4,1,4,3,167,2
+20,Street lighting,New Thippasandra,"XMH7+J5R, 108, 1st Street, Cauveri Colony, Byrasandra, C V Raman Nagar, Bengaluru, Karnataka 560093, India",9,0,5,12,191,24
+44,Water supply,Babusab Palya,"111, Asheervad Colony, Nanjappa Garden, Horamavu, Bengaluru, Karnataka 560113, India",2,0,0,9,180,21
+12,Footpath,Peenya,"173, Yeshwanthpur Suburb II Stage, Yesvanpur Surburb, Yeswanthpur, Bengaluru, Karnataka 560058, India",1,1,1,2,0,40
+7,Pothole / road damage,Peenya,"136, Yeshwanthpur Suburb II Stage, Yesvanpur Surburb, Jenakal Siddeswara Nagar, Peenya, Bengaluru, Karnataka 560058, India",14,0,4,21,221,4
+2,Pothole / road damage,Kempegowda Ward,"4J63+6G3, 2, R T Nagar, Venkatala Village, Chowdeshwari Layout, Yelahanka, Bengaluru, Karnataka 560064, India",14,0,2,21,172,8
+33,Solid waste,Banashankari Temple ward,"WH89+2Q7, 8201, Eshwara Nagar, Banashankari 2nd Stage, Banashankari, Bengaluru, Karnataka 560070, India",6,0,6,8,188,32
+36,Footpath,Banashankari Temple ward,"Block J, J131, BSK Ward, Umarbagh Layout, Banashankari, Bengaluru, Karnataka 560111, India",1,0,1,2,0,45
+31,Pothole / road damage,Shakambari Nagar,"Sri Boredevaru Nilayam, 33-43/A, Pipeline Rd, 1st Phase, J. P. Nagar, Bengaluru, Karnataka 560078, India",14,0,1,21,187,9
+34,Water supply,Banashankari Temple ward,"19, Eshwar Nagar Main Rd, Eshwara Nagar, Banashankari 2nd Stage, Banashankari, Bengaluru, Karnataka 560070, India",4,0,1,30,114,16
+43,Water supply,Babusab Palya,"# 3 ,7th Cross, 4th Cross Rd, Chikka Nanjunda Reddy Layout, Ashirvad Colony, Horamavu, Bengaluru, Karnataka 560113, India",3,1,3,5,151,3
+10,Solid waste,Peenya,"2GHG+QWM, Yeshwanthpur Suburb II Stage, Yesvanpur Surburb, Peenya, Bengaluru, Karnataka 560058, India",6,1,5,8,149,31
+26,Pothole / road damage,Veerabhadranagar,"374, 374, 10th Cross Rd, Avalahalli New BDA Layout, Banashankari 3rd Stage, Banashankari, Bengaluru, Karnataka 560085, India",14,0,4,21,215,5
+32,Street lighting,Banashankari Temple ward,"241, Vivekananda Colony, Sarbandapalya, Banashankari, Bengaluru, Karnataka 560070, India",9,0,4,12,167,27
+39,Street lighting,Jnana Bharathi,"88, Kerekodi Main Rd, Veerabhadra Nagar, Banashankari 3rd Stage, Banashankari, Bengaluru, Karnataka 560085, India",4,0,4,3,128,28
+28,Water supply,Veerabhadranagar,"Sindori bus parking, Veerabhadra Nagar, Kasturba Colony, Nayanda Halli, Bengaluru, Karnataka 560085, India",4,0,0,30,121,20
+42,Solid waste,Kempegowda Ward,"4J43+H94, Krishnaja Ave, K B Sandra, Maruthi Nagar, Yelahanka, Bengaluru, Karnataka 560064, India",2,0,2,9,82,39
+25,Street lighting,Veerabhadranagar,"85, AG Thaneerappa Rd, Avalahalli New BDA Layout, Banashankari 3rd Stage, Banashankari, Bengaluru, Karnataka 560085, India",9,0,4,12,184,25
+22,Water supply,New Thippasandra,"71, Krishnappa Garden, C V Raman Nagar, Bengaluru, Karnataka 560075, India",4,0,0,30,179,17
+6,Drainage,Kempegowda Ward,"C-8, 592, Kendriya Vihar, K B Sandra, Venkatala Village, Chowdeshwari Layout, Yelahanka, Bengaluru, Karnataka 560064, India",3,0,3,4,114,12
+30,Footpath,Veerabhadranagar,"843, 13th Cross Rd, Veerabhadra Nagar, Kasturba Colony, Banashankari, Bengaluru, Karnataka 560085, India",1,0,1,2,0,43
+40,Solid waste,Kempegowda Ward,"4J53+464, Maruthi Nagar, Yelahanka, Bengaluru, Karnataka 560064, India",3,0,3,5,167,38
+5,Footpath,Kempegowda Ward,"17/135, 14th Cross Rd, R T Nagar, Venkatala Village, Chowdeshwari Layout, Yelahanka, Bengaluru, Karnataka 560064, India",1,0,1,2,0,41
+29,Drainage,Veerabhadranagar,"23, 1st Main Rd, near Sagar Medical, Sriranganagar, Kasturba Colony, Hosakerehalli, Bengaluru, Karnataka 560085, India",3,0,3,4,80,14
+24,Footpath,New Thippasandra,"44, KG Colony, GM Palya, C V Raman Nagar, Bengaluru, Karnataka 560075, India",1,0,1,2,0,42
+15,Solid waste,Babusab Palya,"296, 1st Main Rd, Chikka Nanjunda Reddy Layout, Coconut Grove Layout, Horamavu, Bengaluru, Karnataka 560113, India",6,0,2,8,163,36
+37,Street lighting,Veerabhadranagar,"23, 1st Main Rd, near Sagar Medical, Sriranganagar, Kasturba Colony, Hosakerehalli, Bengaluru, Karnataka 560085, India",3,0,3,5,77,29
+14,Street lighting,Babusab Palya,"6, Chikka Nanjunda Reddy Layout, Coconut Grove Layout, Horamavu Banaswadi, Horamavu, Bengaluru, Karnataka 560113, India",9,0,8,12,206,22
+4,Water supply,Kempegowda Ward,"1452/B, R T Nagar, Venkatala Village, Chowdeshwari Layout, Yelahanka, Bengaluru, Karnataka 560064, India",4,0,0,30,167,18
+8,Street lighting,Peenya,"12, PU College Rd, Yeshwanthpur Suburb II Stage, Yesvanpur Surburb, Yeshwanthpur Industrial Suburb, Yeswanthpur, Bengaluru, Karnataka 560058, India",9,0,6,12,157,23
+9,Water supply,Peenya,"10, Yeshwanthpur Suburb II Stage, Yesvanpur Surburb, Jenakal Siddeswara Nagar, Peenya, Bengaluru, Karnataka 560058, India",4,0,0,30,166,19
+11,Drainage,Peenya,"214, 1st Cross Rd, Yeshwanthpur Suburb II Stage, Yesvanpur Surburb, Jenakal Siddeswara Nagar, Peenya, Bengaluru, Karnataka 560058, India",3,1,3,4,47,1
+3,Street lighting,Kempegowda Ward,"3, 2nd Main Rd, 5th cross, Venkatala Village, Chowdeshwari Layout, Yelahanka, Bengaluru, Karnataka 560064, India",9,0,4,12,170,26
+38,Street lighting,Veerabhadranagar,"3, AG Thaneerappa Rd, Veerabhadra Nagar, Banashankari 3rd Stage, Banashankari, Bengaluru, Karnataka 560085, India",2,0,1,9,12,30
+27,Solid waste,Veerabhadranagar,"966 Gangondanahalli, Chandra Layout, Ranganathan Colony, Nayanda Halli, Bengaluru, Karnataka 560085, India",6,0,5,8,163,33
+1,Solid waste,Kempegowda Ward,"4H7X+8W7, 2nd Main Rd, 5th cross, Venkatala Village, Chowdeshwari Layout, Yelahanka, Bengaluru, Karnataka 560064, India",6,0,5,8,147,34
+19,Pothole / road damage,New Thippasandra,"Sri Ramakrishna Nilayam, Cauveri Colony, GM Palya, C V Raman Nagar, Bengaluru, Karnataka 560075, India",14,0,3,21,182,6
+35,Drainage,Banashankari Temple ward,"270, Gangadhar Nagar, Ilyas Nagar, Banashankari, Bengaluru, Karnataka 560111, India",3,0,3,4,103,13
+17,Drainage,Babusab Palya,"914, 5th A Cross Rd, HRBR Layout 1st Block, HRBR Layout, Kalyan Nagar, Bengaluru, Karnataka 560043, India",3,0,3,4,120,11

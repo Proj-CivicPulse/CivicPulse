@@ -28,7 +28,7 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | S | Stabilisation + data foundation | ✅ Done |
 | 6 | Explorer (wards, categories, incidents) | ✅ Done |
 | 7 | Matching evaluation | ✅ Done — threshold set to 0.84 |
-| 8 | Priority calibration | 🟡 Tooling done; needs an officer session |
+| 8 | Priority calibration | 🟡 Proxy run done (age 30 d recommended); one human ranking to confirm |
 | 9 | Hotspots | ✅ Done (2026-10-21) |
 | 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
 | 11 | Decision support | ✅ Done (2026-10-21); the Copilot note was cut |
@@ -39,7 +39,8 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 code I can write alone:
 
 1. **12.4–12.5:** the Copilot panel and its question set (Manya).
-2. **8.3–8.4:** one officer ranking session, then the weight decision.
+2. **8.3–8.4:** a proxy run is done and recommends one change. One human
+   ranking, or a team decision to accept the proxy, settles it.
 3. **13:** the paper and a rehearsed demo.
 
 ### Deployment status (2026-10-21)
@@ -259,8 +260,8 @@ officer session".
 |---|---|---|
 | 8.1 | `GET /dashboard/ranking-sheet`: the active queue as a CSV with the formula's inputs, no score, in a scrambled order; `?withScores=true` is the analyst's key | ✅ DB-backed tests with hand-computed scores |
 | 8.2 | `npm run eval:priority`: Kendall τ-b, precision@10, each term alone, the age variants on two halves, officer vs officer. It first checks its copy of the formula against the key | ✅ unit tests on a stand-in officer; end-to-end on local data (the copy reproduces 45/45 scores) |
-| 8.3 | **Officer session (people):** ≥ 30 incidents ranked by one officer, ideally two | ⬜ |
-| 8.4 | Adopt a variant only if it beats the shipped formula on both halves | ⬜ after 8.3 |
+| 8.3 | Ranking session. **Proxy run done 2026-10-22:** Gemini ranked 45 incidents three times, blind to the formula ([priority-calibration-proxy.md](priority-calibration-proxy.md)). The formula beats the naive baseline in every run. **A human ranking is still to come** | 🟡 |
+| 8.4 | Decision: **age saturating at 30 d** beats the shipped formula on both halves in 3/3 runs. It is ready to adopt (a one-constant change) once a human ranking agrees, or the team accepts the proxy. Category severity, which the formula lacks, is the largest gap; take it to the session as a question | 🟡 |
 
 ### 13 — Paper + demo 🟡
 | Section | Source | Ready |
@@ -268,7 +269,7 @@ officer session".
 | System: architecture, data quality, ingestion gate | service-boundaries.md, data-quality-rules.md | ✅ now |
 | Matching: method, labelled sets, P/R/F1/F2, ablation, distance check | matching-evaluation.md, `backend-node/eval/results/` | ✅ now |
 | Copilot: grounding design and eval results | 12.5 | after 12.5 |
-| Priority: explainability and calibration vs officer | priority-evaluation.md + 8.2 | after 8.3 |
+| Priority: explainability, formula vs naive baseline, proxy calibration | priority-evaluation.md, priority-calibration-proxy.md | ✅ now (human ranking would strengthen it) |
 | Demo: rehearsed run and a backup video | — | ⬜ |
 
 ### Decisions and reviews (people, not code)
@@ -277,7 +278,7 @@ officer session".
 | Review the 30 hand labels in `backend-node/eval/production-joins-labelled.json` | an officer / Devansh |
 | Review the Explorer UI and the `--density-*` tokens, plus the new hotspot rings and list, the attention strip and the suggestion box | Devansh |
 | Redeploy both backends once Railway builds again (commands in "Deployment status") | team |
-| Book the officer ranking session (8.3) | team |
+| One human ranking of the sheet (8.3), or decide to accept the proxy result and adopt age 30 d | team |
 
 ### Backlog — deliberately deferred
 - **Photo upload.** Contract approved, not built.
