@@ -28,20 +28,17 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | S | Stabilisation + data foundation | ✅ Done |
 | 6 | Explorer (wards, categories, incidents) | ✅ Done |
 | 7 | Matching evaluation | ✅ Done — threshold set to 0.84 |
-| 8 | Priority calibration | ✅ Proxy run done; age 30 d applied 2026-10-22. A human ranking would confirm it |
+| 8 | Priority calibration | ✅ Closed 2026-10-22: age 30 d applied; category weight decided against |
 | 9 | Hotspots | ✅ Done (2026-10-21) |
 | 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
 | 11 | Decision support | ✅ Done (2026-10-21); the Copilot note was cut |
 | 12 | Officer Copilot | 🟡 Backend live; panel + eval left (Manya) |
 | 13 | Paper + demo | 🟡 Matching and system sections ready |
 
-**All code-only work is done.** Three things are left, and none of them is
-code I can write alone:
+**All code-only work is done, and Phase 8 is closed.** Two things are left:
 
 1. **12.4–12.5:** the Copilot panel and its question set (Manya).
-2. **8 (optional but valuable):** one human ranking of the sheet, to confirm
-   the 30-day change and test whether category should count.
-3. **13:** the paper and a rehearsed demo.
+2. **13:** the paper and a rehearsed demo, after the backends are redeployed.
 
 ### Deployment status (2026-10-21)
 - **GitHub:** `main` at `4cd2721`, with every phase through 11.
@@ -251,7 +248,7 @@ Check automatically that:
 
 Run it per provider. The comparison goes in the paper.
 
-### 8 — Priority calibration ✅ (age 30 d applied 2026-10-22; a human ranking would confirm)
+### 8 — Priority calibration ✅ (closed 2026-10-22)
 The weights stay frozen until an officer has ranked a real queue. The steps
 are in [priority-evaluation.md](priority-evaluation.md), "Phase 8 — the
 officer session".
@@ -261,7 +258,7 @@ officer session".
 | 8.1 | `GET /dashboard/ranking-sheet`: the active queue as a CSV with the formula's inputs, no score, in a scrambled order; `?withScores=true` is the analyst's key | ✅ DB-backed tests with hand-computed scores |
 | 8.2 | `npm run eval:priority`: Kendall τ-b, precision@10, each term alone, the age variants on two halves, officer vs officer. It first checks its copy of the formula against the key | ✅ unit tests on a stand-in officer; end-to-end on local data (the copy reproduces 45/45 scores) |
 | 8.3 | Ranking session. **Proxy run done 2026-10-22:** Gemini ranked 45 incidents three times, blind to the formula ([priority-calibration-proxy.md](priority-calibration-proxy.md)). The formula beats the naive baseline in every run. **A human ranking is still to come** | 🟡 |
-| 8.4 | **Applied 2026-10-22: age saturates at 30 d** (it beat 14 d on both halves in 3/3 runs). Category severity, which the formula lacks, is the largest gap left; test it on a human ranking | ✅ |
+| 8.4 | **Applied 2026-10-22: age saturates at 30 d** (it beat 14 d on both halves in 3/3 runs). **Category severity: decided against** on published evidence, because the hazard belongs to the problem, not its category. A life-safety flag is in the backlog | ✅ |
 
 ### 13 — Paper + demo 🟡
 | Section | Source | Ready |
@@ -278,9 +275,15 @@ officer session".
 | Review the 30 hand labels in `backend-node/eval/production-joins-labelled.json` | an officer / Devansh |
 | Review the Explorer UI and the `--density-*` tokens, plus the new hotspot rings and list, the attention strip and the suggestion box | Devansh |
 | Redeploy both backends once Railway builds again (commands in "Deployment status") | team |
-| One human ranking of the sheet (8.3): confirms age 30 d and tests category severity | team |
 
 ### Backlog — deliberately deferred
+- **Life-safety flag on incidents** (from Phase 8). Flags an open drain,
+  exposed wiring, sewage overflow or a collapsed road, set by an officer or
+  from report text. It feeds decision support (escalate), not the score.
+  Needs a sub-type taxonomy or text classification
+  ([priority-calibration-proxy.md](priority-calibration-proxy.md)).
+- **Optional human ranking** of the calibration sheet, to confirm the 30-day
+  age change; `npm run eval:priority` scores it in one command.
 - **Photo upload.** Contract approved, not built.
 - **Officer merge / unlink of complaints.** The manual override for false
   merges; the backend hook exists, there is no endpoint or UI.

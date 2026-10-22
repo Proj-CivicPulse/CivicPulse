@@ -198,9 +198,10 @@ class PriorityCalibrationTest {
                 keeps discriminating for as long as incidents actually stay open.
 
                 Usable range now: p25 %.1f to p95 %.1f, with %.0f%% of incidents in the
-                most common band. A human ranking should still confirm the change; the
-                next candidate is a category severity term, which the proxy's
-                rationales pointed to and the formula does not have.
+                most common band. A category severity term was considered and
+                decided against on published evidence: the hazard belongs to the
+                problem (an open drain, an exposed wire), not to its category
+                (docs/priority-calibration-proxy.md).
                 """,
                 100.0 * ageSat14 / corpus.size(), 100.0 * ageSat / corpus.size(),
                 pct(scores, 25), pct(scores, 95),
@@ -402,7 +403,7 @@ class PriorityCalibrationTest {
                 | Why accept it | Ordering is what an officer acts on, and ordering is sound on every probe below. Changing a weight on synthetic evidence would be replacing a known, measured bias with an unmeasured one. |
                 | Revisit trigger | Phase 8, once a real morning's queue has been ranked by an officer. Whichever comes first: 200 labelled incidents, or the first officer complaint that the ranking is wrong. |
                 | Change made | Age saturation 14 -> 30 days, 2026-10-22: beat 14 days on both halves in 3/3 blind proxy rankings; a smaller age weight did worse (docs/priority-calibration-proxy.md). |
-                | Next to test | A category severity term (`categories.severity_weight`) — the proxy ranked by hazard per category, which the formula does not read. Only on a human ranking. |
+                | Decided against | A category severity term, 2026-10-22: hazard is a property of the problem, not the category, and no per-incident risk data exists to weight it (docs/priority-calibration-proxy.md). A life-safety flag on the incident is in the backlog instead. |
                 | Do NOT | re-tune from this file. It is a regression net, not evidence about the real world. |
 
                 ## Phase 8 — the officer session (tooling ready 2026-10-21)

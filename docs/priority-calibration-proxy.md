@@ -69,11 +69,10 @@ Ranker consistency, τ-b between runs: 0.881, 0.749, 0.735.
 3. **Growth adds little here.** In this seed few incidents have 24-hour bursts,
    so the term is mostly zero. That is a property of the data, not proof the term
    is useless.
-4. **The biggest gap is category, which the formula does not read.** Every
+4. **The biggest gap is hazard, which the formula does not read.** Every
    rationale led with hazard by category: sewage and water first, footpaths
-   last. The formula deliberately has no category term. If officers confirm
-   this, the planned remedy is `categories.severity_weight`, read by
-   `PriorityService`. It is never a field on incidents.
+   last. The formula deliberately has no category term. The question was
+   settled on real-world evidence below; the answer is no category weight.
 
 ## Decision
 
@@ -90,11 +89,48 @@ Ranker consistency, τ-b between runs: 0.881, 0.749, 0.735.
   earns 14/30 of the age weight), and still lands in the same band in the
   probes. Live scores change when backend-spring deploys:
   `PriorityRefreshJob` rescores every open incident within 5 minutes.
-- **Still to do:** one human ranking, through the same `eval:priority`, to
+- **Optional:** a human ranking, through the same `eval:priority`, would
   confirm or overturn it. `previous (age saturates at 14 d)` stays a variant
   so that check is one command.
-- **Category severity:** take it to the officer session as a question, not a
-  change.
+- **Closed 2026-10-22: no category severity weight.** Decided on published
+  evidence (next section), not on a ranking.
+
+## Category severity — decided against, on real-world evidence
+
+The question: should the score carry a per-category hazard weight
+(`categories.severity_weight`)? The evidence from India and Bengaluru:
+
+| Category | What the record shows |
+|---|---|
+| Potholes | ~1,856 deaths in India in 2022 attributed to potholes, up from 1,481 in 2021 (MoRTH, via [DT Next](https://www.dtnext.in/edit/highway-hazard-746663)); 1,68,491 road deaths in total ([Outlook Business](https://www.outlookbusiness.com/amp/story/news/168-lakh-people-died-in-461-lakh-road-accidents-in-2022-road-ministry-report)) |
+| Electrical / streetlights | ~13,446 electrocution deaths in 2020 (NCRB, via [DNA India](https://www.dnaindia.com/india/report-electrocution-deaths-30-people-killed-every-year-in-india-ncrb-data-2973160)), mostly domestic and occupational; 20 in five months in Bengaluru per BESCOM ([Deccan Herald](https://www.deccanherald.com/amp/story/india%2Fkarnataka%2Fbengaluru%2F20-electrocution-deaths-in-five-months-bescom-data-1129242)) |
+| Storm-water drains | repeated deaths of children and adults in uncovered drains in Bengaluru, a PIL, and a High Court fencing undertaking ([The Quint](https://www.thequint.com/news/india/stormwater-drains-in-bengaluru-continue-to-claim-lives), [Citizen Matters](https://citizenmatters.in/death-of-9-year-old-in-storm-water-drain-pil-filed-against-bbmp), [The News Minute](https://www.thenewsminute.com/article/all-open-drains-bengaluru-be-fenced-sept-2020-civic-body-hc-115956)) |
+| Water supply | contamination outbreaks: 6 confirmed cholera cases in Karnataka in early 2024 officially, more reported by private hospitals ([Udayavani/PTI](https://english.udayavani.com/article/six-cholera-cases-in-2024-no-outbreak-karnataka-health-dept/1626398)) |
+| Street lighting (dark streets) | police link dark spots to crime ([Deccan Chronicle](https://www.deccanchronicle.com/nation/crime/161118/fix-dark-spots-police-to-bbmp.html)); ~37% of 3,075 km surveyed was not safely lit ([Deccan Herald](https://www.deccanherald.com/india/karnataka/bengaluru/nocturnal-safety-switched-off-2041254)); no Bengaluru study quantifies the harm |
+
+**Decision: no category weight.** Three reasons:
+
+1. **The hazard belongs to the problem, not the category.** The deaths come
+   from an *uncovered* drain, a *deep* pothole on a main road, an *exposed*
+   live wire. The same categories also hold "lights on all day", "low pressure"
+   and "a rocking slab", which are real problems but not dangers. The evaluation
+   set's own problems show this split inside every category. A category weight
+   would raise the harmless reports exactly as much as the dangerous ones, and
+   still could not tell them apart.
+2. **There is no per-incident risk to set it from.** National death counts
+   measure exposure times frequency across a country, not the danger of one
+   reported incident. Turning them into weights would be judgement presented
+   as data, the thing priority-evaluation.md warns against.
+3. **The proxy cannot show otherwise.** It saw only the category, never the
+   report's text, so ranking by category was all it could do. Its preference
+   says hazard matters. It does not say category measures hazard.
+
+**What the evidence does support** is flagging **life-safety problems**:
+open or uncovered drains, exposed wiring, sewage overflow, collapsed road. The
+flag would be set on the incident, either by the officer or from report
+text, and would feed decision support (escalate) rather than the score. It is
+in the roadmap backlog. It needs a sub-type taxonomy or text classification,
+plus an officer's confirmation, before it can be trusted.
 
 ## Limits
 
