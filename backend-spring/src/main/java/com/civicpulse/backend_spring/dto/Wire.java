@@ -29,8 +29,9 @@ public final class Wire {
     }
 
     /**
-     * Entities store LocalDateTime in zoneless TIMESTAMP(6) columns, which
-     * Jackson would otherwise serialise without an offset. A browser parses
+     * Entities hold UTC LocalDateTime values (TIMESTAMPTZ columns since V23,
+     * via UtcTimestampConverter), which Jackson would otherwise serialise
+     * without an offset. A browser parses
      * that as LOCAL time, shifting every timestamp by the viewer's offset —
      * 5h30m for this application's likely audience. Stamping Z is what makes
      * the value unambiguous.

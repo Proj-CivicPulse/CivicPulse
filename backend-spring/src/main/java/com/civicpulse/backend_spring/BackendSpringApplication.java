@@ -33,7 +33,7 @@ public class BackendSpringApplication {
 	/**
 	 * Pin the JVM to UTC.
 	 *
-	 * Entities use LocalDateTime over zoneless TIMESTAMP(6) columns, and
+	 * Entities use LocalDateTime (UTC by convention), and
 	 * Hibernate's @CreationTimestamp writes the JVM's local wall-clock time.
 	 * On a machine set to IST that stores 10:15 for an event that happened at
 	 * 04:45 UTC, and the value carries nothing to say which it meant — so the
@@ -46,9 +46,9 @@ public class BackendSpringApplication {
 	 * as a belt-and-braces re-assertion for any path that somehow loaded a
 	 * clock earlier. It is deliberately redundant.
 	 *
-	 * The durable fix is TIMESTAMPTZ columns mapped to Instant. That is a
-	 * migration worth doing while the data is still disposable, and it is
-	 * tracked as a follow-up rather than done here.
+	 * The columns are TIMESTAMPTZ since V23 and UtcTimestampConverter states
+	 * the offset on every write, so the DATABASE no longer depends on this.
+	 * Java code calling LocalDateTime.now() still does.
 	 */
 	@PostConstruct
 	void forceUtcDefaultTimeZone() {
