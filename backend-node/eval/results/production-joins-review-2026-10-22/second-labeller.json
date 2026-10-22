@@ -1,0 +1,155 @@
+{
+  "model": "gemini-3.8-flash",
+  "labels": [
+    {
+      "id": "p1",
+      "label": "ambiguous",
+      "reason": "The burst pipeline could plausibly be the cause of the water supply disruption in the nearby area."
+    },
+    {
+      "id": "p2",
+      "label": "ambiguous",
+      "reason": "A significant pipe leak nearby could plausibly be the reason for the lack of water supply."
+    },
+    {
+      "id": "p3",
+      "label": "ambiguous",
+      "reason": "A major pipeline burst could plausibly cause a sharp drop in water pressure for nearby residents."
+    },
+    {
+      "id": "p4",
+      "label": "different",
+      "reason": "Clearing a blocked sewage line and replacing a missing storm drain cover are separate repair jobs requiring different crews."
+    },
+    {
+      "id": "p5",
+      "label": "ambiguous",
+      "reason": "Both reports describe an ongoing pipe rupture or leak in close proximity that could refer to the same damaged pipe."
+    },
+    {
+      "id": "p6",
+      "label": "ambiguous",
+      "reason": "The dead lamps on the road and the lack of lighting at the park gate could share a common circuit failure or refer to the same stretch."
+    },
+    {
+      "id": "p7",
+      "label": "ambiguous",
+      "reason": "The deep crater and the road breakup after the rain could describe the same section of damaged pavement."
+    },
+    {
+      "id": "p8",
+      "label": "different",
+      "reason": "A collapsed utility trench from digging is a distinct localized defect from general rain-induced road breakup 144 meters away."
+    },
+    {
+      "id": "p9",
+      "label": "different",
+      "reason": "A pothole at a junction is distinct from a collapsed trench from cable excavation over 100 meters away."
+    },
+    {
+      "id": "p10",
+      "label": "ambiguous",
+      "reason": "The flickering light could be located at the park gate or part of the same faulty lighting circuit."
+    },
+    {
+      "id": "p11",
+      "label": "ambiguous",
+      "reason": "The flickering light may be one of the malfunctioning lamps along the reported road stretch."
+    },
+    {
+      "id": "p12",
+      "label": "ambiguous",
+      "reason": "Both reports describe a severe, hazardous pothole on the road and could refer to the same defect."
+    },
+    {
+      "id": "p13",
+      "label": "ambiguous",
+      "reason": "The dead lamps could be part of the dark stretch of unlit streetlights reported nearby."
+    },
+    {
+      "id": "p14",
+      "label": "ambiguous",
+      "reason": "The large pothole and the general road breakup could refer to the same damaged road area."
+    },
+    {
+      "id": "p15",
+      "label": "ambiguous",
+      "reason": "Both complaints could describe the same accumulating pile of uncollected waste spilling onto the road."
+    },
+    {
+      "id": "p16",
+      "label": "different",
+      "reason": "Clearing dumped construction debris requires different equipment and handling than routine municipal waste collection."
+    },
+    {
+      "id": "p17",
+      "label": "ambiguous",
+      "reason": "The broken road surface and the junction pothole could be referring to the same damaged spot."
+    },
+    {
+      "id": "p18",
+      "label": "different",
+      "reason": "The two locations are over 900 meters apart and describe different types of road damage."
+    },
+    {
+      "id": "p19",
+      "label": "ambiguous",
+      "reason": "Low water pressure and complete lack of water in close proximity plausibly stem from the same supply distribution fault."
+    },
+    {
+      "id": "p20",
+      "label": "ambiguous",
+      "reason": "The bus stop may be situated at the market junction, potentially referring to the same large pothole."
+    },
+    {
+      "id": "p21",
+      "label": "ambiguous",
+      "reason": "The blocked drain causing sewage backup could plausibly be the underlying cause of the recurring waterlogging."
+    },
+    {
+      "id": "p22",
+      "label": "different",
+      "reason": "The reports are over 800 meters apart and refer to different streetlight poles."
+    },
+    {
+      "id": "p23",
+      "label": "ambiguous",
+      "reason": "Both complaints describe a single large traffic-disrupting pothole in the road within a short distance."
+    },
+    {
+      "id": "p24",
+      "label": "ambiguous",
+      "reason": "The out streetlight could be responsible for the dark stretch near the park gate."
+    },
+    {
+      "id": "p25",
+      "label": "different",
+      "reason": "The locations are nearly a kilometer apart, indicating distinct road defects."
+    },
+    {
+      "id": "p26",
+      "label": "ambiguous",
+      "reason": "The flickering light could be part of the three-week outage affecting the same street stretch."
+    },
+    {
+      "id": "p27",
+      "label": "different",
+      "reason": "The reports are nearly a kilometer apart, referring to separate bus stops or road sections."
+    },
+    {
+      "id": "p28",
+      "label": "ambiguous",
+      "reason": "The uncollected pile spilling onto the footpath may describe the same overflowing bin site."
+    },
+    {
+      "id": "p29",
+      "label": "different",
+      "reason": "A distance of over 900 meters indicates two entirely different road junctions."
+    },
+    {
+      "id": "p30",
+      "label": "different",
+      "reason": "The reports are over two kilometers apart and represent separate waste clearance needs."
+    }
+  ]
+}
