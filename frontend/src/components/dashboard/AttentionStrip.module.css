@@ -64,6 +64,26 @@
     color: var(--ink-muted);
 }
 
+/* Says "this opens". Pushed to the card's end; turns when open. */
+.chevron {
+    margin-left: auto;
+    align-self: center;
+    flex-shrink: 0;
+    color: var(--ink-faint);
+    transition: transform var(--motion-base) var(--ease);
+}
+
+.chevronOpen {
+    transform: rotate(180deg);
+    color: var(--seal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chevron {
+        transition: none;
+    }
+}
+
 .list {
     padding: var(--space-2) var(--space-4) var(--space-3);
     border-top: 1px solid var(--rule);

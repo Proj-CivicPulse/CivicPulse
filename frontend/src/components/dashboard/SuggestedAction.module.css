@@ -53,33 +53,6 @@
     gap: var(--space-2);
 }
 
-.label {
-    display: grid;
-    gap: var(--space-1);
-    font: var(--t-micro);
-    color: var(--ink-muted);
-}
-
-.select,
-.note {
-    padding: var(--space-1) var(--space-2);
-    border: 1px solid var(--rule-strong);
-    border-radius: var(--r-sharp);
-    background: var(--surface);
-    font: var(--t-data);
-    color: var(--ink);
-}
-
-.select:focus-visible,
-.note:focus-visible {
-    outline: 2px solid var(--seal);
-    outline-offset: 1px;
-}
-
-.note {
-    resize: vertical;
-}
-
 .answered {
     font: var(--t-data);
     color: var(--ink);

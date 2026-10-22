@@ -12,6 +12,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import StatusChip from '@/components/ui/StatusChip';
 import { incidentName } from '@/components/explorer/IncidentList';
 import SuggestedAction from './SuggestedAction';
+import UpdateIncident from './UpdateIncident';
 import styles from './IncidentDetail.module.css';
 
 interface Props {
@@ -140,6 +141,13 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
                     </div>
                 )}
             </dl>
+
+            {/* Keyed on what it edits, so a saved change (or another officer's,
+                arriving via refetch) resets the form to the incident as it is. */}
+            <UpdateIncident
+                key={`${incident.id}-${incident.status}-${incident.departmentId ?? ''}`}
+                incident={incident}
+            />
 
             <SuggestedAction incidentId={incident.id} />
 

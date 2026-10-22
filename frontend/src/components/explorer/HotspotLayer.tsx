@@ -1,4 +1,5 @@
-import { Circle, Tooltip } from 'react-leaflet';
+import { Fragment } from 'react';
+import { Circle, CircleMarker, Tooltip } from 'react-leaflet';
 import type { Hotspot } from '@/services/explorer.service';
 import { priorityLabel } from '@/lib/priority';
 import { formatCount } from '@/lib/format';
@@ -6,8 +7,14 @@ import styles from './HotspotLayer.module.css';
 
 /** Padding around the farthest member, so the ring encloses its markers. */
 const RING_PADDING_METRES = 60;
-/** A hotspot whose members nearly coincide still reads as an area. */
-const MIN_RING_METRES = 120;
+/** A hotspot whose members nearly coincide still reads as an area when zoomed in. */
+const MIN_RING_METRES = 150;
+/**
+ * A ring in metres shrinks with the map: at city zoom (1 px ≈ 60 m) a 300 m
+ * hotspot is a dot. So each hotspot also gets a marker of fixed SCREEN size,
+ * readable at every zoom; the metre ring shows its true extent up close.
+ */
+const MARKER_RADIUS_PX = 11;
 
 const BAND_CLASS = {
     low: styles.low,
@@ -23,9 +30,10 @@ interface Props {
 }
 
 /**
- * Hotspots as rings over the ward map, one per hotspot, edged in the colour of
- * its highest-priority member. Colour is the second channel: the tooltip
- * names the band in words.
+ * Hotspots over the ward map: a fixed-size dashed marker at each centre
+ * (visible at any zoom) and a ring of the hotspot's true extent, both edged in
+ * the colour of its highest-priority member. Colour is the second channel: the
+ * tooltip names the band in words.
  *
  * Colours are CSS classes (see WardShapes): Leaflet writes style options as
  * SVG attributes, which cannot read var(--*). The class is fixed when Leaflet
@@ -34,15 +42,11 @@ interface Props {
 export default function HotspotLayer({ hotspots, categoryLabel, onSelect }: Props) {
     return (
         <>
-            {hotspots.map((h) => (
-                <Circle
-                    key={`${h.id}-${h.maxPriorityBand}`}
-                    center={[h.latitude, h.longitude]}
-                    radius={Math.max(h.radiusMetres + RING_PADDING_METRES, MIN_RING_METRES)}
-                    pathOptions={{ className: `${styles.ring} ${BAND_CLASS[h.maxPriorityBand]}` }}
-                    eventHandlers={onSelect ? { click: () => onSelect(h) } : undefined}
-                >
-                    {/* React children are escaped: category labels and ward names are API data. */}
+            {hotspots.map((h) => {
+                const band = `${BAND_CLASS[h.maxPriorityBand]}`;
+                const select = onSelect ? { click: () => onSelect(h) } : undefined;
+                // React children are escaped: category labels are API data.
+                const tip = (
                     <Tooltip sticky direction="top" className={styles.tooltip}>
                         <strong>Hotspot · {categoryLabel(h.category)}</strong>
                         <div>
@@ -50,8 +54,28 @@ export default function HotspotLayer({ hotspots, categoryLabel, onSelect }: Prop
                         </div>
                         <div>Highest priority: {priorityLabel(h.maxPriorityBand)}</div>
                     </Tooltip>
-                </Circle>
-            ))}
+                );
+                return (
+                    <Fragment key={`${h.id}-${h.maxPriorityBand}`}>
+                        <Circle
+                            center={[h.latitude, h.longitude]}
+                            radius={Math.max(h.radiusMetres + RING_PADDING_METRES, MIN_RING_METRES)}
+                            pathOptions={{ className: `${styles.ring} ${band}` }}
+                            eventHandlers={select}
+                        >
+                            {tip}
+                        </Circle>
+                        <CircleMarker
+                            center={[h.latitude, h.longitude]}
+                            radius={MARKER_RADIUS_PX}
+                            pathOptions={{ className: `${styles.marker} ${band}` }}
+                            eventHandlers={select}
+                        >
+                            {tip}
+                        </CircleMarker>
+                    </Fragment>
+                );
+            })}
         </>
     );
 }

@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ChevronDown } from 'lucide-react';
 import { explorerService, type AttentionKey, type AttentionSignal } from '@/services/explorer.service';
 import { queryKeys } from '@/lib/queryKeys';
 import { formatCount } from '@/lib/format';
 import { formatRelative } from '@/lib/datetime';
 import { useOpenIncident } from '@/lib/useOpenIncident';
+import { useDashboardStore } from '@/stores/dashboard.store';
 import PriorityChip from '@/components/ui/PriorityChip';
 import { placeName } from '@/components/explorer/IncidentList';
 import styles from './AttentionStrip.module.css';
@@ -28,7 +30,13 @@ interface Props {
  * signal keeps its own time window, stated in its definition.
  */
 export default function AttentionStrip({ wardId, category, categoryLabel }: Props) {
-    const [open, setOpen] = useState<AttentionKey | null>(null);
+    // Which card is open, and which incident was selected when it opened.
+    // Selecting another incident brings in the detail panel, so the list
+    // counts as closed from then on and the queue keeps its room — derived,
+    // not reset in an effect.
+    const [opened, setOpened] = useState<{ key: AttentionKey; at: string | null } | null>(null);
+    const selectedIncidentId = useDashboardStore((s) => s.selectedIncidentId);
+    const open = opened !== null && opened.at === selectedIncidentId ? opened.key : null;
     const openIncident = useOpenIncident();
 
     const filters = useMemo(
@@ -66,11 +74,19 @@ export default function AttentionStrip({ wardId, category, categoryLabel }: Prop
                             aria-expanded={isOpen}
                             aria-controls="attention-list"
                             disabled={n === 0}
-                            onClick={() => setOpen(isOpen ? null : s.key)}
+                            onClick={() => setOpened(isOpen ? null : { key: s.key, at: selectedIncidentId })}
                             title={s.definition}
                         >
                             <span className={styles.count}>{formatCount(n)}</span>
                             <span className={styles.label}>{TITLES[s.key](n)}</span>
+                            {n > 0 && (
+                                <ChevronDown
+                                    size={14}
+                                    strokeWidth={2}
+                                    aria-hidden="true"
+                                    className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}
+                                />
+                            )}
                         </button>
                     );
                 })}

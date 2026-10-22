@@ -217,7 +217,10 @@ const PROBLEMS = (() => {
  * [reportCount, ageDays]
  */
 const SHAPES = [
-    [14, 21], // heavy + old        -> critical
+    // Old enough to pass the 30-day age saturation (14 days until 2026-10-22):
+    // at 21 days a 14-report incident is honestly medium now, and a demo with
+    // nothing in the high band never shows "Escalate" or the high-priority card.
+    [14, 35], // heavy + old        -> high
     [9, 12],  // busy + recent      -> high
     [6, 8],   // moderate           -> medium/high
     [4, 30],  // small but stale    -> medium
