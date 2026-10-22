@@ -26,11 +26,11 @@ incidents (Phase 8) can do that.
 | Band | Count | Share |
 |---|---:|---:|
 | LOW | 294 | 14.7% |
-| MEDIUM | 1311 | 65.6% |
+| MEDIUM | 1312 | 65.6% |
 | HIGH | 355 | 17.8% |
-| CRITICAL | 40 | 2.0% |
+| CRITICAL | 39 | 2.0% |
 
-Score percentiles — min 0.9, p25 3.6, p50 4.5, p75 5.3, p95 6.4, max 9.9
+Score percentiles — min 0.9, p25 3.6, p50 4.5, p75 5.2, p95 6.4, max 9.9
 
 ## Term influence (ablation)
 
@@ -42,10 +42,10 @@ actually looks at.
 
 | Term | Weight | Mean \|delta\| | Max \|delta\| | Top-50 churn |
 |---|---:|---:|---:|---:|
-| volume | 40% | 1.856 | 6.50 | 47 / 50 |
-| growth | 30% | 0.334 | 3.00 | 23 / 50 |
-| age | 20% | 1.474 | 2.00 | 18 / 50 |
-| spread | 10% | 0.746 | 4.00 | 19 / 50 |
+| volume | 40% | 2.356 | 8.40 | 50 / 50 |
+| growth | 30% | 0.326 | 3.10 | 21 / 50 |
+| age | 20% | 0.000 | 0.00 | 0 / 50 |
+| spread | 10% | 0.737 | 4.10 | 19 / 50 |
 
 ## Term saturation
 
@@ -84,7 +84,7 @@ They are asserted, not merely reported.
 | 40 reports, 20 today, 300 m apart, 1 day old | 7.4 | HIGH |
 | 40 reports, none today, 30 days old | 6.3 | HIGH |
 | 6 reports spread over 3 km | 4.3 | MEDIUM |
-| 6 reports within 40 m | 3.4 | MEDIUM |
+| 6 reports within 40 m | 3.3 | MEDIUM |
 | 3 reports, all today | 3.6 | MEDIUM |
 | 1 report, 60 days old | 2.9 | LOW |
 

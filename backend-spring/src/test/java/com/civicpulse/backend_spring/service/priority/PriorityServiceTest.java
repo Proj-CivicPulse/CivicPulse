@@ -48,8 +48,9 @@ class PriorityServiceTest {
             for (int i = 0; i < 3; i++) {
                 complaints.add(complaint(NOW.minusHours(2), BASE_LAT, BASE_LON));
             }
-            // ...and 9 older ones, one of them 400 m away.
-            complaints.add(complaint(NOW.minusDays(10), LAT_400M, BASE_LON));
+            // ...and 9 older ones, one of them 400 m away. Age runs from the
+            // FIRST report, so the oldest one sets "two weeks old".
+            complaints.add(complaint(NOW.minusDays(14), LAT_400M, BASE_LON));
             for (int i = 0; i < 8; i++) {
                 complaints.add(complaint(NOW.minusDays(10), BASE_LAT, BASE_LON));
             }
@@ -71,8 +72,9 @@ class PriorityServiceTest {
             for (int i = 0; i < 40; i++) {
                 complaints.add(complaint(NOW.minusHours(1), BASE_LAT, BASE_LON));
             }
-            // 5 km apart — far past the 1 km spread saturation.
-            complaints.add(complaint(NOW.minusHours(1), BASE_LAT + 0.045, BASE_LON));
+            // 5 km apart — far past the 1 km spread saturation — and first
+            // reported 90 days ago, past the age saturation.
+            complaints.add(complaint(NOW.minusDays(90), BASE_LAT + 0.045, BASE_LON));
 
             PriorityResult result = service.compute(incident, complaints, NOW);
 
@@ -94,12 +96,16 @@ class PriorityServiceTest {
         @Test
         @DisplayName("age never decays the score")
         void ageOnlyAdds() {
-            List<Complaint> complaints = List.of(
-                    complaint(NOW.minusDays(40), BASE_LAT, BASE_LON),
-                    complaint(NOW.minusDays(40), BASE_LAT, BASE_LON));
+            // Same two reports, first reported 2 days ago vs 60 days ago.
+            List<Complaint> recent = List.of(
+                    complaint(NOW.minusDays(2), BASE_LAT, BASE_LON),
+                    complaint(NOW.minusDays(2), BASE_LAT, BASE_LON));
+            List<Complaint> longAgo = List.of(
+                    complaint(NOW.minusDays(60), BASE_LAT, BASE_LON),
+                    complaint(NOW.minusDays(60), BASE_LAT, BASE_LON));
 
-            double young = service.compute(incidentCreated(NOW.minusDays(1)), complaints, NOW).score();
-            double old = service.compute(incidentCreated(NOW.minusDays(60)), complaints, NOW).score();
+            double young = service.compute(incidentCreated(NOW.minusDays(2)), recent, NOW).score();
+            double old = service.compute(incidentCreated(NOW.minusDays(2)), longAgo, NOW).score();
 
             assertThat(old).isGreaterThan(young);
         }
@@ -162,17 +168,9 @@ class PriorityServiceTest {
         @Test
         @DisplayName("evidence is stated in plain language, never as weights or codes")
         void plainLanguage() {
-            // "without resolution" is said once age is saturated (30 days).
-            Incident incident = incidentCreated(NOW.minusDays(35));
-            List<Complaint> complaints = new ArrayList<>();
-            for (int i = 0; i < 3; i++) {
-                complaints.add(complaint(NOW.minusHours(3), BASE_LAT, BASE_LON));
-            }
-            for (int i = 0; i < 9; i++) {
-                complaints.add(complaint(NOW.minusDays(15), BASE_LAT, BASE_LON));
-            }
-
-            PriorityResult result = service.compute(incident, complaints, NOW);
+            // "without resolution" is said once age — from the first report —
+            // is saturated (30 days).
+            PriorityResult result = service.compute(incidentCreated(NOW), firstReportedDaysAgo(35), NOW);
 
             assertThat(result.reasons())
                     .contains("12 complaints reported")
@@ -180,8 +178,21 @@ class PriorityServiceTest {
                     .contains("Open for 35 days without resolution");
 
             // Below saturation the reason is the plain age.
-            PriorityResult younger = service.compute(incidentCreated(NOW.minusDays(21)), complaints, NOW);
+            PriorityResult younger = service.compute(incidentCreated(NOW), firstReportedDaysAgo(21), NOW);
             assertThat(younger.reasons()).contains("Open for 21 days");
+        }
+
+        /** 3 reports in the last day, 9 older, the oldest {@code days} ago. */
+        private List<Complaint> firstReportedDaysAgo(int days) {
+            List<Complaint> complaints = new ArrayList<>();
+            for (int i = 0; i < 3; i++) {
+                complaints.add(complaint(NOW.minusHours(3), BASE_LAT, BASE_LON));
+            }
+            complaints.add(complaint(NOW.minusDays(days), BASE_LAT, BASE_LON));
+            for (int i = 0; i < 8; i++) {
+                complaints.add(complaint(NOW.minusDays(10), BASE_LAT, BASE_LON));
+            }
+            return complaints;
         }
 
         @Test

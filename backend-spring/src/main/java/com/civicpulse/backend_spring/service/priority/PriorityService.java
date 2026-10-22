@@ -94,8 +94,26 @@ public class PriorityService {
                 complaints.size(),
                 countSince(complaints, now.minusDays(1)),
                 countSince(complaints, now.minusDays(7)),
-                incident.getCreatedAt() == null ? 0 : Duration.between(incident.getCreatedAt(), now).toDays(),
+                daysOpen(incident, complaints, now),
                 maxPairwiseDistanceMetres(complaints));
+    }
+
+    /**
+     * Age of the PROBLEM: days since its first report — the same clock the
+     * incident panel's "Age", the Explorer and time-to-resolve use
+     * (data-quality-rules.md). Until 2026-10-22 this read the incident's
+     * created_at, which is when the GROUPING was made: the same thing for a
+     * live report, but for an imported backlog it is the import day, and the
+     * panel then said "Open for 21 days" beside "Age: 19 days". Falls back to
+     * created_at only for an incident with no dated member.
+     */
+    private static long daysOpen(Incident incident, List<Complaint> complaints, LocalDateTime now) {
+        LocalDateTime first = complaints.stream()
+                .map(Complaint::getReportedAt)
+                .filter(t -> t != null && !t.isAfter(now))
+                .min(LocalDateTime::compareTo)
+                .orElse(incident.getCreatedAt());
+        return first == null ? 0 : Math.max(0, Duration.between(first, now).toDays());
     }
 
     public PriorityResult compute(Incident incident, List<Complaint> complaints, LocalDateTime now) {
