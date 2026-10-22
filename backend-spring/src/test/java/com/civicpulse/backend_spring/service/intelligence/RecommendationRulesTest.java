@@ -60,6 +60,24 @@ class RecommendationRulesTest {
                 .isEqualTo("Priority is high and work has not started 9 days after the first report.");
         assertThat(RecommendationRules.describe(facts)).containsExactly(
                 "Status: open", "Priority: high (6.1)", "First reported: 9 days ago",
-                "Last reported: today", "Reports in the last 72 h: 3", "In a hotspot: no");
+                "Last reported: today", "Reports in the last 72 h: 3", "In a hotspot: no",
+                "Life-safety hazard: no");
+    }
+
+    @Test
+    @DisplayName("a life-safety hazard on an open incident → escalate, ahead of every score rule")
+    void lifeSafety() {
+        Facts suggested = new Facts(OPEN, 1.0, 0L, 0L, 0, false, true, false);
+        Facts confirmed = new Facts(OPEN, 1.0, 0L, 0L, 0, true, true, true);
+        assertThat(RecommendationRules.decide(suggested).action()).isEqualTo(Action.ESCALATE);
+        assertThat(RecommendationRules.decide(suggested).ruleId()).isEqualTo("life_safety");
+        assertThat(RecommendationRules.decide(suggested).explanation()).contains("confirm it");
+        assertThat(RecommendationRules.decide(confirmed).explanation()).startsWith("An officer confirmed");
+        assertThat(RecommendationRules.describe(confirmed)).last()
+                .isEqualTo("Life-safety hazard: yes, confirmed by an officer");
+
+        // Work has started: the hazard is being dealt with, the usual rules apply.
+        Facts working = new Facts(IN_PROGRESS, 1.0, 20L, 15L, 0, false, true, true);
+        assertThat(RecommendationRules.decide(working).action()).isEqualTo(Action.VERIFY_AND_CLOSE);
     }
 }

@@ -5,6 +5,8 @@ import { formatCount } from '@/lib/format';
 import Skeleton from '@/components/ui/Skeleton';
 import styles from './WardStrip.module.css';
 
+const TOP_WARDS = 10;
+
 /**
  * The proof under the hero: live open-incident counts per ward.
  *
@@ -27,11 +29,19 @@ export default function WardStrip() {
         staleTime: 60_000,
     });
 
+    // The busiest wards only. All 243 cards, nearly every one reading "0",
+    // buried the few that mattered. Sorted here, not by the endpoint, so the
+    // public contract stays a plain list.
+    const topWards = (data ?? [])
+        .filter((ward) => ward.openIncidentCount > 0)
+        .sort((a, b) => b.openIncidentCount - a.openIncidentCount || a.wardName.localeCompare(b.wardName))
+        .slice(0, TOP_WARDS);
+
     return (
         <section className={styles.section} aria-labelledby="ward-strip-heading">
             <div className={styles.inner}>
                 <h2 className={styles.heading} id="ward-strip-heading">
-                    Open incidents by ward
+                    Wards with the most open incidents
                 </h2>
 
                 {isPending ? (
@@ -42,11 +52,11 @@ export default function WardStrip() {
                     // A failed side-panel must not shout on the landing page.
                     // State it plainly and let the hero carry the page.
                     <p className={styles.unavailable}>Ward counts are unavailable right now.</p>
-                ) : data.length === 0 ? (
-                    <p className={styles.unavailable}>No wards are configured yet.</p>
+                ) : topWards.length === 0 ? (
+                    <p className={styles.unavailable}>No ward has an open incident right now.</p>
                 ) : (
                     <ul className={styles.grid}>
-                        {data.map((ward) => (
+                        {topWards.map((ward) => (
                             <li key={ward.wardId} className={styles.card}>
                                 <span className={styles.wardName}>{ward.wardName}</span>
                                 <span className={styles.count}>

@@ -194,7 +194,8 @@ public class ExplorerRepository {
     // ── N3: complaint counts per bucket ─────────────────────────────────────
 
     /**
-     * Counts by {@code date_trunc(unit, reported_at)}, optionally split by
+     * Counts by {@code date_trunc(unit, reported_at, 'UTC')} — UTC days and
+     * weeks, matching the service's bucket list — optionally split by
      * category. Only non-empty buckets come back; the service fills the zeros,
      * because it owns the bucket list. {@code unit} is "day" or "week" — chosen
      * by the service from an enum, never from request text.
@@ -208,7 +209,7 @@ public class ExplorerRepository {
         String key = byCategory ? "c.category" : "NULL::varchar";
 
         String sql = """
-                SELECT date_trunc(:unit, c.reported_at) AS bucket, %s AS key, COUNT(*) AS n
+                SELECT date_trunc(:unit, c.reported_at, 'UTC') AS bucket, %s AS key, COUNT(*) AS n
                 FROM complaints c
                 WHERE %s
                 GROUP BY 1, 2

@@ -21,7 +21,11 @@ public enum MatchingStatus {
     /** A backend-node run holds the claim; the claim timestamp is {@code updated_at}. */
     PROCESSING,
 
-    /** The semantic pipeline assigned it — to a new <em>or</em> an existing incident. */
+    /**
+     * The semantic pipeline assigned it — to a new <em>or</em> an existing
+     * incident — or an officer did (merge, unlink). Terminal either way: the
+     * reconcile sweep never moves it, so an officer's decision stays put.
+     */
     MATCHED,
 
     /** The naive fallback assigned it; {@code MatchReconciliationJob} will retry it. */

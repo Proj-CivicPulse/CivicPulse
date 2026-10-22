@@ -76,7 +76,7 @@ class RankingSheetServiceTest {
         // 1 report, open 20 days: volume log(2)/log(26)=0.213, age 20/30.
         // 10 * (0.4*0.213 + 0.2*0.667) = 2.18 → 2.2, low.
         oldOne = incident("OPEN", "12, Hosur Road, Bengaluru", NOW.minusDays(20));
-        report(oldOne, NOW.minusDays(2));
+        report(oldOne, NOW.minusDays(20));   // age runs from the first report
 
         // 3 reports (2 in the last 24 h), open 2 days, all at one point:
         // 10 * (0.4*0.4255 + 0.3*0.4 + 0.2*(2/30)) = 3.04 → 3.0, medium.
@@ -103,7 +103,7 @@ class RankingSheetServiceTest {
         assertThat(lines.getFirst()).isEqualTo(RankingSheetService.SHEET_HEADER + ",officer_rank");
         assertThat(lines.getFirst()).doesNotContain("score", "band", "reason");
         assertThat(lines).hasSize(3);                                  // header + 2 active; resolved left out
-        assertThat(row(lines, oldOne)).endsWith(",\"12, Hosur Road, Bengaluru\",1,0,1,20,0,");
+        assertThat(row(lines, oldOne)).endsWith(",\"12, Hosur Road, Bengaluru\",1,0,0,20,0,");
         assertThat(row(lines, busyOne)).endsWith(",,3,2,3,2,0,");
     }
 
@@ -115,7 +115,7 @@ class RankingSheetServiceTest {
         List<String> lines = rankingSheetService.csv(List.of(wardId), true, NOW).lines().toList();
 
         assertThat(lines.getFirst()).isEqualTo(RankingSheetService.SHEET_HEADER + ",score,band");
-        assertThat(row(lines, oldOne)).endsWith(",1,0,1,20,0,2.2,low");
+        assertThat(row(lines, oldOne)).endsWith(",1,0,0,20,0,2.2,low");
         assertThat(row(lines, busyOne)).endsWith(",3,2,3,2,0,3.0,medium");
     }
 

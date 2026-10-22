@@ -1,5 +1,5 @@
 {
-  "description": "Real production joins (incident_match_log, semantic matcher, top_similarity < 0.90) labelled by hand. One row per distinct pair of texts; distancesM lists each decision that joined that pair. Label rule: same = the same physical fault fixable by one repair job; ambiguous = plausibly one root cause, excluded from headline figures. Labeller: assistant, 2026-10-14, pending officer review. The texts are seed data from backend-spring/scripts/seed-dev-data.mjs, not residents.",
+  "description": "Real production joins (incident_match_log, semantic matcher, top_similarity < 0.90) labelled by hand. One row per distinct pair of texts; distancesM lists each decision that joined that pair. Label rule: same = the same physical fault fixable by one repair job; ambiguous = plausibly one root cause, excluded from headline figures. Labeller: assistant, 2026-10-14. Reviewed 2026-10-22 against a blind second labeller (gemini-3.8-flash, eval/results/production-joins-review-2026-10-22/): agreement 19/30, Cohen's kappa 0.45, no same/different flips; every disagreement was the second labeller choosing ambiguous. Three labels changed to ambiguous on review (p5, p12, p26), each noted in its reason. The texts are seed data from backend-spring/scripts/seed-dev-data.mjs, not residents.",
   "pairs": [
     {
       "id": "p1",
@@ -70,8 +70,8 @@
       ],
       "a": "Burst pipeline near the junction, the road is flooded and the water is muddy.",
       "b": "Water pipe has been leaking for days. Clean water running straight into the drain.",
-      "label": "same",
-      "reason": "Both describe one leaking main flooding the road, within 170 m."
+      "label": "ambiguous",
+      "reason": "Reviewed 2026-10-22, was same: a burst pipe flooding the road and a pipe leaking into the drain, 24-168 m apart, may be one main or two; the texts do not say which."
     },
     {
       "id": "p6",
@@ -163,8 +163,8 @@
       ],
       "a": "Deep crater near the bus stop. It fills with water and you cannot tell how deep it is.",
       "b": "Large pothole in the middle of the road, cars are swerving into oncoming traffic to avoid it.",
-      "label": "same",
-      "reason": "Deep crater and large pothole in the road at the same spot."
+      "label": "ambiguous",
+      "reason": "Reviewed 2026-10-22, was same: a crater 'near the bus stop' and a pothole 'in the middle of the road', 31-202 m apart, could be one hole or two."
     },
     {
       "id": "p13",
@@ -367,8 +367,8 @@
       ],
       "a": "Light flickers all night and then goes out. Been like this since the storm.",
       "b": "Street light has been out for three weeks. The whole stretch is pitch dark after 7pm.",
-      "label": "same",
-      "reason": "A lamp that flickered then failed, on the dark stretch, 27-133 m apart."
+      "label": "ambiguous",
+      "reason": "Reviewed 2026-10-22, was same: a flickering-then-dead lamp may or may not be on the dark stretch; labelled as p10 and p11, which pair the same lamp with the same outage."
     },
     {
       "id": "p27",

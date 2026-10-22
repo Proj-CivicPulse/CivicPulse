@@ -2,12 +2,17 @@ package com.civicpulse.backend_spring.controller;
 
 import com.civicpulse.backend_spring.dto.PageResponse;
 import com.civicpulse.backend_spring.dto.complaint.ComplaintDto;
+import com.civicpulse.backend_spring.dto.incident.GroupingDto;
 import com.civicpulse.backend_spring.dto.incident.IncidentDto;
+import com.civicpulse.backend_spring.dto.incident.MembershipChangeDto;
+import com.civicpulse.backend_spring.dto.incident.MembershipChangeRequest;
 import com.civicpulse.backend_spring.dto.incident.RecommendationDto;
 import com.civicpulse.backend_spring.dto.incident.RecommendationFeedbackRequest;
 import com.civicpulse.backend_spring.dto.incident.UpdateIncidentRequest;
 import com.civicpulse.backend_spring.service.incident.IncidentQuery;
 import com.civicpulse.backend_spring.exception.UnauthorizedException;
+import com.civicpulse.backend_spring.service.incident.GroupingExplainer;
+import com.civicpulse.backend_spring.service.incident.IncidentMembershipService;
 import com.civicpulse.backend_spring.service.incident.IncidentService;
 import com.civicpulse.backend_spring.service.intelligence.RecommendationService;
 import jakarta.validation.Valid;
@@ -37,6 +42,8 @@ public class IncidentController {
 
     private final IncidentService incidentService;
     private final RecommendationService recommendationService;
+    private final IncidentMembershipService membershipService;
+    private final GroupingExplainer groupingExplainer;
 
     /**
      * One page of the queue, most urgent first by default
@@ -75,6 +82,49 @@ public class IncidentController {
     @GetMapping("/{id}/complaints")
     public ResponseEntity<List<ComplaintDto>> complaints(@PathVariable Long id) {
         return ResponseEntity.ok(incidentService.getComplaints(id));
+    }
+
+    /** Why each report is part of this incident, in an officer's terms. */
+    @GetMapping("/{id}/grouping")
+    public ResponseEntity<GroupingDto> grouping(@PathVariable Long id) {
+        return ResponseEntity.ok(groupingExplainer.explain(id));
+    }
+
+    /** Merge this incident into {@code intoIncidentId}: same ward, same category, both active. */
+    @PostMapping("/{id}/merge")
+    public ResponseEntity<MembershipChangeDto> merge(
+            @PathVariable Long id,
+            @RequestBody MembershipChangeRequest request,
+            Authentication authentication) {
+        Long into = request.getIntoIncidentId() == null || request.getIntoIncidentId().isBlank()
+                ? null : parseId(request.getIntoIncidentId());
+        return ResponseEntity.ok(membershipService.merge(id, into, officer(authentication), request.getNote()));
+    }
+
+    /** Split one report off into an incident of its own: "not the same problem". */
+    @PostMapping("/{id}/complaints/{complaintId}/unlink")
+    public ResponseEntity<MembershipChangeDto> unlink(
+            @PathVariable Long id,
+            @PathVariable Long complaintId,
+            @RequestBody(required = false) MembershipChangeRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(membershipService.unlink(
+                id, complaintId, officer(authentication), request == null ? null : request.getNote()));
+    }
+
+    private static long officer(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof Long userId)) {
+            throw new UnauthorizedException("Not authenticated");
+        }
+        return userId;
+    }
+
+    private static Long parseId(String value) {
+        try {
+            return Long.valueOf(value.trim());
+        } catch (NumberFormatException ex) {
+            throw new com.civicpulse.backend_spring.exception.ValidationException("intoIncidentId must be a valid id");
+        }
     }
 
     @PatchMapping("/{id}")

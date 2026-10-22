@@ -99,6 +99,12 @@
     color: var(--ink-faint);
 }
 
+/* The hotspot legend's band chips sit in the note's line of text. */
+.legendChip {
+    margin-right: var(--space-1);
+    vertical-align: middle;
+}
+
 .toggle {
     padding: var(--space-1) var(--space-2);
     border: 1px solid var(--rule);

@@ -11,4 +11,7 @@ public interface IncidentMatchLogRepository extends JpaRepository<IncidentMatchL
 
     /** Every decision recorded for one complaint, oldest first — its matching history. */
     List<IncidentMatchLog> findByComplaintIdOrderByCreatedAtAsc(Long complaintId);
+
+    /** Every decision for these complaints, newest first — the first per complaint is its latest. */
+    List<IncidentMatchLog> findByComplaintIdInOrderByIdDesc(List<Long> complaintIds);
 }

@@ -111,7 +111,19 @@ class AttentionServiceTest {
 
         long resolvedHigh = incident("garbage", "RESOLVED", 9.0, LAT + 110 * HUNDRED_M);
         report(resolvedHigh, "garbage", jan(31, 9));
+
+        lifeSafetyId = incident("drainage", "OPEN", 1.0, LAT + 130 * HUNDRED_M);
+        report(lifeSafetyId, "drainage", jan(20, 9));
+        long resolvedHazard = incident("drainage", "RESOLVED", 1.0, LAT + 150 * HUNDRED_M);
+        report(resolvedHazard, "drainage", jan(20, 9));
+        entityManager.createNativeQuery("""
+                UPDATE incidents SET life_safety = TRUE, life_safety_source = 'REPORT_TEXT'
+                WHERE id IN (?1, ?2)
+                """)
+                .setParameter(1, lifeSafetyId).setParameter(2, resolvedHazard).executeUpdate();
     }
+
+    private long lifeSafetyId;
 
     private static List<String> ids(AttentionDto dto, String key) {
         return dto.getSignals().stream().filter(s -> s.getKey().equals(key)).findFirst().orElseThrow()
@@ -127,21 +139,22 @@ class AttentionServiceTest {
 
         assertThat(dto.getAsOf()).isEqualTo("2001-02-01T00:00:00Z");
         assertThat(dto.getSignals()).extracting(AttentionDto.Signal::getKey)
-                .containsExactly("high_priority", "worsening", "in_hotspot", "category_spike");
+                .containsExactly("life_safety", "high_priority", "worsening", "in_hotspot", "category_spike");
+        assertThat(ids(dto, "life_safety")).containsExactly(String.valueOf(lifeSafetyId));
         assertThat(ids(dto, "high_priority")).containsExactly(String.valueOf(highId));
         assertThat(ids(dto, "worsening")).containsExactly(String.valueOf(worseningId));
         assertThat(ids(dto, "in_hotspot"))
                 .containsExactlyInAnyOrderElementsOf(hotspotIds.stream().map(String::valueOf).toList());
         assertThat(ids(dto, "category_spike")).containsExactly(String.valueOf(spikeId));
 
-        AttentionDto.Signal spike = dto.getSignals().get(3);
+        AttentionDto.Signal spike = dto.getSignals().get(4);
         assertThat(spike.getCategories()).singleElement().satisfies(s -> {
             assertThat(s.getCategory()).isEqualTo("pothole");
             assertThat(s.getLastWeek()).isEqualTo(6);
             assertThat(s.getPriorWeeklyMean()).isEqualTo(0.5);
         });
 
-        AttentionDto.Item worsening = dto.getSignals().get(1).getIncidents().getFirst();
+        AttentionDto.Item worsening = dto.getSignals().get(2).getIncidents().getFirst();
         assertThat(worsening.getRecentReports()).isEqualTo(2);
         assertThat(worsening.getLastReportedAt()).isEqualTo("2001-01-31T08:00:00Z");
     }
@@ -153,7 +166,8 @@ class AttentionServiceTest {
 
         AttentionDto dto = attentionService.attention(List.of(wardId), List.of("Solid Waste"), NOW);
 
-        assertThat(dto.getSignals()).hasSize(4);
+        assertThat(dto.getSignals()).hasSize(5);
+        assertThat(ids(dto, "life_safety")).isEmpty();
         assertThat(ids(dto, "high_priority")).containsExactly(String.valueOf(highId));
         assertThat(ids(dto, "worsening")).containsExactly(String.valueOf(worseningId));
         assertThat(ids(dto, "in_hotspot")).isEmpty();

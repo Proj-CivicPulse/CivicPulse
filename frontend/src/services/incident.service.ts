@@ -57,6 +57,15 @@ export interface Incident {
      */
     firstReportedAt: string | null;
     lastReportedAt: string | null;
+    /**
+     * A hazard to life: open drain or manhole, exposed wiring, sewage
+     * overflow, collapsed road, fallen tree or pole. `report_text` means the
+     * reports suggested it and an officer has not decided yet; `officer` means
+     * decided (either way). Feeds the suggestion, never the score.
+     */
+    lifeSafety: boolean;
+    lifeSafetySource: 'report_text' | 'officer' | null;
+    lifeSafetyReason: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -86,6 +95,9 @@ export interface UpdateIncidentInput {
     departmentId?: string;
     title?: string;
     summary?: string;
+    /** The officer's decision on the life-safety flag; final once sent. */
+    lifeSafety?: boolean;
+    lifeSafetyNote?: string;
 }
 
 function buildQuery(filters: IncidentFilters = {}): string {
@@ -134,6 +146,26 @@ export interface RecommendationFeedback {
     note?: string;
 }
 
+/**
+ * Why one report is part of its incident, in an officer's terms (distance,
+ * wording, who decided) — never a similarity score.
+ */
+export interface GroupingMember {
+    complaintId: string;
+    referenceNo: string;
+    kind: 'started' | 'joined' | 'backup_rule' | 'rechecked' | 'merged' | 'split' | 'unknown';
+    explanation: string;
+    siblingReferenceNo: string | null;
+    distanceM: number | null;
+    decidedAt: string | null;
+}
+
+/** After a merge or unlink: both incidents as they now are. `source` is null after a merge. */
+export interface MembershipChange {
+    source: Incident | null;
+    target: Incident;
+}
+
 /** Every endpoint here requires the officer role. */
 export const incidentService = {
     list: (filters?: IncidentFilters) =>
@@ -146,6 +178,17 @@ export const incidentService = {
 
     update: (id: string, changes: UpdateIncidentInput) =>
         patch<Incident>(SPRING_API_PATH, `/incidents/${id}`, changes),
+
+    grouping: (id: string) =>
+        get<{ incidentId: string; members: GroupingMember[] }>(SPRING_API_PATH, `/incidents/${id}/grouping`),
+
+    /** Same ward, same category, both active; the emptied incident is deleted. */
+    merge: (id: string, intoIncidentId: string, note?: string) =>
+        post<MembershipChange>(SPRING_API_PATH, `/incidents/${id}/merge`, { intoIncidentId, ...(note ? { note } : {}) }),
+
+    /** Moves one report into a new incident of its own. */
+    unlink: (id: string, complaintId: string, note?: string) =>
+        post<MembershipChange>(SPRING_API_PATH, `/incidents/${id}/complaints/${complaintId}/unlink`, note ? { note } : {}),
 
     recommendation: (id: string) => get<Recommendation>(SPRING_API_PATH, `/incidents/${id}/recommendation`),
 

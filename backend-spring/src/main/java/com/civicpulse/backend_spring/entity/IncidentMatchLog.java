@@ -102,6 +102,14 @@ public class IncidentMatchLog {
     @Column(name = "embedding_dim")
     private Integer embeddingDim;
 
+    /** The officer who merged or unlinked (V25); null for a matcher decision. */
+    @Column(name = "actor_user_id")
+    private Long actorUserId;
+
+    /** The officer's reason, if they gave one. */
+    @Column(name = "note", length = 500)
+    private String note;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

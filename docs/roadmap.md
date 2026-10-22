@@ -273,8 +273,29 @@ officer session".
 | Item | Owner |
 |---|---|
 | Review the 30 hand labels in `backend-node/eval/production-joins-labelled.json` | team |
-| UI review: the Explorer and `--density-*` tokens, the hotspot rings and list, the attention strip and the suggestion box | team |
+| Reseed the live demo data after the backends deploy (the heaviest hotspots are now 35 days old, so the demo has a high band under the 30-day age rule): clear it, then run the seed | team (bulk delete on production) |
 | Redeploy both backends once Railway builds again (commands in "Deployment status") | team |
+
+### UI review ✅ (2026-10-22)
+Two passes by Gemini (`gemini-3.8-flash`) on screenshots of the new screens,
+with every finding checked against the code before acting. Fixed:
+- **Accept / Override** read as if it acted. It is now **Agree / Disagree**,
+  with the note "only recorded to check the rules" kept above the controls.
+  The form uses the shared `Field` components.
+- **No way to change an incident** existed anywhere in the UI. Added **Update
+  incident** (status and department) to the panel. "Resolved — fixed" and
+  "Closed — ended without a fix" are spelled out.
+- **"Open for 21 days" beside "Age 19 days".** Priority age now runs from the
+  first report, as everything else does.
+- **Hotspots invisible at city zoom.** They now have a fixed-size marker plus
+  the true-extent ring, and a legend.
+- **Attention cards** gained an open/closed chevron, and the list closes when
+  an incident opens, so the queue keeps its room.
+
+Checked and not changed:
+- the mobile "overlap" (a full-page screenshot of a fixed sheet);
+- the phone hotspot table, which scrolls sideways like the ward table;
+- the phone incident queue: same, and it predates this work.
 
 ### Backlog — deliberately deferred
 - **Life-safety flag on incidents** (from Phase 8). Flags an open drain,

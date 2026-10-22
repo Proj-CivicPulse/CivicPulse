@@ -10,11 +10,13 @@ not separate them at all: on a labelled set with three real problems per
 ward + category, every pool collapsed into **one** incident. Separation appears
 only around 0.84–0.87, and even there the two distributions overlap. On real
 production joins, the cheapest large win is not the threshold but **distance**:
-every same-problem join was within 202 m, and a 500 m check on the matched
-member removes 6 of 22 wrong joins while losing **none** of 27 right ones. That
+every same-problem join was within 149 m, and a 500 m check on the matched
+member removes 6 of 22 wrong joins while losing **none** of 17 right ones. That
 check is now built (`MATCH_MAX_SIBLING_DISTANCE_M = 500`). **The threshold is
 now 0.84** (decided 2026-10-21, §4): the recall it appeared to cost on real
-joins came from seed texts that were themselves different problems.
+joins came from seed texts that were themselves different problems. The real
+labels were **reviewed on 2026-10-22** against a blind second labeller (§3a):
+three moved to ambiguous, and 0.84 is still the best threshold.
 
 ---
 
@@ -33,10 +35,10 @@ Two datasets, because neither is enough alone.
 | | Authored set | Real production joins |
 |---|---|---|
 | File | `backend-node/eval/matching-eval-set.json` | `backend-node/eval/production-joins-labelled.json` |
-| Size | 12 pools · 144 complaints · 216 same / 576 different pairs | 30 distinct pairs · 64 decisions (27 same, 22 different, 15 ambiguous) |
+| Size | 12 pools · 144 complaints · 216 same / 576 different pairs | 30 distinct pairs · 64 decisions (17 same, 22 different, 25 ambiguous, after the §3a review) |
 | What it is | Each pool = one ward + category with **three different problems**, four complaints each, in deliberately different voices (formal, terse, angry, code-mixed Kannada/Hindi–English). Problems share locality names on purpose. | Every semantic join in `incident_match_log` below 0.90 similarity, labelled by hand with a written reason per pair. |
 | Strength | Contains the hard case production data cannot: same ward, same category, similar words, different fault | Real decisions, real coordinates |
-| Weakness | Authored, not collected; no coordinates | Seed texts (short, generic); small; single labeller |
+| Weakness | Authored, not collected; no coordinates | Seed texts (short, generic); small; one labeller plus a model second opinion |
 
 **Label rule (both sets):** two complaints are the same incident iff they
 describe the same physical fault that one repair job would fix. Where two
@@ -125,17 +127,20 @@ threshold is.
 64 real join decisions, all made at 0.75. For each candidate policy: how many
 wrong joins it would have prevented and how many right ones it would have lost.
 
+Figures use the labels as reviewed on 2026-10-22 (§3a); the first-pass figures
+(27 same, 15 ambiguous) are in git history and gave the same ordering.
+
 | Policy | Wrong joins removed | Right joins lost | Precision of kept joins |
 |---|---|---|---|
-| 0.75, no distance check (today) | 0 / 22 | 0 / 27 | 55% |
-| **0.75 + distance ≤ 500 m** | **6 / 22** | **0 / 27** | 63% |
-| 0.80 + ≤ 500 m | 10 / 22 | 4 / 27 | 66% |
-| 0.82 + ≤ 500 m | 13 / 22 | 7 / 27 | 69% |
-| 0.84 + ≤ 500 m | 21 / 22 | 9 / 27 | 95% |
-| 0.85 + ≤ 500 m | 22 / 22 | 13 / 27 | 100% |
-| 0.85, no distance check | 17 / 22 | 13 / 27 | 74% |
+| 0.75, no distance check | 0 / 22 | 0 / 17 | 44% |
+| 0.75 + distance ≤ 500 m | 6 / 22 | 0 / 17 | 52% |
+| 0.80 + ≤ 500 m | 10 / 22 | 0 / 17 | 59% |
+| 0.82 + ≤ 500 m | 13 / 22 | 1 / 17 | 64% |
+| **0.84 + ≤ 500 m (shipped)** | **21 / 22** | **3 / 17** | **93%** |
+| 0.85 + ≤ 500 m | 22 / 22 | 7 / 17 | 100% |
+| 0.85, no distance check | 17 / 22 | 7 / 17 | 71% |
 
-Distances: every **same**-problem join was within **202 m**. The **different**-
+Distances: every **same**-problem join was within **149 m**. The **different**-
 problem joins split into two groups: 16–176 m (same place, different fault —
 blocked sewer vs missing drain cover, uncollected garbage vs illegal dumping)
 and **843–2108 m** (same kind of fault, different place). Distance removes the
@@ -143,6 +148,43 @@ second group completely and costs nothing; only text can separate the first.
 
 Results are insensitive to the exact cut between 250 m and 500 m (identical
 here); 1000 m catches only one of the far pairs.
+
+### 3a. Label review (2026-10-22)
+
+The 30 pairs were labelled once, by the assistant, on 2026-10-14. To check
+them, a **blind second labeller** (`gemini-3.8-flash`, `npm run
+eval:second-label`) labelled every pair under the same rule, seeing the
+category, both texts and the distance, never the first label or the
+similarity.
+
+| | |
+|---|---|
+| Raw agreement | 19 / 30 (63%) |
+| Cohen's κ (three classes) | 0.45 (moderate) |
+| same ↔ different flips | **0** |
+
+Every disagreement was the second labeller answering *ambiguous*: it never
+called a pair "same", and it never called a first-pass "different" pair
+"same". So the two labellers disagree on how sure to be, not on direction.
+
+Each of the 11 disagreements was re-read against the rule. **Three labels
+changed to ambiguous**, where the first reason claimed more than the texts say:
+
+- **p5:** a burst pipe flooding the road vs a pipe leaking into the drain.
+  The texts don't say whether it is one main.
+- **p12:** a crater "near the bus stop" vs a pothole "in the middle of the
+  road", 31–202 m apart.
+- **p26:** it was inconsistent with p10/p11, which pair the same lamp with the
+  same outage as ambiguous.
+
+The other eight were kept: both texts name the same fault at the same place
+(p6, p13, p24: dead lamps on one dark stretch; p19: no supply and low pressure
+in one area; p23, p28) or different crews and landmarks (p15, p20).
+
+**Effect on the threshold.** It still holds, more clearly than before. Under
+the reviewed labels, 0.84 + 500 m keeps one wrong join and loses 3 of 17 right
+ones (it was 9 of 27). Under the second labeller's own labels, it keeps **no**
+wrong join. Raw output: `backend-node/eval/results/production-joins-review-2026-10-22/`.
 
 ---
 
@@ -189,12 +231,14 @@ distance check on:
 
 | Threshold | Real joins F2 | Authored F2 | Mean |
 |---|---|---|---|
-| 0.75 | 0.894 | 0.652 | 0.773 |
-| 0.80 | 0.804 | 0.700 | 0.752 |
-| **0.84** | 0.709 | **0.852** | **0.780** |
-| 0.85 | 0.574 | 0.883 | 0.729 |
+| 0.75 | 0.842 | 0.652 | 0.747 |
+| 0.80 | 0.876 | 0.700 | 0.788 |
+| **0.84** | 0.843 | **0.852** | **0.848** |
+| 0.85 | 0.641 | 0.883 | 0.762 |
 
-0.84 is best on the mean and best on real-join F1 (0.783 vs 0.771), and cuts
+Real-join figures use the §3a reviewed labels; before the review the mean was
+0.780 at 0.84 against 0.773 at 0.75, so the review widened the margin. 0.84 is
+best on the mean and best on real-join F1 (0.875 vs 0.762 at 0.82), and cuts
 the wrong real joins kept from 16 to 1. Then the cost side was checked. The
 "right joins lost" were all seed reports, and the seed script built each
 hotspot by rotating four **different** faults of one category: a leak, no
@@ -230,7 +274,8 @@ here to reopen the contract's single-linkage decision.
   sample of real traffic and its absolute numbers are not production rates.
 - **The real sample is small** (30 distinct pairs) and its texts are seed data.
   The 73 joins at ≥ 0.95 were not labelled — most are verbatim seed reuse.
-- **One labeller** (the assistant), no inter-rater agreement. Labels and their
-  reasons are in the JSON for an officer to review and overrule.
+- **No human labeller.** The first labeller is the assistant, the second a
+  different model (κ 0.45, §3a). Labels and their reasons are in the JSON for an
+  officer to overrule.
 - **Time** was not evaluated, and the authored set has no coordinates, so the
   distance finding rests on the real sample alone.

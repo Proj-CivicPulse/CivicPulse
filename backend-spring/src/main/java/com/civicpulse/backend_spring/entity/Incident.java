@@ -1,6 +1,7 @@
 package com.civicpulse.backend_spring.entity;
 
 import com.civicpulse.backend_spring.enums.IncidentStatus;
+import com.civicpulse.backend_spring.enums.LifeSafetySource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -158,6 +159,27 @@ public class Incident {
     /** Street address of the incident centroid. Null when geocoding is off. */
     @Column(name = "address", length = 512)
     private String address;
+
+    /**
+     * The problem can kill someone: open drain, exposed wiring, sewage
+     * overflow, collapsed road, fallen tree or pole (V24). Feeds decision
+     * support and "needs attention", never the score.
+     */
+    @Column(name = "life_safety", nullable = false)
+    @Builder.Default
+    private boolean lifeSafety = false;
+
+    /**
+     * Who set {@link #lifeSafety}. {@code OFFICER} is final: recompute then
+     * leaves the flag alone. Null when nothing has ever flagged it.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "life_safety_source", length = 16)
+    private LifeSafetySource lifeSafetySource;
+
+    /** Why: the detector's quoted phrase, or what the officer recorded. */
+    @Column(name = "life_safety_reason", length = 255)
+    private String lifeSafetyReason;
 
     @Column(name = "ai_recommendation", columnDefinition = "TEXT")
     private String aiRecommendation;

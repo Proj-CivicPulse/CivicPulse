@@ -21,6 +21,7 @@ import DataTable, { type Column } from '@/components/ui/DataTable';
 import EmptyState from '@/components/ui/EmptyState';
 import MapView from '@/components/ui/MapView';
 import Panel from '@/components/ui/Panel';
+import PriorityChip from '@/components/ui/PriorityChip';
 import Skeleton from '@/components/ui/Skeleton';
 import styles from './Explorer.module.css';
 
@@ -197,7 +198,10 @@ export default function WardExplorer() {
                             <DensityLegend title="Active incidents" />
                             {(hotspotsQuery.data?.hotspots.length ?? 0) > 0 && (
                                 <p className={styles.note} style={{ padding: 'var(--space-2) var(--space-4) 0' }}>
-                                    Dashed rings are hotspots, edged by their highest priority.
+                                    Dashed circles are hotspots, edged by their highest priority:{' '}
+                                    {(['low', 'medium', 'high', 'critical'] as const).map((band) => (
+                                        <PriorityChip key={band} band={band} className={styles.legendChip} />
+                                    ))}
                                 </p>
                             )}
                             {boundariesQuery.data && (

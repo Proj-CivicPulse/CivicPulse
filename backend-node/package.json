@@ -27,6 +27,7 @@
         "eval:production-joins": "node --import tsx eval/evaluate-production-joins.ts",
         "eval:priority": "node --import tsx eval/evaluate-priority.ts",
         "eval:priority-proxy": "node --import tsx eval/proxy-rank-priority.ts",
+        "eval:second-label": "node --import tsx eval/second-label-production-joins.ts",
         "typecheck": "tsc --noEmit",
         "lint": "oxlint"
     },

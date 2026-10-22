@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { incidentService, type RecommendedAction } from '@/services/incident.service';
 import { queryKeys } from '@/lib/queryKeys';
 import { describeError } from '@/lib/errors';
 import { formatRelative } from '@/lib/datetime';
 import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
 import styles from './SuggestedAction.module.css';
 
 export const ACTION_LABEL: Record<RecommendedAction, string> = {
@@ -19,14 +20,21 @@ const ACTIONS = Object.keys(ACTION_LABEL) as RecommendedAction[];
 
 /**
  * Decision support (Phase 11): the next step the rules recommend, the rule in
- * words, the facts it read — and the officer's answer. Accepting or overriding
- * only records the decision; status and department are still changed by hand.
+ * words, the facts it read — and whether the officer agrees. Agree / Disagree,
+ * not Accept / Override: "Accept" on "Escalate" reads as "escalate it", and
+ * nothing is escalated — the answer only checks the rules.
  */
 export default function SuggestedAction({ incidentId }: { incidentId: string }) {
     const queryClient = useQueryClient();
     const [overriding, setOverriding] = useState(false);
     const [chosen, setChosen] = useState<RecommendedAction | ''>('');
     const [note, setNote] = useState('');
+    const formRef = useRef<HTMLFormElement>(null);
+
+    // The panel scrolls; bring the form and its Save button into view on open.
+    useEffect(() => {
+        if (overriding) formRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, [overriding]);
 
     const query = useQuery({
         queryKey: queryKeys.incidents.recommendation(incidentId),
@@ -79,17 +87,24 @@ export default function SuggestedAction({ incidentId }: { incidentId: string }) 
                         </ul>
                     </details>
 
+                    {/* Above the controls, so it is in view while answering. */}
+                    <p className={styles.muted}>
+                        Your answer is only recorded to check the rules. It does not escalate,
+                        assign or change the incident — use Update incident above for that.
+                    </p>
+
                     {answeredThis && last ? (
                         <p className={styles.answered}>
                             {last.decision === 'accepted'
-                                ? 'Accepted'
-                                : `Overridden: ${last.chosenAction ? ACTION_LABEL[last.chosenAction] : ''}`}
+                                ? 'You agreed'
+                                : `You disagreed — better: ${last.chosenAction ? ACTION_LABEL[last.chosenAction] : ''}`}
                             {' · '}
                             {formatRelative(last.createdAt)}
                             {last.note ? ` — “${last.note}”` : ''}
                         </p>
                     ) : overriding ? (
                         <form
+                            ref={formRef}
                             className={styles.override}
                             onSubmit={(e) => {
                                 e.preventDefault();
@@ -101,35 +116,31 @@ export default function SuggestedAction({ incidentId }: { incidentId: string }) 
                                 });
                             }}
                         >
-                            <label className={styles.label}>
-                                Instead
-                                <select
-                                    className={styles.select}
-                                    value={chosen}
-                                    onChange={(e) => setChosen(e.target.value as RecommendedAction | '')}
-                                    required
-                                >
-                                    <option value="">Choose…</option>
-                                    {ACTIONS.filter((a) => a !== rec.action).map((a) => (
-                                        <option key={a} value={a}>
-                                            {ACTION_LABEL[a]}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className={styles.label}>
-                                Why (optional)
-                                <textarea
-                                    className={styles.note}
-                                    rows={2}
-                                    maxLength={1000}
-                                    value={note}
-                                    onChange={(e) => setNote(e.target.value)}
-                                />
-                            </label>
+                            <Field
+                                as="select"
+                                label="What would you do instead?"
+                                value={chosen}
+                                onChange={(e) => setChosen(e.target.value as RecommendedAction | '')}
+                                required
+                            >
+                                <option value="">Choose…</option>
+                                {ACTIONS.filter((a) => a !== rec.action).map((a) => (
+                                    <option key={a} value={a}>
+                                        {ACTION_LABEL[a]}
+                                    </option>
+                                ))}
+                            </Field>
+                            <Field
+                                as="textarea"
+                                label="Why (optional)"
+                                rows={2}
+                                maxLength={1000}
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                            />
                             <div className={styles.buttons}>
                                 <Button type="submit" size="compact" disabled={!chosen || feedback.isPending}>
-                                    Save
+                                    Save my answer
                                 </Button>
                                 <Button
                                     type="button"
@@ -149,10 +160,10 @@ export default function SuggestedAction({ incidentId }: { incidentId: string }) 
                                 disabled={feedback.isPending}
                                 onClick={() => feedback.mutate({ decision: 'accepted' })}
                             >
-                                Accept
+                                Agree
                             </Button>
                             <Button size="compact" variant="quiet" onClick={() => setOverriding(true)}>
-                                Override…
+                                Disagree…
                             </Button>
                         </div>
                     )}
@@ -160,9 +171,6 @@ export default function SuggestedAction({ incidentId }: { incidentId: string }) 
                     {feedback.isError && (
                         <p className={styles.error}>{describeError(feedback.error, 'your decision').title}</p>
                     )}
-                    <p className={styles.muted}>
-                        Your answer is recorded to check the rules; it does not change the incident.
-                    </p>
                 </>
             )}
         </section>

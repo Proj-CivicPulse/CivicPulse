@@ -82,12 +82,15 @@ skips one.
 | **`resolved_at` is written only by the status transition** — stamped on entering `RESOLVED`, cleared on leaving it for any status (including `CLOSED`, which means no fix), unchanged on re-sending `RESOLVED`. | `IncidentService.applyStatus`, `IncidentResolutionTest` | `PATCH /incidents/{id}` |
 | **A retired category is refused on new reports but accepted on import** — an import is history. | `CategoryService.require`; `IngestionValidator` | both |
 | **Priority is recomputed only by membership change or the sweep**, never by `PATCH`. | `IncidentService`, `PriorityRefreshJob` | incidents |
-| **Timestamps are UTC.** | JVM-wide `TimeZone.setDefault` | everything |
+| **Timestamps are instants.** Every column is `timestamptz` (V23); Spring's `LocalDateTime` values are UTC and the converter states the offset on write; every session runs in UTC. | `UtcTimestampConverter`, Hikari `connection-init-sql`, JVM-wide `TimeZone.setDefault` | everything |
 
-The last row is the weakest. Columns are `timestamp without time zone`, and
-UTC-ness is a process-level guarantee: any other writer to the database is
-outside it. Moving to `timestamptz` is the one schema change worth considering,
-as a deliberate piece of work.
+The last row used to be the weakest: the columns were `timestamp without time
+zone`, so UTC-ness was a promise only the Spring process kept, and any other
+writer (backend-node's `updated_at = now()`, a person in psql) was outside it.
+Since V23 (2026-10-22) the database stores instants, so every client reads the
+same moment. What still relies on the JVM pin is Java code calling
+`LocalDateTime.now()`; moving the entities to `Instant` would remove that too,
+and is a refactor, not a schema change.
 
 ---
 

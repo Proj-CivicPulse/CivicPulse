@@ -26,6 +26,10 @@ spring:
       # connections open for no work.
       minimum-idle: 0
       idle-timeout: 30000
+      # Columns are TIMESTAMPTZ (V23), so date_trunc, ::date and EXTRACT
+      # depend on the SESSION zone. Pinned here so a query means the same
+      # thing whatever zone the JVM or the server defaults to.
+      connection-init-sql: SET TIME ZONE 'UTC'
 
   jpa:
     hibernate:

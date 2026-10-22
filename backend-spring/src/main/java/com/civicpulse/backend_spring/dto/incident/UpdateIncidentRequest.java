@@ -16,4 +16,13 @@ public class UpdateIncidentRequest {
     private String departmentId;
     private String title;
     private String summary;
+
+    /**
+     * The officer's call on the life-safety flag. Either value is final: the
+     * text detector no longer changes the flag afterwards (V24).
+     */
+    private Boolean lifeSafety;
+
+    /** Optional, with lifeSafety: what the officer saw. At most 255 characters. */
+    private String lifeSafetyNote;
 }
