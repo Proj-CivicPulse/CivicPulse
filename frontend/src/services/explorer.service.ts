@@ -124,7 +124,7 @@ export interface HotspotMember {
  * "Needs attention" (docs/roadmap.md, Phase 10). Always four signals, in this
  * order, empty ones included; each carries the incidents behind it.
  */
-export type AttentionKey = 'high_priority' | 'worsening' | 'in_hotspot' | 'category_spike';
+export type AttentionKey = 'life_safety' | 'high_priority' | 'worsening' | 'in_hotspot' | 'category_spike';
 
 export interface Attention {
     asOf: string;

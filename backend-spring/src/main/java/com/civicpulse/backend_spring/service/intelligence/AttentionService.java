@@ -21,10 +21,13 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * "Needs attention" — docs/roadmap.md, Phase 10. Four deterministic signals,
+ * "Needs attention" — docs/roadmap.md, Phase 10. Five deterministic signals,
  * each a statement an officer can open:
  *
  * <ul>
+ *   <li><b>life_safety</b> — active, and flagged as a life-safety hazard (V24),
+ *       by an officer or by the reports' text. First, because it is the one
+ *       signal about harm rather than volume.</li>
  *   <li><b>high_priority</b> — active, in the high or critical band.</li>
  *   <li><b>worsening</b> — {@value #WORSENING_REPORTS}+ new reports in the last
  *       {@value #WORSENING_HOURS} hours. (The plan also named "score up 1.0
@@ -84,6 +87,10 @@ public class AttentionService {
         LocalDateTime weekAgo = now.minusDays(7);
 
         List<AttentionDto.Signal> signals = new ArrayList<>();
+        signals.add(signal("life_safety",
+                "Active incidents whose reports describe a hazard to life: open drain or manhole, exposed "
+                        + "wiring, sewage overflow, collapsed road, fallen tree or pole",
+                active, ActiveIncident::lifeSafety, List.of()));
         signals.add(signal("high_priority",
                 "Active incidents in the high or critical band",
                 active, i -> i.priorityScore() >= high, List.of()));

@@ -19,6 +19,7 @@ import Button from '@/components/ui/Button';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import EmptyState from '@/components/ui/EmptyState';
 import MapView, { type MapMarker } from '@/components/ui/MapView';
+import HazardChip from '@/components/ui/HazardChip';
 import PriorityChip from '@/components/ui/PriorityChip';
 import Skeleton from '@/components/ui/Skeleton';
 import StatusChip from '@/components/ui/StatusChip';
@@ -159,7 +160,12 @@ export default function IncidentDashboard() {
             {
                 key: 'title',
                 header: 'Incident',
-                cell: (row) => truncate(incidentName(row, categoryLabel), 44),
+                cell: (row) => (
+                    <span className={styles.titleCell}>
+                        {truncate(incidentName(row, categoryLabel), 44)}
+                        <HazardChip incident={row} />
+                    </span>
+                ),
                 sortValue: (row) => incidentName(row, categoryLabel),
             },
             {

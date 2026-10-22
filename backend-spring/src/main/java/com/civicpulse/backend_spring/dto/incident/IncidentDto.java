@@ -87,6 +87,15 @@ public class IncidentDto {
     private final String firstReportedAt;
     private final String lastReportedAt;
 
+    /**
+     * Life-safety hazard (V24). {@code lifeSafetySource} is "report_text" (a
+     * suggestion from the reports, for an officer to confirm or clear),
+     * "officer" (decided), or null (never flagged).
+     */
+    private final boolean lifeSafety;
+    private final String lifeSafetySource;
+    private final String lifeSafetyReason;
+
     private final String createdAt;
     private final String updatedAt;
 
@@ -116,6 +125,9 @@ public class IncidentDto {
                 Wire.timestamp(incident.getResolvedAt()),
                 Wire.timestamp(incident.getFirstReportedAt()),
                 Wire.timestamp(incident.getLastReportedAt()),
+                incident.isLifeSafety(),
+                Wire.enumValue(incident.getLifeSafetySource()),
+                incident.getLifeSafetyReason(),
                 Wire.timestamp(incident.getCreatedAt()),
                 Wire.timestamp(incident.getUpdatedAt())
         );

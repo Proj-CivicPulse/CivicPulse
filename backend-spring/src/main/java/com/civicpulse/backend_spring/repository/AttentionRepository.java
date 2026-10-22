@@ -27,7 +27,7 @@ public class AttentionRepository {
     /** An active incident with its recent-report count. */
     public record ActiveIncident(long id, long wardId, String wardName, String category, String address,
                                  double priorityScore, int complaintCount, long recentReports,
-                                 LocalDateTime lastReportedAt) {
+                                 LocalDateTime lastReportedAt, boolean lifeSafety) {
     }
 
     /** One category's report counts: the last 7 days and the 28 days before them. */
@@ -49,7 +49,7 @@ public class AttentionRepository {
 
         String sql = """
                 SELECT i.id, i.ward_id, w.name AS ward_name, i.category, i.address,
-                       COALESCE(i.priority_score, 0) AS score, i.complaint_count,
+                       COALESCE(i.priority_score, 0) AS score, i.complaint_count, i.life_safety,
                        COUNT(*) FILTER (WHERE m.reported_at >= :recentFrom) AS recent,
                        MAX(m.reported_at) AS last_reported
                 FROM incidents i
@@ -65,7 +65,7 @@ public class AttentionRepository {
                     rs.getLong("id"), rs.getLong("ward_id"), rs.getString("ward_name"),
                     rs.getString("category"), rs.getString("address"), rs.getDouble("score"),
                     rs.getInt("complaint_count"), rs.getLong("recent"),
-                    last == null ? null : last.toLocalDateTime());
+                    last == null ? null : last.toLocalDateTime(), rs.getBoolean("life_safety"));
         });
     }
 

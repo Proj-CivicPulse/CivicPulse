@@ -12,6 +12,7 @@ import { placeName } from '@/components/explorer/IncidentList';
 import styles from './AttentionStrip.module.css';
 
 const TITLES: Record<AttentionKey, (n: number) => string> = {
+    life_safety: (n) => (n === 1 ? 'life-safety hazard' : 'life-safety hazards'),
     high_priority: (n) => (n === 1 ? 'high-priority incident' : 'high-priority incidents'),
     worsening: () => 'getting worse',
     in_hotspot: (n) => (n === 1 ? 'in a hotspot' : 'in hotspots'),
@@ -25,7 +26,7 @@ interface Props {
 }
 
 /**
- * "Needs attention" (Phase 10): four statements above the queue, each opening
+ * "Needs attention" (Phase 10): five statements above the queue, each opening
  * the incidents behind it. Narrowed by the queue's ward and category; each
  * signal keeps its own time window, stated in its definition.
  */

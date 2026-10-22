@@ -1,0 +1,19 @@
+/* Text and a 1px border in --hazard-ink, like PriorityChip: never a fill. */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: 20px;
+    padding: 0 var(--space-2);
+    border: 1px solid currentcolor;
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+    color: var(--hazard-ink);
+    font: var(--t-micro);
+    white-space: nowrap;
+}
+
+/* Not yet confirmed: same colour and icon, a dashed edge. */
+.suggested {
+    border-style: dashed;
+}

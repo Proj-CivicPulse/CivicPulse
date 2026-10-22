@@ -6,6 +6,7 @@ import com.civicpulse.backend_spring.entity.Complaint;
 import com.civicpulse.backend_spring.entity.Incident;
 import com.civicpulse.backend_spring.entity.IncidentMatchLog;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
+import com.civicpulse.backend_spring.enums.LifeSafetySource;
 import com.civicpulse.backend_spring.enums.MatchOutcome;
 import com.civicpulse.backend_spring.enums.Matcher;
 import com.civicpulse.backend_spring.enums.MatchingStatus;
@@ -192,6 +193,7 @@ public class IncidentAttachmentService {
         }
 
         applyCentroid(incident, members);
+        applyLifeSafety(incident, members);
 
         // The centroid moves as members join, so the address is re-derived with
         // it. Nearly always a cache hit: the mean of a tight cluster barely
@@ -228,6 +230,33 @@ public class IncidentAttachmentService {
                 .priorityScore(0.0)
                 .build();
         return incidentRepository.save(incident);
+    }
+
+    /**
+     * Re-derives a text-suggested life-safety flag from the members. Never
+     * touches an officer's decision: once an officer has set or cleared the
+     * flag, a new report does not reopen the question.
+     */
+    static void applyLifeSafety(Incident incident, List<Complaint> members) {
+        if (incident.getLifeSafetySource() == LifeSafetySource.OFFICER) {
+            return;
+        }
+        List<String> texts = new java.util.ArrayList<>();
+        for (Complaint member : members) {
+            texts.add(member.getTitle());
+            texts.add(member.getDescription());
+        }
+        LifeSafetyDetector.detect(texts).ifPresentOrElse(
+                finding -> {
+                    incident.setLifeSafety(true);
+                    incident.setLifeSafetySource(LifeSafetySource.REPORT_TEXT);
+                    incident.setLifeSafetyReason(finding.reason());
+                },
+                () -> {
+                    incident.setLifeSafety(false);
+                    incident.setLifeSafetySource(null);
+                    incident.setLifeSafetyReason(null);
+                });
     }
 
     /** Mean of member coordinates — good enough at city scale. */

@@ -116,6 +116,14 @@
     --status-resolved: #4A7A5C;  /* 4.83:1 */
     --status-closed: #5E6B67;    /* 5.41:1 — faint by design */
 
+    /*
+     * Life-safety hazard (V24): the one flag about harm rather than urgency.
+     * Shares the darkest red with critical priority because it is the most
+     * serious thing on screen; it is never shown by colour alone — always the
+     * warning icon and the words "Life safety". Text and 1px borders only.
+     */
+    --hazard-ink: #8E1F16;       /* 8.65:1 */
+
     /* --------------------------------------------------------------- focus */
 
     --focus: #17494D;

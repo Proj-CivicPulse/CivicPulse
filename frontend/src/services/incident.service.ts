@@ -57,6 +57,15 @@ export interface Incident {
      */
     firstReportedAt: string | null;
     lastReportedAt: string | null;
+    /**
+     * A hazard to life: open drain or manhole, exposed wiring, sewage
+     * overflow, collapsed road, fallen tree or pole. `report_text` means the
+     * reports suggested it and an officer has not decided yet; `officer` means
+     * decided (either way). Feeds the suggestion, never the score.
+     */
+    lifeSafety: boolean;
+    lifeSafetySource: 'report_text' | 'officer' | null;
+    lifeSafetyReason: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -86,6 +95,9 @@ export interface UpdateIncidentInput {
     departmentId?: string;
     title?: string;
     summary?: string;
+    /** The officer's decision on the life-safety flag; final once sent. */
+    lifeSafety?: boolean;
+    lifeSafetyNote?: string;
 }
 
 function buildQuery(filters: IncidentFilters = {}): string {

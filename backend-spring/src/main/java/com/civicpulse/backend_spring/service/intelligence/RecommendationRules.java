@@ -15,6 +15,9 @@ import java.util.List;
  * taken on their behalf: accepting one only records the decision.
  *
  * <ol>
+ *   <li><b>escalate</b> (life_safety) — open, and flagged as a life-safety
+ *       hazard (V24), by an officer or by the reports' text. Ahead of every
+ *       other rule: a hazard that can kill someone does not wait for a score.</li>
  *   <li><b>escalate</b> — open, high or critical, first reported
  *       {@value #ESCALATE_AFTER_DAYS}+ days ago, and work has not started.</li>
  *   <li><b>dispatch</b> — open, and high or critical, or getting worse
@@ -36,9 +39,21 @@ public final class RecommendationRules {
 
     public enum Action { ESCALATE, DISPATCH, VERIFY_AND_CLOSE, CONSOLIDATE, MONITOR }
 
-    /** What the rules read. Days are whole days; null when there is no report. */
+    /**
+     * What the rules read. Days are whole days; null when there is no report.
+     * {@code lifeSafetyConfirmed} means an officer set the flag, rather than
+     * the reports' text suggesting it.
+     */
     public record Facts(IncidentStatus status, double priorityScore, Long daysSinceFirstReport,
-                        Long daysSinceLastReport, long reportsLast72h, boolean inHotspot) {
+                        Long daysSinceLastReport, long reportsLast72h, boolean inHotspot,
+                        boolean lifeSafety, boolean lifeSafetyConfirmed) {
+
+        /** No life-safety flag. */
+        public Facts(IncidentStatus status, double priorityScore, Long daysSinceFirstReport,
+                     Long daysSinceLastReport, long reportsLast72h, boolean inHotspot) {
+            this(status, priorityScore, daysSinceFirstReport, daysSinceLastReport, reportsLast72h, inHotspot,
+                    false, false);
+        }
     }
 
     /** The action, the rule that produced it, and why — in the officer's terms. */
@@ -57,6 +72,12 @@ public final class RecommendationRules {
         boolean open = f.status() == IncidentStatus.OPEN;
         String bandName = band.name().toLowerCase(java.util.Locale.ROOT);
 
+        if (open && f.lifeSafety()) {
+            return new Decision(Action.ESCALATE, "life_safety", f.lifeSafetyConfirmed()
+                    ? "An officer confirmed a life-safety hazard and work has not started: send a crew today."
+                    : "The reports describe a life-safety hazard and work has not started: confirm it and "
+                            + "send a crew today.");
+        }
         if (open && urgent && f.daysSinceFirstReport() != null && f.daysSinceFirstReport() >= ESCALATE_AFTER_DAYS) {
             return new Decision(Action.ESCALATE, "urgent_unattended",
                     "Priority is " + bandName + " and work has not started " + f.daysSinceFirstReport()
@@ -94,7 +115,9 @@ public final class RecommendationRules {
                 "First reported: " + days(f.daysSinceFirstReport()),
                 "Last reported: " + days(f.daysSinceLastReport()),
                 "Reports in the last 72 h: " + f.reportsLast72h(),
-                "In a hotspot: " + (f.inHotspot() ? "yes" : "no"));
+                "In a hotspot: " + (f.inHotspot() ? "yes" : "no"),
+                "Life-safety hazard: " + (!f.lifeSafety() ? "no"
+                        : f.lifeSafetyConfirmed() ? "yes, confirmed by an officer" : "suggested by the reports"));
     }
 
     private static String days(Long d) {

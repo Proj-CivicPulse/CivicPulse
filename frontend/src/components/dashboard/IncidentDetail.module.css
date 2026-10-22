@@ -47,6 +47,28 @@
     flex-wrap: wrap;
 }
 
+/* ------------------------------------------------------------ life safety */
+
+/* The same shape as .why, edged in the hazard colour instead of the seal. */
+.hazard {
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface);
+    border: 1px solid var(--hazard-ink);
+    border-left-width: 4px;
+    border-radius: var(--r-sharp);
+}
+
+.hazardReason {
+    font: var(--t-body);
+    color: var(--ink);
+}
+
+.hazardNote {
+    margin-top: var(--space-1);
+    font: var(--t-data);
+    color: var(--ink-muted);
+}
+
 /* ---------------------------------------------------------- explainability */
 
 /*

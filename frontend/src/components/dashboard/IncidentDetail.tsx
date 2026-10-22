@@ -7,6 +7,7 @@ import { formatCount, formatCoordinates, truncate } from '@/lib/format';
 import { daysSince, formatAbsolute, formatRelative } from '@/lib/datetime';
 import { useDepartmentNames } from '@/lib/useRegistry';
 import Button from '@/components/ui/Button';
+import HazardChip from '@/components/ui/HazardChip';
 import PriorityChip from '@/components/ui/PriorityChip';
 import Skeleton from '@/components/ui/Skeleton';
 import StatusChip from '@/components/ui/StatusChip';
@@ -65,8 +66,26 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
                 <div className={styles.chips}>
                     <PriorityChip band={incident.priorityBand} score={incident.priorityScore} />
                     <StatusChip status={incident.status} />
+                    <HazardChip incident={incident} />
                 </div>
             </div>
+
+            {/* A hazard to life outranks the score, so it sits above it. */}
+            {incident.lifeSafety && (
+                <section className={styles.hazard} aria-labelledby={`hazard-${incident.id}`}>
+                    <h3 className={styles.whyHeading} id={`hazard-${incident.id}`}>
+                        {incident.lifeSafetySource === 'officer'
+                            ? 'Life-safety hazard — confirmed'
+                            : 'Possible life-safety hazard'}
+                    </h3>
+                    {incident.lifeSafetyReason && <p className={styles.hazardReason}>{incident.lifeSafetyReason}</p>}
+                    {incident.lifeSafetySource === 'report_text' && (
+                        <p className={styles.hazardNote}>
+                            Suggested from the reports' wording. Confirm or clear it under Update incident.
+                        </p>
+                    )}
+                </section>
+            )}
 
             {/*
              * THE HEADLINE, not a tooltip.
@@ -145,7 +164,7 @@ export default function IncidentDetail({ incident, categoryLabel, onClose }: Pro
             {/* Keyed on what it edits, so a saved change (or another officer's,
                 arriving via refetch) resets the form to the incident as it is. */}
             <UpdateIncident
-                key={`${incident.id}-${incident.status}-${incident.departmentId ?? ''}`}
+                key={`${incident.id}-${incident.status}-${incident.departmentId ?? ''}-${incident.lifeSafetySource ?? ''}-${incident.lifeSafety}`}
                 incident={incident}
             />
 

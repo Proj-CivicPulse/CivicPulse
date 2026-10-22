@@ -6,6 +6,7 @@ import com.civicpulse.backend_spring.dto.incident.RecommendationDto;
 import com.civicpulse.backend_spring.dto.incident.RecommendationFeedbackRequest;
 import com.civicpulse.backend_spring.entity.Complaint;
 import com.civicpulse.backend_spring.entity.Incident;
+import com.civicpulse.backend_spring.enums.LifeSafetySource;
 import com.civicpulse.backend_spring.exception.ResourceNotFoundException;
 import com.civicpulse.backend_spring.exception.ValidationException;
 import com.civicpulse.backend_spring.repository.ComplaintRepository;
@@ -136,7 +137,8 @@ public class RecommendationService {
                 .anyMatch(m -> m.getId().equals(String.valueOf(incident.getId())));
 
         return new Facts(incident.getStatus(), incident.getPriorityScore() == null ? 0 : incident.getPriorityScore(),
-                daysSince(first, now), daysSince(last, now), recent, inHotspot);
+                daysSince(first, now), daysSince(last, now), recent, inHotspot,
+                incident.isLifeSafety(), incident.getLifeSafetySource() == LifeSafetySource.OFFICER);
     }
 
     private RecommendationDto.Feedback lastFeedback(Long incidentId) {

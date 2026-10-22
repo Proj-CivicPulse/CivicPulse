@@ -8,6 +8,7 @@ import com.civicpulse.backend_spring.dto.incident.UpdateIncidentRequest;
 import com.civicpulse.backend_spring.entity.Department;
 import com.civicpulse.backend_spring.entity.Incident;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
+import com.civicpulse.backend_spring.enums.LifeSafetySource;
 import com.civicpulse.backend_spring.exception.ResourceNotFoundException;
 import com.civicpulse.backend_spring.exception.ValidationException;
 import com.civicpulse.backend_spring.repository.ComplaintRepository;
@@ -87,11 +88,18 @@ public class IncidentService {
         boolean hasAny = notBlank(request.getStatus())
                 || notBlank(request.getDepartmentId())
                 || notBlank(request.getTitle())
-                || notBlank(request.getSummary());
+                || notBlank(request.getSummary())
+                || request.getLifeSafety() != null;
 
         if (!hasAny) {
             throw new ValidationException(
-                    "At least one of status, departmentId, title, summary is required");
+                    "At least one of status, departmentId, title, summary, lifeSafety is required");
+        }
+        if (notBlank(request.getLifeSafetyNote()) && request.getLifeSafety() == null) {
+            throw new ValidationException("lifeSafetyNote is only accepted with lifeSafety");
+        }
+        if (notBlank(request.getLifeSafetyNote()) && request.getLifeSafetyNote().trim().length() > 255) {
+            throw new ValidationException("lifeSafetyNote must be at most 255 characters");
         }
 
         Incident incident = requireIncident(id);
@@ -113,6 +121,10 @@ public class IncidentService {
                     .orElseThrow(() -> new ValidationException(
                             "departmentId does not match a known department"));
             incident.setDepartment(department);
+        }
+
+        if (request.getLifeSafety() != null) {
+            applyLifeSafety(incident, request.getLifeSafety(), request.getLifeSafetyNote());
         }
 
         // Priority is deliberately NOT recomputed here. Status is an officer's
@@ -144,6 +156,23 @@ public class IncidentService {
         }
 
         incident.setStatus(next);
+    }
+
+    /**
+     * The officer's decision on the flag, final from now on. Confirming a
+     * text suggestion keeps its quoted reason unless the officer wrote their
+     * own; clearing keeps nothing, so a stale quote never sits on a "no".
+     */
+    private static void applyLifeSafety(Incident incident, boolean value, String note) {
+        String reason = notBlank(note) ? "Officer: " + note.trim() : null;
+        if (reason == null && value) {
+            reason = incident.isLifeSafety() && incident.getLifeSafetyReason() != null
+                    ? incident.getLifeSafetyReason()
+                    : "Confirmed by an officer";
+        }
+        incident.setLifeSafety(value);
+        incident.setLifeSafetySource(LifeSafetySource.OFFICER);
+        incident.setLifeSafetyReason(reason == null ? null : reason.substring(0, Math.min(255, reason.length())));
     }
 
     @Transactional(readOnly = true)

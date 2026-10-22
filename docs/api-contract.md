@@ -651,6 +651,7 @@ one records the decision and changes nothing else.
 
 | Order | Action | Rule (`ruleId`) |
 |---|---|---|
+| 0 | `escalate` | open, and flagged as a life-safety hazard, by an officer or by the reports' text (`life_safety`) — added 2026-10-22 |
 | 1 | `escalate` | open, high or critical, first reported ≥ 7 days ago (`urgent_unattended`) |
 | 2 | `dispatch` | open, and high or critical (`urgent_open`) or ≥ 2 reports in 72 h (`worsening_open`) |
 | 3 | `verify_and_close` | in progress, no new report for ≥ 14 days (`quiet_in_progress`) |
@@ -689,16 +690,17 @@ docs/priority-evaluation.md, "Phase 8 — the officer session".
 
 #### `GET /dashboard/attention` — Phase 10 — ✅ implemented 2026-10-21
 
-"Needs attention": four statements, each with the incidents behind it.
+"Needs attention": five statements, each with the incidents behind it.
 
 | | |
 |---|---|
 | Auth | officer |
 | Params | `wardId`, `category` (repeatable) — narrow every signal alike. No window: each signal has its own, below |
-| Response | `{ asOf, signals: [{ key, definition, incidents: [Item], categories: [Spike] }] }` — always all four keys, in this order, empty ones included |
+| Response | `{ asOf, signals: [{ key, definition, incidents: [Item], categories: [Spike] }] }` — always all five keys, in this order, empty ones included |
 
 | Key | Rule (evaluated as of `asOf`) |
 |---|---|
+| `life_safety` | active, and flagged as a life-safety hazard (`Incident.lifeSafety`) — added 2026-10-22 |
 | `high_priority` | active, score in the high or critical band (`PriorityBand`, never a literal) |
 | `worsening` | active, ≥ 2 member reports in the last 72 h |
 | `in_hotspot` | a member of a hotspot above (last 30 days) |
@@ -988,10 +990,28 @@ Keep in sync with `backend-spring/src/main/resources/db/migration/`.
   "resolvedAt": null,         // set only while status is `resolved`; see below
   "firstReportedAt": "…",     // min(member reportedAt) — "age" is measured from this
   "lastReportedAt": "…",      // max(member reportedAt)
+  "lifeSafety": false,        // a hazard to life (V24); feeds decision support, never the score
+  "lifeSafetySource": null,   // "report_text" (suggested, undecided) | "officer" (decided) | null
+  "lifeSafetyReason": null,   // e.g. "Reports mention an open drain or manhole: “drain cover is missing”"
   "createdAt": "…",
   "updatedAt": "…"
 }
 ```
+
+**`lifeSafety` (V24, 2026-10-22).** A problem that can kill someone: an open
+drain or manhole, exposed wiring, sewage overflow, a collapsed road, a fallen
+tree or pole. Two sources, and the officer's word is final:
+
+- `report_text` — `LifeSafetyDetector` matched a fixed phrase in a member's
+  text. Re-derived on every recompute, so it follows the members (unlinking
+  the hazardous report clears it). `lifeSafetyReason` quotes the words.
+- `officer` — set by `PATCH /incidents/{id}` with `{ "lifeSafety": true|false,
+  "lifeSafetyNote"?: "…" }`. Final either way: later reports no longer change
+  it, so a cleared false alarm stays cleared. `lifeSafetyNote` (≤ 255) is
+  refused without `lifeSafety`.
+
+It feeds decision support (rule 0, `life_safety`) and "needs attention", never
+the score: the weights stay as calibrated (priority-calibration-proxy.md).
 
 **`resolvedAt` is maintained with `status`, not alongside it.** It is stamped
 when an incident enters `resolved` and **cleared when it leaves** — a reopened
