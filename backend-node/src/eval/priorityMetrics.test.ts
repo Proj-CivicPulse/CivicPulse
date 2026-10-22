@@ -14,8 +14,8 @@ import {
 describe('priority formula port', () => {
     it('reproduces PriorityService on hand-checked cases and the calibration probes', () => {
         // Same cases as backend-spring RankingSheetServiceTest.
-        assert.equal(priorityScore({ reports: 1, reportsLast24h: 0, daysOpen: 20, spreadM: 0 }), 2.9);
-        assert.equal(priorityScore({ reports: 3, reportsLast24h: 2, daysOpen: 2, spreadM: 0 }), 3.2);
+        assert.equal(priorityScore({ reports: 1, reportsLast24h: 0, daysOpen: 20, spreadM: 0 }), 2.2);
+        assert.equal(priorityScore({ reports: 3, reportsLast24h: 2, daysOpen: 2, spreadM: 0 }), 3.0);
         // docs/priority-evaluation.md, "Operational plausibility probes".
         assert.equal(priorityScore({ reports: 40, reportsLast24h: 20, daysOpen: 1, spreadM: 300 }), 7.4);
         assert.equal(priorityScore({ reports: 40, reportsLast24h: 0, daysOpen: 30, spreadM: 300 }), 6.3);

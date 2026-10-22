@@ -16,7 +16,7 @@ incidents (Phase 8) can do that.
 - 2000 incidents across 243 wards and 8 categories
 - members: min 1, median 6, p95 17, max 79
 - 757 incidents (38%) had at least one report in the last 24 h
-- 1535 incidents (77%) are 14 days or older (the age saturation point)
+- 977 incidents (49%) are 30 days or older (the age saturation point)
 - 472 incidents (24%) are spread over 1 km or more
 - 5% of incidents deliberately carry NO coordinates
 
@@ -25,12 +25,12 @@ incidents (Phase 8) can do that.
 
 | Band | Count | Share |
 |---|---:|---:|
-| LOW | 217 | 10.9% |
-| MEDIUM | 1277 | 63.9% |
-| HIGH | 455 | 22.8% |
-| CRITICAL | 51 | 2.6% |
+| LOW | 294 | 14.7% |
+| MEDIUM | 1311 | 65.6% |
+| HIGH | 355 | 17.8% |
+| CRITICAL | 40 | 2.0% |
 
-Score percentiles — min 0.9, p25 3.9, p50 4.7, p75 5.5, p95 6.5, max 10.0
+Score percentiles — min 0.9, p25 3.6, p50 4.5, p75 5.3, p95 6.4, max 9.9
 
 ## Term influence (ablation)
 
@@ -42,10 +42,10 @@ actually looks at.
 
 | Term | Weight | Mean \|delta\| | Max \|delta\| | Top-50 churn |
 |---|---:|---:|---:|---:|
-| volume | 40% | 1.850 | 6.60 | 46 / 50 |
+| volume | 40% | 1.856 | 6.50 | 47 / 50 |
 | growth | 30% | 0.334 | 3.00 | 23 / 50 |
-| age | 20% | 1.743 | 2.00 | 17 / 50 |
-| spread | 10% | 0.746 | 4.00 | 17 / 50 |
+| age | 20% | 1.474 | 2.00 | 18 / 50 |
+| spread | 10% | 0.746 | 4.00 | 19 / 50 |
 
 ## Term saturation
 
@@ -57,26 +57,21 @@ cannot tell you and is the single most useful number here for Phase 8.
 |---|---:|---:|---:|
 | volume (cap 25) | 2.7% | 8.7% | 88.7% |
 | growth (cap 5/24h) | 2.3% | 62.2% | 35.6% |
-| age (cap 14 d) | 76.8% | 2.6% | 20.7% |
+| age (cap 30 d) | 48.9% | 2.6% | 48.6% |
 | spread (cap 1 km) | 23.6% | 5.3% | 71.2% |
 
-**The finding worth carrying into Phase 8.** Age is saturated for 77% of
-this corpus, so it contributes a near-constant +2.0 to most scores. That
-is why its ablation delta (see above) rivals volume's despite carrying
-half the weight: removing it moves nearly everything by the same amount,
-which changes the numbers without changing the ordering much — note its
-comparatively low top-50 churn.
+**The finding this file carried into Phase 8.** With age saturating at
+14 days, age was pinned at 1.0 for 77% of this corpus — a near-constant
++2.0 on most scores, which changed the numbers without changing the
+ordering much. **Since 2026-10-22 age saturates at 30 days**, after a
+blind proxy ranking preferred 30 on both halves in every run
+(docs/priority-calibration-proxy.md); it is now pinned for 49%, and
+keeps discriminating for as long as incidents actually stay open.
 
-The consequence is a compressed usable range: p25 3.9 to p95 6.5, with
-64% of incidents landing in one band. The model still ranks correctly,
-but it spends much of the 0-10 scale on an offset.
-
-Two candidate responses, BOTH requiring labelled data first:
-a longer age saturation (30-60 days, so ageing keeps discriminating for
-as long as incidents actually stay open), or a smaller age weight. Which
-is right depends on how long real incidents live and on whether officers
-consider a month-old incident meaningfully more urgent than a
-fortnight-old one — neither of which this synthetic corpus can answer.
+Usable range now: p25 3.6 to p95 6.4, with 66% of incidents in the
+most common band. A human ranking should still confirm the change; the
+next candidate is a category severity term, which the proxy's
+rationales pointed to and the formula does not have.
 
 ## Operational plausibility probes
 
@@ -87,25 +82,26 @@ They are asserted, not merely reported.
 |---|---:|---|
 | 40 reports, 20 today, 300 m apart, 1 day old | 7.4 | HIGH |
 | 40 reports, none today, 30 days old | 6.3 | HIGH |
-| 6 reports spread over 3 km | 4.7 | MEDIUM |
-| 6 reports within 40 m | 3.7 | MEDIUM |
+| 6 reports spread over 3 km | 4.3 | MEDIUM |
+| 6 reports within 40 m | 3.4 | MEDIUM |
 | 3 reports, all today | 3.6 | MEDIUM |
 | 1 report, 60 days old | 2.9 | LOW |
 
 ## DECISION
 
-**Ship the current model unchanged: weights 40/30/20/10, bands
-3.0 / 5.5 / 7.5.** This is a decision, not a deferral — the model is
-approved for production as it stands.
+**Ship the model: weights 40/30/20/10, bands 3.0 / 5.5 / 7.5, age
+saturating at 30 days.** Approved 2026-09-17 with age at 14 days;
+amended 2026-10-22 to 30 days on a proxy calibration.
 
 | | |
 |---|---|
-| Decided | 2026-09-17, as part of the pre-deployment audit |
-| Scope | Applies until Phase 8 evaluation completes |
-| Accepted defect | Age saturates for ~77% of incidents, acting as a near-constant +2.0 offset rather than a discriminator. Growth is inert for ~62%. The queue still ORDERS correctly; it spends part of the 0-10 scale on an offset. |
+| Decided | 2026-09-17, pre-deployment audit; amended 2026-10-22 (age 14 -> 30 d) |
+| Scope | Until a human ranking confirms or overturns the amendment |
+| Accepted defect | Growth is inert for ~62% of incidents. With age at 14 days it was also pinned for ~77%, a near-constant offset — the reason for the amendment. |
 | Why accept it | Ordering is what an officer acts on, and ordering is sound on every probe below. Changing a weight on synthetic evidence would be replacing a known, measured bias with an unmeasured one. |
 | Revisit trigger | Phase 8, once a real morning's queue has been ranked by an officer. Whichever comes first: 200 labelled incidents, or the first officer complaint that the ranking is wrong. |
-| First change to try | Age saturation 14 -> 30-45 days (keeps age discriminating for as long as incidents actually stay open). Only if that fails, reduce the age weight. |
+| Change made | Age saturation 14 -> 30 days, 2026-10-22: beat 14 days on both halves in 3/3 blind proxy rankings; a smaller age weight did worse (docs/priority-calibration-proxy.md). |
+| Next to test | A category severity term (`categories.severity_weight`) — the proxy ranked by hazard per category, which the formula does not read. Only on a human ranking. |
 | Do NOT | re-tune from this file. It is a regression net, not evidence about the real world. |
 
 ## Phase 8 — the officer session (tooling ready 2026-10-21)
@@ -160,7 +156,7 @@ probes.
 ## What this does and does not establish
 
 **Established.** The model discriminates: all four bands are reachable
-and critical is 2.6% of the corpus rather than most of it. Ordering is
+and critical is 2.0% of the corpus rather than most of it. Ordering is
 operationally sensible on every probe above — a growing incident
 outranks a static one of equal size, age alone cannot manufacture
 urgency, spread nudges rather than dominates, and more corroboration

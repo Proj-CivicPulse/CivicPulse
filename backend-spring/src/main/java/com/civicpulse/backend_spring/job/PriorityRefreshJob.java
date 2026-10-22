@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * Keeps stored priority scores from drifting as incidents age.
  *
- * <p>The priority formula has a time-dependent term — age, saturating at 14
+ * <p>The priority formula has a time-dependent term — age, saturating at 30
  * days — so an incident's correct score changes every day whether or not
  * anything is written to it. Until now recompute happened only on a membership
  * change (attach, reconcile, unlink), which meant an incident that stopped

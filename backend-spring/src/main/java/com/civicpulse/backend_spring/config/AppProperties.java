@@ -160,8 +160,8 @@ public class AppProperties {
              * A score older than this is treated as drifted.
              *
              * <p>Sized against what the formula can actually express: the age
-             * term saturates at 14 days, so one day is the smallest step that
-             * moves a score at all (1/14th of the 0.20 age weight — about 0.14
+             * term saturates at 30 days, so one day is the smallest step that
+             * moves a score at all (1/30th of the 0.20 age weight — about 0.07
              * of a point, enough to cross a band edge). Recomputing more often
              * than that would burn writes to produce the same number.
              */

@@ -12,8 +12,8 @@ at 0.32–0.42, and beats the naive "most reports first" baseline in every run.
 One variant beats the shipped formula on **both** halves in **all three** runs:
 **age saturating at 30 days instead of 14**. That is the change
 [priority-evaluation.md](priority-evaluation.md) had already named as the first
-to try. The production formula is **not** changed on this evidence alone (see
-"Decision").
+to try. **Applied 2026-10-22** at the team's decision to accept the proxy
+evidence (see "Decision").
 
 ---
 
@@ -77,15 +77,22 @@ Ranker consistency, τ-b between runs: 0.881, 0.749, 0.735.
 
 ## Decision
 
-- **Production weights stay as shipped for now.** The evidence is doubly
-  indirect: demo incidents, ranked by a model. It is clear and consistent, and
-  it agrees with the change planned in advance, but the rule set before any data
-  was that weights change on a person's ranking.
-- **Ready to adopt:** `AGE_SATURATION_DAYS` 14 → 30 in `PriorityService` (and
-  `PRODUCTION.saturation.ageDays` in `priorityMetrics.ts`). Adopt it as soon as
-  one human ranking agrees, or earlier if the team accepts proxy evidence. It
-  is a one-constant change, and `PriorityRefreshJob` rescores every open
-  incident within 5 minutes of deploying.
+- **Applied 2026-10-22: `AGE_SATURATION_DAYS` 14 → 30** in `PriorityService`,
+  and `PRODUCTION.saturation.ageDays` in `priorityMetrics.ts`. The team chose
+  to accept the proxy evidence rather than wait for an officer. The evidence is
+  doubly indirect (demo incidents, ranked by a model), but it is clear,
+  consistent, and agrees with the change planned in advance. Weights and bands
+  are unchanged.
+- **Effect** on the synthetic calibration corpus
+  ([priority-evaluation.md](priority-evaluation.md)): age now discriminates
+  for 49% of incidents instead of 21%. Every plausibility probe still holds. A
+  two-week-old incident scores up to about 1 point lower than before (it now
+  earns 14/30 of the age weight), and still lands in the same band in the
+  probes. Live scores change when backend-spring deploys:
+  `PriorityRefreshJob` rescores every open incident within 5 minutes.
+- **Still to do:** one human ranking, through the same `eval:priority`, to
+  confirm or overturn it. `previous (age saturates at 14 d)` stays a variant
+  so that check is one command.
 - **Category severity:** take it to the officer session as a question, not a
   change.
 

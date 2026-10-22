@@ -18,7 +18,7 @@ import java.util.List;
  *
  *   volume = min(1, log10(1 + n) / log10(1 + 25))
  *   growth = min(1, newIn24h / 5)
- *   age    = min(1, ageDays / 14)
+ *   age    = min(1, ageDays / 30)   (14 until 2026-10-22, docs/priority-calibration-proxy.md)
  *   spread = min(1, spreadMetres / 1000)
  *
  *   score  = round(10 * (0.40*volume + 0.30*growth + 0.20*age + 0.10*spread), 1)
@@ -62,7 +62,13 @@ public class PriorityService {
     /** Reports in 24h at which the growth term saturates. */
     private static final double GROWTH_SATURATION_24H = 5.0;
     /** Days at which the age term saturates. */
-    private static final double AGE_SATURATION_DAYS = 14.0;
+    /**
+     * Days at which the age term saturates. 30 since 2026-10-22: at 14 the term
+     * was pinned at 1.0 for most open incidents (priority-evaluation.md), and a
+     * blind ranking preferred 30 on both halves in every run
+     * (priority-calibration-proxy.md).
+     */
+    private static final double AGE_SATURATION_DAYS = 30.0;
     /** Metres at which the geographic-spread term saturates. */
     private static final double SPREAD_SATURATION_METRES = 1000.0;
 

@@ -1009,7 +1009,7 @@ that gets assigned and closed, and two resolution timestamps would disagree
 whenever a member complaint is resolved inside a still-open incident.
 
 **`priorityComputedAt` is not `updatedAt`.** The priority formula has a
-time-dependent term (age, saturating at 14 days), so a stored score drifts with
+time-dependent term (age, saturating at 30 days), so a stored score drifts with
 no write at all. `updatedAt` moves on any write — a status change, a department
 assignment — and so cannot say whether the *score* is current. This can, and a
 ranked queue is entitled to say how old its ranking is. `PriorityRefreshJob`

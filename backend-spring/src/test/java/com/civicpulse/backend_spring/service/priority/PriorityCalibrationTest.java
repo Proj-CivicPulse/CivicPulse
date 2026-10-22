@@ -164,7 +164,8 @@ class PriorityCalibrationTest {
                 |---|---:|---:|---:|
                 """);
 
-        long ageSat = corpus.stream().filter(c -> c.ageDays() >= 14).count();
+        long ageSat = corpus.stream().filter(c -> c.ageDays() >= 30).count();
+        long ageSat14 = corpus.stream().filter(c -> c.ageDays() >= 14).count();
         long ageZero = corpus.stream().filter(c -> c.ageDays() == 0).count();
         long growthSat = corpus.stream().filter(c -> c.newIn24h() >= 5).count();
         long growthZero = corpus.stream().filter(c -> c.newIn24h() == 0).count();
@@ -176,7 +177,7 @@ class PriorityCalibrationTest {
         for (Object[] row : new Object[][] {
                 {"volume (cap 25)", volSat, volZero},
                 {"growth (cap 5/24h)", growthSat, growthZero},
-                {"age (cap 14 d)", ageSat, ageZero},
+                {"age (cap 30 d)", ageSat, ageZero},
                 {"spread (cap 1 km)", spreadSat, spreadZero},
         }) {
             long sat = (long) row[1];
@@ -188,25 +189,21 @@ class PriorityCalibrationTest {
 
         md.append(String.format("""
 
-                **The finding worth carrying into Phase 8.** Age is saturated for %.0f%% of
-                this corpus, so it contributes a near-constant +2.0 to most scores. That
-                is why its ablation delta (see above) rivals volume's despite carrying
-                half the weight: removing it moves nearly everything by the same amount,
-                which changes the numbers without changing the ordering much — note its
-                comparatively low top-50 churn.
+                **The finding this file carried into Phase 8.** With age saturating at
+                14 days, age was pinned at 1.0 for %.0f%% of this corpus — a near-constant
+                +2.0 on most scores, which changed the numbers without changing the
+                ordering much. **Since 2026-10-22 age saturates at 30 days**, after a
+                blind proxy ranking preferred 30 on both halves in every run
+                (docs/priority-calibration-proxy.md); it is now pinned for %.0f%%, and
+                keeps discriminating for as long as incidents actually stay open.
 
-                The consequence is a compressed usable range: p25 %.1f to p95 %.1f, with
-                %.0f%% of incidents landing in one band. The model still ranks correctly,
-                but it spends much of the 0-10 scale on an offset.
-
-                Two candidate responses, BOTH requiring labelled data first:
-                a longer age saturation (30-60 days, so ageing keeps discriminating for
-                as long as incidents actually stay open), or a smaller age weight. Which
-                is right depends on how long real incidents live and on whether officers
-                consider a month-old incident meaningfully more urgent than a
-                fortnight-old one — neither of which this synthetic corpus can answer.
+                Usable range now: p25 %.1f to p95 %.1f, with %.0f%% of incidents in the
+                most common band. A human ranking should still confirm the change; the
+                next candidate is a category severity term, which the proxy's
+                rationales pointed to and the formula does not have.
                 """,
-                100.0 * ageSat / corpus.size(), pct(scores, 25), pct(scores, 95),
+                100.0 * ageSat14 / corpus.size(), 100.0 * ageSat / corpus.size(),
+                pct(scores, 25), pct(scores, 95),
                 100.0 * bands.values().stream().mapToInt(Integer::intValue).max().orElse(0)
                         / corpus.size()));
 
@@ -369,14 +366,14 @@ class PriorityCalibrationTest {
         long distinctWards = corpus.stream().map(Case::ward).distinct().count();
         long distinctCategories = corpus.stream().map(Case::category).distinct().count();
         long withBurst = corpus.stream().filter(c -> c.newIn24h() > 0).count();
-        long old = corpus.stream().filter(c -> c.ageDays() >= 14).count();
+        long old = corpus.stream().filter(c -> c.ageDays() >= 30).count();
         long wide = corpus.stream().filter(c -> c.spreadMetres() >= 1000).count();
 
         return String.format("""
                 - %d incidents across %d wards and %d categories
                 - members: min %d, median %d, p95 %d, max %d
                 - %d incidents (%.0f%%) had at least one report in the last 24 h
-                - %d incidents (%.0f%%) are 14 days or older (the age saturation point)
+                - %d incidents (%.0f%%) are 30 days or older (the age saturation point)
                 - %d incidents (%.0f%%) are spread over 1 km or more
                 - 5%% of incidents deliberately carry NO coordinates
                 """,
@@ -393,18 +390,19 @@ class PriorityCalibrationTest {
 
                 ## DECISION
 
-                **Ship the current model unchanged: weights 40/30/20/10, bands
-                3.0 / 5.5 / 7.5.** This is a decision, not a deferral — the model is
-                approved for production as it stands.
+                **Ship the model: weights 40/30/20/10, bands 3.0 / 5.5 / 7.5, age
+                saturating at 30 days.** Approved 2026-09-17 with age at 14 days;
+                amended 2026-10-22 to 30 days on a proxy calibration.
 
                 | | |
                 |---|---|
-                | Decided | 2026-09-17, as part of the pre-deployment audit |
-                | Scope | Applies until Phase 8 evaluation completes |
-                | Accepted defect | Age saturates for ~77%% of incidents, acting as a near-constant +2.0 offset rather than a discriminator. Growth is inert for ~62%%. The queue still ORDERS correctly; it spends part of the 0-10 scale on an offset. |
+                | Decided | 2026-09-17, pre-deployment audit; amended 2026-10-22 (age 14 -> 30 d) |
+                | Scope | Until a human ranking confirms or overturns the amendment |
+                | Accepted defect | Growth is inert for ~62%% of incidents. With age at 14 days it was also pinned for ~77%%, a near-constant offset — the reason for the amendment. |
                 | Why accept it | Ordering is what an officer acts on, and ordering is sound on every probe below. Changing a weight on synthetic evidence would be replacing a known, measured bias with an unmeasured one. |
                 | Revisit trigger | Phase 8, once a real morning's queue has been ranked by an officer. Whichever comes first: 200 labelled incidents, or the first officer complaint that the ranking is wrong. |
-                | First change to try | Age saturation 14 -> 30-45 days (keeps age discriminating for as long as incidents actually stay open). Only if that fails, reduce the age weight. |
+                | Change made | Age saturation 14 -> 30 days, 2026-10-22: beat 14 days on both halves in 3/3 blind proxy rankings; a smaller age weight did worse (docs/priority-calibration-proxy.md). |
+                | Next to test | A category severity term (`categories.severity_weight`) — the proxy ranked by hazard per category, which the formula does not read. Only on a human ranking. |
                 | Do NOT | re-tune from this file. It is a regression net, not evidence about the real world. |
 
                 ## Phase 8 — the officer session (tooling ready 2026-10-21)

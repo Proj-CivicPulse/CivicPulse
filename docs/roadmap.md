@@ -28,7 +28,7 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | S | Stabilisation + data foundation | ✅ Done |
 | 6 | Explorer (wards, categories, incidents) | ✅ Done |
 | 7 | Matching evaluation | ✅ Done — threshold set to 0.84 |
-| 8 | Priority calibration | 🟡 Proxy run done (age 30 d recommended); one human ranking to confirm |
+| 8 | Priority calibration | ✅ Proxy run done; age 30 d applied 2026-10-22. A human ranking would confirm it |
 | 9 | Hotspots | ✅ Done (2026-10-21) |
 | 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
 | 11 | Decision support | ✅ Done (2026-10-21); the Copilot note was cut |
@@ -39,8 +39,8 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 code I can write alone:
 
 1. **12.4–12.5:** the Copilot panel and its question set (Manya).
-2. **8.3–8.4:** a proxy run is done and recommends one change. One human
-   ranking, or a team decision to accept the proxy, settles it.
+2. **8 (optional but valuable):** one human ranking of the sheet, to confirm
+   the 30-day change and test whether category should count.
 3. **13:** the paper and a rehearsed demo.
 
 ### Deployment status (2026-10-21)
@@ -86,7 +86,7 @@ Contract: [matching-contract.md](matching-contract.md).
 
 ### 3 — Explainable priority engine ✅
 Four terms: volume, growth, age, spread (weights 40/30/20/10; bands
-3.0/5.5/7.5). Reasons are stored with the score. A 5-minute
+3.0/5.5/7.5; age saturates at 30 days, 14 until 2026-10-22). Reasons are stored with the score. A 5-minute
 `PriorityRefreshJob` keeps age current. The weights are hand-set and frozen until
 Phase 8 ([priority-evaluation.md](priority-evaluation.md)).
 
@@ -251,7 +251,7 @@ Check automatically that:
 
 Run it per provider. The comparison goes in the paper.
 
-### 8 — Priority calibration 🟡 (tooling done 2026-10-21)
+### 8 — Priority calibration ✅ (age 30 d applied 2026-10-22; a human ranking would confirm)
 The weights stay frozen until an officer has ranked a real queue. The steps
 are in [priority-evaluation.md](priority-evaluation.md), "Phase 8 — the
 officer session".
@@ -261,7 +261,7 @@ officer session".
 | 8.1 | `GET /dashboard/ranking-sheet`: the active queue as a CSV with the formula's inputs, no score, in a scrambled order; `?withScores=true` is the analyst's key | ✅ DB-backed tests with hand-computed scores |
 | 8.2 | `npm run eval:priority`: Kendall τ-b, precision@10, each term alone, the age variants on two halves, officer vs officer. It first checks its copy of the formula against the key | ✅ unit tests on a stand-in officer; end-to-end on local data (the copy reproduces 45/45 scores) |
 | 8.3 | Ranking session. **Proxy run done 2026-10-22:** Gemini ranked 45 incidents three times, blind to the formula ([priority-calibration-proxy.md](priority-calibration-proxy.md)). The formula beats the naive baseline in every run. **A human ranking is still to come** | 🟡 |
-| 8.4 | Decision: **age saturating at 30 d** beats the shipped formula on both halves in 3/3 runs. It is ready to adopt (a one-constant change) once a human ranking agrees, or the team accepts the proxy. Category severity, which the formula lacks, is the largest gap; take it to the session as a question | 🟡 |
+| 8.4 | **Applied 2026-10-22: age saturates at 30 d** (it beat 14 d on both halves in 3/3 runs). Category severity, which the formula lacks, is the largest gap left; test it on a human ranking | ✅ |
 
 ### 13 — Paper + demo 🟡
 | Section | Source | Ready |
@@ -278,7 +278,7 @@ officer session".
 | Review the 30 hand labels in `backend-node/eval/production-joins-labelled.json` | an officer / Devansh |
 | Review the Explorer UI and the `--density-*` tokens, plus the new hotspot rings and list, the attention strip and the suggestion box | Devansh |
 | Redeploy both backends once Railway builds again (commands in "Deployment status") | team |
-| One human ranking of the sheet (8.3), or decide to accept the proxy result and adopt age 30 d | team |
+| One human ranking of the sheet (8.3): confirms age 30 d and tests category severity | team |
 
 ### Backlog — deliberately deferred
 - **Photo upload.** Contract approved, not built.

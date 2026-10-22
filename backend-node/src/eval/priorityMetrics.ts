@@ -23,10 +23,10 @@ export interface FormulaParams {
     saturation: { reports: number; reportsPer24h: number; ageDays: number; spreadM: number };
 }
 
-/** PriorityService as shipped: 40/30/20/10, saturating at 25 reports, 5/24 h, 14 days, 1 km. */
+/** PriorityService as shipped: 40/30/20/10, saturating at 25 reports, 5/24 h, 30 days, 1 km. */
 export const PRODUCTION: FormulaParams = {
     weights: { volume: 0.4, growth: 0.3, age: 0.2, spread: 0.1 },
-    saturation: { reports: 25, reportsPer24h: 5, ageDays: 14, spreadM: 1000 },
+    saturation: { reports: 25, reportsPer24h: 5, ageDays: 30, spreadM: 1000 },
 };
 
 const saturate = (v: number) => (Number.isNaN(v) || v < 0 ? 0 : Math.min(1, v));
@@ -106,8 +106,9 @@ export interface Variant {
 
 /** The changes priority-evaluation.md names as first to try, plus the shipped formula. */
 export const VARIANTS: Variant[] = [
-    { name: 'shipped (age saturates at 14 d)', params: PRODUCTION },
-    { name: 'age saturates at 30 d', params: { ...PRODUCTION, saturation: { ...PRODUCTION.saturation, ageDays: 30 } } },
+    { name: 'shipped (age saturates at 30 d)', params: PRODUCTION },
+    // Shipped until 2026-10-22; kept so a later ranking can re-check the switch.
+    { name: 'previous (age saturates at 14 d)', params: { ...PRODUCTION, saturation: { ...PRODUCTION.saturation, ageDays: 14 } } },
     { name: 'age saturates at 45 d', params: { ...PRODUCTION, saturation: { ...PRODUCTION.saturation, ageDays: 45 } } },
     {
         name: 'age weight 10% (to volume)',

@@ -40,7 +40,7 @@ class PriorityServiceTest {
     class Score {
 
         @Test
-        @DisplayName("12 reports, 3 in the last day, two weeks old, spread 400 m -> 7.3 (high)")
+        @DisplayName("12 reports, 3 in the last day, two weeks old, spread 400 m -> 6.3 (high)")
         void representativeIncident() {
             Incident incident = incidentCreated(NOW.minusDays(14));
             List<Complaint> complaints = new ArrayList<>();
@@ -56,11 +56,10 @@ class PriorityServiceTest {
 
             PriorityResult result = service.compute(incident, complaints, NOW);
 
-            // NOTE: docs/api-contract.md originally illustrated this shape with
-            // 7.4. That figure was written by hand before any formula existed;
-            // 7.3 is what the model actually produces, and the doc has been
-            // corrected to match rather than the weights bent to fit it.
-            assertThat(result.score()).isEqualTo(7.3);
+            // 7.3 while age saturated at 14 days; since 2026-10-22 it saturates at
+            // 30 (docs/priority-calibration-proxy.md), so two weeks earns 14/30 of
+            // the age weight: 7.3 - 0.2*(16/30)*10 = 6.3. Still high.
+            assertThat(result.score()).isEqualTo(6.3);
             assertThat(result.band()).isEqualTo(PriorityBand.HIGH);
         }
 
@@ -163,7 +162,8 @@ class PriorityServiceTest {
         @Test
         @DisplayName("evidence is stated in plain language, never as weights or codes")
         void plainLanguage() {
-            Incident incident = incidentCreated(NOW.minusDays(21));
+            // "without resolution" is said once age is saturated (30 days).
+            Incident incident = incidentCreated(NOW.minusDays(35));
             List<Complaint> complaints = new ArrayList<>();
             for (int i = 0; i < 3; i++) {
                 complaints.add(complaint(NOW.minusHours(3), BASE_LAT, BASE_LON));
@@ -177,7 +177,11 @@ class PriorityServiceTest {
             assertThat(result.reasons())
                     .contains("12 complaints reported")
                     .contains("3 new complaints in the last 24 hours")
-                    .contains("Open for 21 days without resolution");
+                    .contains("Open for 35 days without resolution");
+
+            // Below saturation the reason is the plain age.
+            PriorityResult younger = service.compute(incidentCreated(NOW.minusDays(21)), complaints, NOW);
+            assertThat(younger.reasons()).contains("Open for 21 days");
         }
 
         @Test
