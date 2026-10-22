@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { incidentService, type Incident, type IncidentFilters } from '@/services/incident.service';
+import {
+    incidentService,
+    type Incident,
+    type IncidentFilters,
+} from '@/services/incident.service';
 import { categoryService } from '@/services/category.service';
 import { wardService } from '@/services/ward.service';
 import { queryKeys } from '@/lib/queryKeys';
@@ -15,6 +19,7 @@ import { incidentName } from '@/components/explorer/IncidentList';
 import AttentionStrip from '@/components/dashboard/AttentionStrip';
 import WardRail from '@/components/dashboard/WardRail';
 import IncidentDetail from '@/components/dashboard/IncidentDetail';
+import CopilotPanel from '@/components/copilot/CopilotPanel';
 import Button from '@/components/ui/Button';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import EmptyState from '@/components/ui/EmptyState';
@@ -23,31 +28,11 @@ import HazardChip from '@/components/ui/HazardChip';
 import PriorityChip from '@/components/ui/PriorityChip';
 import Skeleton from '@/components/ui/Skeleton';
 import StatusChip from '@/components/ui/StatusChip';
-import styles from "./IncidentDashboard.module.css";
+import styles from './IncidentDashboard.module.css';
 
-/**
- * Rows per page in the queue.
- *
- * Paged on the client over one server page of up to QUEUE_FETCH_LIMIT
- * incidents, so re-sorting a column still runs over every loaded incident
- * rather than only the visible ten.
- */
 const QUEUE_PAGE_SIZE = 10;
-
-/**
- * How many incidents the console loads per filter combination — the server's
- * maximum page. The map needs every marker in the filtered set, so the console
- * asks for all of it in one page; when `total` exceeds this the queue says so
- * instead of implying it is showing everything. Past that scale the map moves
- * to per-ward aggregates (docs/api-contract.md, N1).
- */
 const QUEUE_FETCH_LIMIT = 200;
 
-/**
- * Three regions, all visible at once, no tabs. The map and the queue are two
- * views of the same filtered set: selecting a marker highlights the row and
- * vice versa, through one piece of store state.
- */
 export default function IncidentDashboard() {
     const selectedWardId = useDashboardStore((s) => s.selectedWardId);
     const statusFilter = useDashboardStore((s) => s.statusFilter);
@@ -57,11 +42,19 @@ export default function IncidentDashboard() {
     const selectIncident = useDashboardStore((s) => s.selectIncident);
     const windowDays = useDashboardStore((s) => s.windowDays);
 
-    // Search is typed, so it is debounced: one request per pause, not per key.
+    // Copilot panel visibility.
+    const [copilotOpen, setCopilotOpen] = useState(false);
+
+    // Debounced incident search.
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
+
     useEffect(() => {
-        const id = window.setTimeout(() => setSearch(searchInput.trim()), 300);
+        const id = window.setTimeout(
+            () => setSearch(searchInput.trim()),
+            300,
+        );
+
         return () => window.clearTimeout(id);
     }, [searchInput]);
 
@@ -71,34 +64,47 @@ export default function IncidentDashboard() {
         staleTime: 5 * 60_000,
     });
 
-    // Every filter is applied by the server, including band — the thresholds
-    // are the model's, so the client never compares scores itself. Keeping the
-    // filters in the key means each combination caches separately.
     const serverFilters = useMemo<IncidentFilters>(
         () => ({
-            ...(selectedWardId !== null ? { wardIds: [selectedWardId] } : {}),
-            ...(statusFilter !== null ? { statuses: [statusFilter] } : {}),
-            ...(bandFilter !== null ? { priorityBands: [bandFilter] } : {}),
-            ...(categoryFilter !== null ? { categories: [categoryFilter] } : {}),
-            // Incidents with a member REPORTED in the window — the same window
-            // every Explorer view applies.
+            ...(selectedWardId !== null
+                ? { wardIds: [selectedWardId] }
+                : {}),
+            ...(statusFilter !== null
+                ? { statuses: [statusFilter] }
+                : {}),
+            ...(bandFilter !== null
+                ? { priorityBands: [bandFilter] }
+                : {}),
+            ...(categoryFilter !== null
+                ? { categories: [categoryFilter] }
+                : {}),
             ...reportWindow(windowDays),
             ...(search !== '' ? { q: search } : {}),
             limit: QUEUE_FETCH_LIMIT,
         }),
-        [selectedWardId, statusFilter, bandFilter, categoryFilter, windowDays, search]
+        [
+            selectedWardId,
+            statusFilter,
+            bandFilter,
+            categoryFilter,
+            windowDays,
+            search,
+        ],
     );
 
     const incidentsQuery = useQuery({
         queryKey: queryKeys.incidents.list(serverFilters),
         queryFn: () => incidentService.list(serverFilters),
-        // Refetch keeps the frame: the previous queue stays up, dimmed, while
-        // a new filter combination loads — no skeleton flash per click.
         placeholderData: keepPreviousData,
     });
 
-    const incidents = useMemo(() => incidentsQuery.data?.items ?? [], [incidentsQuery.data]);
+    const incidents = useMemo(
+        () => incidentsQuery.data?.items ?? [],
+        [incidentsQuery.data],
+    );
+
     const total = incidentsQuery.data?.total ?? 0;
+
     const hasNarrowingFilters =
         statusFilter !== null ||
         bandFilter !== null ||
@@ -112,25 +118,16 @@ export default function IncidentDashboard() {
         staleTime: 60 * 60_000,
     });
 
-    // The category facets are the registry's codes, in registry order. They can
-    // no longer come from what loaded: with category filtered on the server,
-    // the loaded set narrows to the selected category and every other chip
-    // would vanish. A chip that matches nothing lands on the "no incidents
-    // match these filters" state, which says exactly that.
     const categories = useMemo(
         () => (categoriesQuery.data ?? []).map((c) => c.code),
-        [categoriesQuery.data]
+        [categoriesQuery.data],
     );
 
-    /**
-     * Canonical code -> the officer-facing name in the registry.
-     *
-     * Falls back to humanizing the code itself, which is what an incident
-     * carrying a value the registry does not know (a row the V11 backfill left
-     * alone) needs — it is still real data and still belongs on screen.
-     */
     const categoryLabel = useMemo(() => {
-        const names = new Map((categoriesQuery.data ?? []).map((c) => [c.code, c.name]));
+        const names = new Map(
+            (categoriesQuery.data ?? []).map((c) => [c.code, c.name]),
+        );
+
         return (code: string) => names.get(code) ?? humanizeEnum(code);
     }, [categoriesQuery.data]);
 
@@ -138,8 +135,10 @@ export default function IncidentDashboard() {
         () =>
             incidents
                 .filter(
-                    (i): i is Incident & { lat: number; long: number } =>
-                        i.lat !== null && i.long !== null
+                    (i): i is Incident & {
+                        lat: number;
+                        long: number;
+                    } => i.lat !== null && i.long !== null,
                 )
                 .map((i) => ({
                     id: i.id,
@@ -148,18 +147,21 @@ export default function IncidentDashboard() {
                     band: i.priorityBand,
                     label: incidentName(i, categoryLabel),
                 })),
-        // categoryLabel belongs here: it changes exactly once, when /categories
-        // resolves, and that is precisely when these labels must be rebuilt.
-        [incidents, categoryLabel]
+        [incidents, categoryLabel],
     );
 
-    const selected = incidents.find((i) => i.id === selectedIncidentId) ?? null;
+    const selected =
+        incidents.find((i) => i.id === selectedIncidentId) ?? null;
 
     const columns = useMemo<Column<Incident>[]>(
         () => [
             {
                 key: 'title',
                 header: 'Incident',
+                cell: (row) =>
+                    truncate(incidentName(row, categoryLabel), 44),
+                sortValue: (row) =>
+                    incidentName(row, categoryLabel),
                 cell: (row) => (
                     <span className={styles.titleCell}>
                         {truncate(incidentName(row, categoryLabel), 44)}
@@ -171,14 +173,21 @@ export default function IncidentDashboard() {
             {
                 key: 'priority',
                 header: 'Priority',
-                cell: (row) => <PriorityChip band={row.priorityBand} score={row.priorityScore} />,
+                cell: (row) => (
+                    <PriorityChip
+                        band={row.priorityBand}
+                        score={row.priorityScore}
+                    />
+                ),
                 sortValue: (row) => row.priorityScore,
                 width: '140px',
             },
             {
                 key: 'status',
                 header: 'Status',
-                cell: (row) => <StatusChip status={row.status} />,
+                cell: (row) => (
+                    <StatusChip status={row.status} />
+                ),
                 sortValue: (row) => row.status,
                 width: '120px',
             },
@@ -193,36 +202,76 @@ export default function IncidentDashboard() {
             {
                 key: 'age',
                 header: 'Age',
-                // Age of the PROBLEM — since it was first reported — not of the
-                // grouping, which createdAt would measure.
                 cell: (row) => {
-                    const days = row.firstReportedAt ? daysSince(row.firstReportedAt) : null;
+                    const days = row.firstReportedAt
+                        ? daysSince(row.firstReportedAt)
+                        : null;
+
                     return days === null ? '—' : `${days}d`;
                 },
-                sortValue: (row) => (row.firstReportedAt ? daysSince(row.firstReportedAt) : null) ?? 0,
+                sortValue: (row) =>
+                    (
+                        row.firstReportedAt
+                            ? daysSince(row.firstReportedAt)
+                            : null
+                    ) ?? 0,
                 align: 'end',
                 width: '80px',
             },
         ],
-        // categoryLabel is the only value these cells close over. It changes
-        // once, when /categories resolves; without it here the table would keep
-        // rendering raw codes for the life of the page.
-        [categoryLabel]
+        [categoryLabel],
     );
 
     const errorCopy = incidentsQuery.isError
         ? describeError(incidentsQuery.error, 'incidents')
         : null;
 
+    /*
+     * Reuse the dashboard's reporting-window helper.
+     * Only include dates if that helper returns fields named "from" and "to".
+     */
+    const copilotWindow = reportWindow(windowDays) as Record<
+        string,
+        unknown
+    >;
+
+    const copilotScope = {
+        ...(selectedWardId !== null
+            ? { wardId: String(selectedWardId) }
+            : {}),
+        ...(categoryFilter !== null
+            ? { category: categoryFilter }
+            : {}),
+        ...(typeof copilotWindow.from === 'string'
+            ? { from: copilotWindow.from }
+            : {}),
+        ...(typeof copilotWindow.to === 'string'
+            ? { to: copilotWindow.to }
+            : {}),
+    };
+
     return (
         <div className={styles.page}>
             <AppHeader wide nav={EXPLORER_NAV} />
 
-            <div className={selected ? styles.layoutWithDetail : styles.layout}>
-                <aside className={styles.rail} aria-label="Wards and filters">
+            <div
+                className={
+                    selected
+                        ? styles.layoutWithDetail
+                        : styles.layout
+                }
+            >
+                <aside
+                    className={styles.rail}
+                    aria-label="Wards and filters"
+                >
                     {wardsQuery.isPending ? (
                         <div className={styles.railLoading}>
-                            <Skeleton count={5} variant="row" label="Loading wards" />
+                            <Skeleton
+                                count={5}
+                                variant="row"
+                                label="Loading wards"
+                            />
                         </div>
                     ) : (
                         <WardRail
@@ -234,7 +283,6 @@ export default function IncidentDashboard() {
                 </aside>
 
                 <main className={styles.center}>
-                    {/* Always rendered, so the grid rows never shift while it loads. */}
                     <div>
                         <AttentionStrip
                             wardId={selectedWardId}
@@ -242,6 +290,7 @@ export default function IncidentDashboard() {
                             categoryLabel={categoryLabel}
                         />
                     </div>
+
                     <div className={styles.map}>
                         <MapView
                             ariaLabel="Incidents on a map"
@@ -252,19 +301,43 @@ export default function IncidentDashboard() {
                         />
                     </div>
 
-                    <section className={styles.queue} aria-labelledby="queue-heading">
+                    <section
+                        className={styles.queue}
+                        aria-labelledby="queue-heading"
+                    >
                         <div className={styles.queueHead}>
-                            <h2 className={styles.queueTitle} id="queue-heading">
+                            <h2
+                                className={styles.queueTitle}
+                                id="queue-heading"
+                            >
                                 Incident queue
                             </h2>
+
+                            <Button
+                                variant="secondary"
+                                size="compact"
+                                onClick={() =>
+                                    setCopilotOpen((open) => !open)
+                                }
+                                aria-expanded={copilotOpen}
+                                aria-controls="dashboard-copilot"
+                            >
+                                {copilotOpen
+                                    ? 'Close Copilot'
+                                    : 'Ask Copilot'}
+                            </Button>
+
                             <input
                                 type="search"
                                 className={styles.search}
                                 placeholder="Search titles and summaries"
                                 aria-label="Search incidents"
                                 value={searchInput}
-                                onChange={(e) => setSearchInput(e.target.value)}
+                                onChange={(event) =>
+                                    setSearchInput(event.target.value)
+                                }
                             />
+
                             <span className={styles.queueCount}>
                                 {total > incidents.length
                                     ? `${formatCount(incidents.length)} of ${formatCount(total)} incidents`
@@ -274,7 +347,11 @@ export default function IncidentDashboard() {
 
                         {incidentsQuery.isPending ? (
                             <div className={styles.queueLoading}>
-                                <Skeleton count={8} variant="row" label="Loading incidents" />
+                                <Skeleton
+                                    count={8}
+                                    variant="row"
+                                    label="Loading incidents"
+                                />
                             </div>
                         ) : errorCopy !== null ? (
                             <EmptyState
@@ -285,7 +362,9 @@ export default function IncidentDashboard() {
                                     <Button
                                         variant="secondary"
                                         size="compact"
-                                        onClick={() => void incidentsQuery.refetch()}
+                                        onClick={() =>
+                                            void incidentsQuery.refetch()
+                                        }
                                     >
                                         Try again
                                     </Button>
@@ -306,16 +385,43 @@ export default function IncidentDashboard() {
                                 rows={incidents}
                                 rowKey={(row) => row.id}
                                 selectedId={selectedIncidentId}
-                                onSelect={(row) => selectIncident(row.id)}
-                                initialSort={{ key: "priority", direction: "desc" }}
+                                onSelect={(row) =>
+                                    selectIncident(row.id)
+                                }
+                                initialSort={{
+                                    key: 'priority',
+                                    direction: 'desc',
+                                }}
                                 pageSize={QUEUE_PAGE_SIZE}
                             />
                         )}
                     </section>
+
+                    {copilotOpen && (
+                        <section
+                            id="dashboard-copilot"
+                            aria-label="Copilot assistant"
+                            style={{ marginTop: '20px' }}
+                        >
+                            <CopilotPanel
+                                scope={copilotScope}
+                                onClose={() => setCopilotOpen(false)}
+                                onOpenIncident={(incidentId) => {
+                                    selectIncident(incidentId);
+                                }}
+                                onNavigate={(path) => {
+                                    window.location.assign(path);
+                                }}
+                            />
+                        </section>
+                    )}
                 </main>
 
                 {selected && (
-                    <aside className={styles.detail} aria-label="Incident details">
+                    <aside
+                        className={styles.detail}
+                        aria-label="Incident details"
+                    >
                         <IncidentDetail
                             incident={selected}
                             categoryLabel={categoryLabel}

@@ -1,0 +1,250 @@
+.copilot-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 460px;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #202124;
+  border: 1px solid #e1e5eb;
+  border-radius: 12px;
+  font-family: inherit;
+}
+
+.copilot-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e8ebef;
+}
+
+.copilot-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.copilot-header p {
+  margin-top: 6px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.copilot-close {
+  border: none;
+  background: transparent;
+  color: #667085;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+.copilot-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.copilot-form label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.copilot-form textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #101828;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.copilot-form textarea:focus {
+  outline: 2px solid #356ae6;
+  outline-offset: 1px;
+}
+
+.copilot-ask-button {
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #2457c5;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.copilot-ask-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.copilot-status,
+.copilot-empty,
+.copilot-error,
+.copilot-warning {
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.copilot-status {
+  background: #eff5ff;
+  color: #244b8f;
+}
+
+.copilot-empty {
+  background: #f8fafc;
+  border: 1px dashed #d0d5dd;
+}
+
+.copilot-empty h3,
+.copilot-result h3 {
+  margin-top: 0;
+  font-size: 15px;
+}
+
+.copilot-empty p {
+  margin-bottom: 0;
+  color: #667085;
+}
+
+.copilot-error {
+  background: #fff1f1;
+  border: 1px solid #f2c6c6;
+  color: #912018;
+}
+
+.copilot-error p {
+  margin-bottom: 0;
+}
+
+.copilot-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.copilot-answer {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.copilot-warning {
+  background: #fff8e5;
+  border: 1px solid #f0d58c;
+  color: #795600;
+}
+
+.copilot-sources,
+.copilot-history {
+  padding-top: 12px;
+  border-top: 1px solid #e8ebef;
+}
+
+.copilot-sources h4,
+.copilot-history h4 {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.copilot-source-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.copilot-source {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #d8e0ec;
+  border-radius: 8px;
+  background: #f8faff;
+  color: #244b8f;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.copilot-source:enabled {
+  cursor: pointer;
+}
+
+.copilot-source:enabled:hover {
+  background: #eaf1ff;
+}
+
+.copilot-source:disabled {
+  opacity: 0.85;
+  cursor: default;
+}
+
+.copilot-source-kind {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.copilot-note,
+.copilot-meta {
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.copilot-history-item {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #f5f7fa;
+  color: #475467;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.copilot-history-item:hover {
+  background: #edf2fa;
+}
+
+@media (max-width: 480px) {
+  .copilot-panel {
+    padding: 14px;
+  }
+
+  .copilot-source-list {
+    flex-direction: column;
+  }
+
+  .copilot-source {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
