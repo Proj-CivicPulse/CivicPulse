@@ -274,8 +274,8 @@ what is left.** In short (2026-10-24):
 - [x] 8 — Priority calibration (proxy run; age now saturates at 30 days)
 - [x] 9 — Hotspots → 10 — "Needs attention" → 11 — Decision support
 - [x] Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`
-- [ ] 12 — Officer Copilot — backend and panel done; golden-question eval left
-- [ ] 13 — Paper + demo (system, matching and priority sections ready)
+- [x] 12 — Officer Copilot — backend, panel, and golden-question eval (21/22)
+- [ ] 13 — Paper (if required) + backup demo video
 
 ---
 

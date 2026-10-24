@@ -32,16 +32,16 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | 9 | Hotspots | ✅ Done (2026-10-21) |
 | 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
 | 11 | Decision support | ✅ Done (2026-10-21); the Copilot note was cut |
-| 12 | Officer Copilot | 🟡 Backend live; panel merged 2026-10-24 (PR #2); eval left (Manya) |
-| 13 | Paper + demo | 🟡 System, matching and priority sections ready; Copilot section waits on 12.5 |
+| 12 | Officer Copilot | ✅ Panel merged (PR #2); eval 21/22 on 2026-10-24 |
+| 13 | Paper + demo | 🟡 Every section's results exist; the paper is only needed if required |
 | B | Backlog items delivered 2026-10-22 | ✅ Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`, label review |
 
-**All planned product code is done.** What is left:
+**All planned product work and evaluations are done.** What is left:
 
-1. **12.5:** the Copilot golden-question eval (Manya). It feeds the paper.
-2. **Deploy:** redeploy both Railway backends (below).
-3. **13:** the paper, and a backup demo video.
-4. **Polish:** the Copilot panel's styles (below, 12.4).
+1. **Deploy:** redeploy both Railway backends (below).
+2. **13:** the paper, if it is required, and a backup demo video.
+3. **Polish:** the Copilot panel's styles (12.4), and hotspots and
+   life-safety flags in the Copilot's packet (12.5 finding).
 
 ### Deployment status (2026-10-24)
 - **GitHub:** `main` has every phase, the backlog items above and the Copilot
@@ -231,7 +231,7 @@ Resident complaint text is not sent to the model.
 | 12.2 | Node `/internal/copilot/answer`, swappable provider (none / ollama / gemini / anthropic) | ✅ |
 | 12.3 | Spring `/copilot/query`: packet builder, citation check, per-officer limit | ✅ |
 | 12.4 | Copilot panel | ✅ merged 2026-10-24 (PR #2), on the Incidents page; polish left, see below |
-| 12.5 | **Golden-question eval** (~20 questions, some unanswerable) | ⬜ |
+| 12.5 | Golden-question eval | ✅ 2026-10-24: 21/22 pass on Gemini; results below |
 
 **Live now on Gemini** (`gemini-3.8-flash`) in production and locally. Verified
 end to end on 2026-10-21. Ollama (`qwen2.5:7b`) is the free option for
@@ -263,14 +263,31 @@ The original plan for the panel, kept for reference. A drawer on the Explorer pa
 
 The project's design system applies: tokens in `tokens.css` and the shared components in `components/ui`.
 
-**12.5 — the eval.** About 20 questions against a seeded local database,
-including unanswerable ones (weather, an out-of-scope ward, "who is the mayor").
-Check automatically that:
-- every cited id is in the packet;
-- every number in the answer appears in the packet;
-- unanswerable questions come back `answerable: false`.
+**12.5 — the eval, run 2026-10-24.** `npm run eval:copilot` asks
+22 questions in `backend-node/eval/copilot-questions.json` through Spring as an
+officer, the same path the panel uses, and scores each answer against the
+packet the model saw. The packet is captured by backend-node only when
+`COPILOT_EVAL_CAPTURE` is set, which it never is when deployed. Report:
+`backend-node/eval/results/copilot-2026-10-24/report.md`.
 
-Run it per provider. The comparison goes in the paper.
+| Check (Gemini `gemini-3.8-flash`, local seed) | Result |
+|---|---|
+| Questions passing every check | 21/22 (95%) |
+| Answerable questions answered | 12/12 |
+| Expected fact stated (counts, top ward, top incident…) | 10/10 |
+| Unanswerable questions declined, citing nothing | 8/9 (weather, mayor, budget, a resident's phone number, a prompt injection, another ward, …) |
+| Citations not in the packet | 0 of 37 |
+| Numbers not in the packet | 0 of 81 |
+| Median latency | 4.3 s |
+
+**The one failure is a packet gap, not a hallucination.** Asked "where are the
+hotspots?", the Copilot named the busiest wards. Every figure it gave was
+true, but a CivicPulse hotspot is 3+ incidents of one category within 500 m
+(Phase 9), and the packet holds no hotspots and no life-safety flags: both
+were built after it. The fix is in Spring's `CopilotPacketBuilder`: add the
+hotspots and flagged incidents, or at least a definition line saying they
+are not in this view. The eval has only been run on Gemini; running it on
+Ollama or Claude is the remaining comparison for the paper.
 
 ### 8 — Priority calibration ✅ (closed 2026-10-22)
 The weights stay frozen until an officer has ranked a real queue. The steps
@@ -289,7 +306,7 @@ officer session".
 |---|---|---|
 | System: architecture, data quality, ingestion gate | service-boundaries.md, data-quality-rules.md | ✅ now |
 | Matching: method, labelled sets, P/R/F1/F2, ablation, distance check | matching-evaluation.md, `backend-node/eval/results/` | ✅ now |
-| Copilot: grounding design and eval results | 12.5 | after 12.5 |
+| Copilot: grounding design and eval results | api-contract.md "Copilot", `backend-node/eval/results/copilot-2026-10-24/` | ✅ now (Gemini only) |
 | Priority: explainability, formula vs naive baseline, proxy calibration | priority-evaluation.md, priority-calibration-proxy.md | ✅ now (human ranking would strengthen it) |
 | Demo: rehearsed run and a backup video | deck and four-speaker script in `presentation/` (2026-10-22) | 🟡 backup video left |
 
