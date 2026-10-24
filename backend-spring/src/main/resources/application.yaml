@@ -144,6 +144,19 @@ app:
     packet-wards: ${COPILOT_PACKET_WARDS:10}
     trend-days: ${COPILOT_TREND_DAYS:14}
 
+  # Photo upload (docs/photo-upload-contract.md). Any S3-compatible bucket:
+  # a Railway Bucket in production, MinIO locally. Leave PHOTO_STORAGE_BUCKET
+  # unset and the feature is off — the endpoints answer 503
+  # PHOTO_UPLOAD_UNAVAILABLE and the form says photos are unavailable.
+  photos:
+    endpoint: ${PHOTO_STORAGE_ENDPOINT:}
+    bucket: ${PHOTO_STORAGE_BUCKET:}
+    access-key: ${PHOTO_STORAGE_ACCESS_KEY:}
+    secret-key: ${PHOTO_STORAGE_SECRET_KEY:}
+    region: ${PHOTO_STORAGE_REGION:auto}
+    # true for MinIO and older Railway buckets; the bucket's Credentials tab says.
+    path-style: ${PHOTO_STORAGE_PATH_STYLE:false}
+
   matching:
     node-base-url: ${NODE_BASE_URL:http://localhost:3001}
     process-timeout-ms: ${MATCHING_PROCESS_TIMEOUT_MS:2500}

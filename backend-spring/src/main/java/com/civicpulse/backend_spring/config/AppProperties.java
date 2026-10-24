@@ -91,6 +91,49 @@ public class AppProperties {
 
     private final Copilot copilot = new Copilot();
 
+    private final Photos photos = new Photos();
+
+    /**
+     * Photo storage (docs/photo-upload-contract.md): an S3-compatible bucket.
+     * Off unless {@code bucket} is set. The limits are the contract's §3 and
+     * §4 values, kept here rather than as literals so tests can read them.
+     */
+    @Getter
+    @Setter
+    public static class Photos {
+
+        private String endpoint = "";
+        private String bucket = "";
+        private String accessKey = "";
+        private String secretKey = "";
+        private String region = "auto";
+        private boolean pathStyle = false;
+
+        /** Largest upload accepted, in bytes. */
+        @Positive
+        private long maxBytes = 8L * 1024 * 1024;
+
+        /** Lifetime of the presigned PUT. Long enough for a slow connection. */
+        @Positive
+        private int intentMinutes = 10;
+
+        /** Lifetime of the presigned GET an officer's browser loads. */
+        @Positive
+        private int readMinutes = 15;
+
+        /** How long a just-filed complaint's anonymous upload token stays valid. */
+        @Positive
+        private int tokenHours = 2;
+
+        /** Unconfirmed uploads older than this are deleted by the sweep. */
+        @Positive
+        private int orphanHours = 24;
+
+        public boolean isEnabled() {
+            return bucket != null && !bucket.isBlank();
+        }
+    }
+
     /**
      * The officer Copilot (docs/roadmap.md, Phase 12). Spring builds the
      * grounding packet and calls backend-node's {@code /internal/copilot/answer};

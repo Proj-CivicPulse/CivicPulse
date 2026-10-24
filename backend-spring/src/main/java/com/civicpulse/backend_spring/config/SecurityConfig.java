@@ -139,6 +139,12 @@ public class SecurityConfig {
                         // decision (docs/endpoints.md); tracking your own
                         // complaints below is not.
                         .requestMatchers(HttpMethod.POST, "/complaints").permitAll()
+                        // Attaching the photo of a report just filed, without
+                        // an account. Not open in practice: ComplaintPhotoService
+                        // demands the complaint's upload token or its owner's
+                        // session, and answers 404 otherwise.
+                        .requestMatchers(HttpMethod.POST, "/complaints/*/photo-intent", "/complaints/*/photo")
+                                .permitAll()
 
                         .requestMatchers("/complaints/mine").hasRole("CITIZEN")
 

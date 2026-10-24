@@ -11,6 +11,7 @@ import AppHeader from '@/components/AppHeader';
 import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
 import MapView from '@/components/ui/MapView';
+import PhotoAttach from '@/components/complaint/PhotoAttach';
 import styles from './SubmitComplaint.module.css';
 
 const DESCRIPTION_MAX = 5000;
@@ -158,6 +159,13 @@ export default function SubmitComplaint() {
                             </div>
                         </div>
 
+                        <section className={styles.photoBlock} aria-labelledby="photo-heading">
+                            <h2 className={styles.blockTitle} id="photo-heading">
+                                Photo
+                            </h2>
+                            <PhotoAttach complaint={complaint} />
+                        </section>
+
                         <div className={styles.confirmActions}>
                             <Button to="/complaints" variant="primary">
                                 Track my reports
@@ -289,15 +297,12 @@ export default function SubmitComplaint() {
                     <section className={styles.block}>
                         <h2 className={styles.blockTitle}>Photo</h2>
                         {/*
-                         * Deliberately not built. docs/endpoints.md still has the
-                         * upload mechanism open (direct-to-storage URL vs. a
-                         * multipart endpoint), and no storage provider is
-                         * configured — so a working-looking uploader here would
-                         * be a lie. Saying so is better than a dead button.
+                         * Attached AFTER the report is filed, never as a gate
+                         * on it (docs/photo-upload-contract.md §6): a resident
+                         * whose upload fails has still reported the problem.
                          */}
                         <p className={styles.blockHint}>
-                            Photo upload isn&rsquo;t available yet. Describe what you see and a ward
-                            officer will follow up.
+                            You can add one photo on the next screen, once the report is filed.
                         </p>
                     </section>
 

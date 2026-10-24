@@ -8,6 +8,7 @@ import { formatRelative } from '@/lib/datetime';
 import { useDashboardStore } from '@/stores/dashboard.store';
 import Button from '@/components/ui/Button';
 import Skeleton from '@/components/ui/Skeleton';
+import ReportPhoto from './ReportPhoto';
 import styles from './IncidentDetail.module.css';
 
 /**
@@ -71,6 +72,7 @@ export default function IncidentReports({ incident }: { incident: Incident }) {
                                     {formatRelative(complaint.reportedAt)}
                                 </time>
                                 <span className={styles.complaintText}>{truncate(complaint.description, 70)}</span>
+                                {complaint.hasPhoto && <ReportPhoto complaintId={complaint.id} />}
                                 {reason && <span className={styles.complaintWhy}>{reason.explanation}</span>}
                                 {canSplit &&
                                     (confirming === complaint.id ? (

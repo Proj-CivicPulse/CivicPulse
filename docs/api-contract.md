@@ -247,9 +247,29 @@ creating transaction, so a rollback returns the number instead of burning it.
 
 `POST /complaints` does **not** accept `photoUrl`. It used to, and stored it
 verbatim — which let any caller put an arbitrary URL on a complaint that an
-officer's dashboard would later render. `photoUrl` remains on the RESPONSE
-shape, because that column is where the server-issued upload flow in
-`photo-upload-contract.md` will write an object key it minted itself.
+officer's dashboard would later render. Since 2026-10-25 a photo arrives only
+through the server-issued flow below, and the complaint carries `hasPhoto`,
+never a URL.
+
+#### Photo upload — ✅ implemented 2026-10-25 ([photo-upload-contract.md](photo-upload-contract.md))
+
+| Method | Path | Who | Body → response |
+|---|---|---|---|
+| POST | `/complaints/{id}/photo-intent` | the submitter's `uploadToken`, or the owning citizen | `{ contentType, sizeBytes, uploadToken? }` → `{ uploadUrl, objectKey, expiresAt, maxBytes, contentType }` |
+| PUT | `uploadUrl` | the browser, **directly to storage** | the file, with exactly the declared `Content-Type` and length |
+| POST | `/complaints/{id}/photo` | as for the intent | `{ objectKey, uploadToken? }` → `Complaint` with `hasPhoto: true` |
+| GET | `/complaints/{id}/photo` | officer, or the owning citizen | → `{ url, thumbnailUrl, expiresAt }`, signed GETs valid 15 min |
+
+- `uploadToken` is returned once, as `photoUploadToken` on the `POST /complaints`
+  response, and only when storage is configured: an HMAC over the complaint id
+  and an expiry (2 h). It replaces the contract's "reference number as proof",
+  because reference numbers are sequential and so guessable.
+- Any caller without the token or ownership gets **404**, as on the complaint.
+- With no bucket configured every photo endpoint answers **503
+  `PHOTO_UPLOAD_UNAVAILABLE`**, and `photoUploadToken` is null.
+- 400 `VALIDATION_ERROR`: a type other than JPEG/PNG/WebP, more than 8 MB, an
+  `objectKey` not issued for this complaint, nothing uploaded, an upload that
+  does not decode as an image of at least 64×64 px, or a second photo.
 
 `GET /complaints/{id}` returns **404, not 403**, when a citizen asks for someone
 else complaint. A 403 would confirm the id exists and turn sequential ids into
@@ -643,6 +663,27 @@ matcher rightly keeps apart and an officer still wants to see together.
 Rule-based, no ML: the incident set is far too small to train anything, and an
 officer can check every member.
 
+#### Officer merge, unlink and "why grouped" — ✅ implemented 2026-10-22
+
+| Method | Path | Body → response |
+|---|---|---|
+| GET | `/incidents/{id}/grouping` | → `{ incidentId, members: [{ complaintId, referenceNo, kind, explanation, siblingReferenceNo, distanceM, decidedAt }] }` |
+| POST | `/incidents/{id}/merge` | `{ intoIncidentId, note? }` → `{ source: null, target: Incident }` |
+| POST | `/incidents/{id}/complaints/{complaintId}/unlink` | `{ note? }` (optional) → `{ source: Incident, target: Incident }` |
+
+- `grouping` tells each report's latest decision from `incident_match_log` in
+  an officer's words — distance and how alike the wording is, never a
+  similarity score. `kind`: `started`, `joined`, `backup_rule`, `rechecked`,
+  `merged`, `split`, `unknown`.
+- `merge` requires both incidents active, in the same ward and of the same
+  category; it moves every report and deletes the emptied incident. An
+  officer-confirmed life-safety flag moves with it.
+- `unlink` moves one report into a new incident of its own; 400 for an
+  incident's only report, 404 for a report not on that incident.
+- Both write `incident_match_log` rows (`MERGED` / `UNLINKED`, matcher
+  `OFFICER`, the officer and the note; V25) and leave the reports `matched`, so
+  the reconcile sweep never undoes them.
+
 #### Decision support — Phase 11 — ✅ implemented 2026-10-21
 
 A recommended next action per active incident, from fixed rules (first match
@@ -968,7 +1009,8 @@ Keep in sync with `backend-spring/src/main/resources/db/migration/`.
   "status": "open",           // open | in_progress | resolved | closed
   "matchingStatus": "pending", // pending | processing | matched | degraded — Phase 2 pipeline state
   "address": "4th Cross, Jayanagar, Bengaluru",  // null when geocoding is off
-  "photoUrl": null,           // read-only; never accepted on create — see below
+  "hasPhoto": false,          // a photo is attached; its URL is never on this shape (GET /complaints/{id}/photo)
+  "photoUploadToken": null,   // POST /complaints response only, when photo upload is on
   "reportedAt": "2026-08-29T10:15:00Z",  // when it was REPORTED; see note below
   "createdAt": "2026-08-29T10:15:00Z",   // when the row was created here
   "updatedAt": "2026-08-29T10:15:00Z"
@@ -1234,6 +1276,6 @@ naive fallback runs, and the reconcile sweep retries once the provider is back.
       was right: multipart holds a request thread for the length of every
       upload, and a caller-supplied `photoUrl` lets anyone put arbitrary content
       in front of an officer — that field has been removed from
-      `POST /complaints`. Not implemented; see `photo-upload-contract.md`.
+      `POST /complaints`. **Implemented 2026-10-25**; see "Photo upload" above.
 
 _Living document — update it in the same PR as any cross-service change._

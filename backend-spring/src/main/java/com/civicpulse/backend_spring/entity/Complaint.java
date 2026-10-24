@@ -133,8 +133,16 @@ public class Complaint {
     @Column(name = "address", length = 512)
     private String address;
 
-    @Column(name = "photo_url", length = 1024)
-    private String photoUrl;
+    /**
+     * Object key of the photo the SERVER wrote after re-encoding the upload
+     * (V26; docs/photo-upload-contract.md). Never a URL and never anything a
+     * caller sent: the confirm step is the only writer. Null = no photo.
+     */
+    @Column(name = "photo_object_key", length = 255)
+    private String photoObjectKey;
+
+    @Column(name = "photo_attached_at")
+    private LocalDateTime photoAttachedAt;
 
     /**
      * Where this complaint sits in the Phase 2 matching pipeline. See

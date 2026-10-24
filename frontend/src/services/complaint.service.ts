@@ -69,7 +69,14 @@ export interface Complaint {
      * dashboard work.
      */
     matchingStatus: MatchingStatus;
-    photoUrl?: string;
+    /** A photo is attached. Its URL is never on this shape — see complaintService.photo. */
+    hasPhoto: boolean;
+    /**
+     * Only on the create response, and only when photo upload is on: the
+     * proof that lets whoever just filed this report attach its photo
+     * without an account. Short-lived; keep it in memory, never in storage.
+     */
+    photoUploadToken?: string | null;
     /**
      * When the problem was reported. Equal to createdAt for a complaint filed
      * through this site; the upstream timestamp for an imported one, which can
@@ -93,10 +100,10 @@ export interface CreateComplaintInput {
     wardId?: string;
     lat: number;
     long: number;
-    // No photoUrl. The server no longer accepts one on create: a caller-supplied
+    // No photoUrl. The server never accepts one on create: a caller-supplied
     // URL ends up rendered in an officer's dashboard, which makes it a tracking
-    // pixel at best. Photos will arrive through the server-issued
-    // intent/confirm flow in docs/photo-upload-contract.md.
+    // pixel at best. Photos arrive through the server-issued intent/confirm
+    // flow instead (complaintService.photoIntent / confirmPhoto).
 }
 
 /** GET /complaints parameters (docs/api-contract.md, E4). Newest report first by default. */
@@ -151,4 +158,33 @@ export const complaintService = {
     /** Officer only. */
     update: (id: string, changes: UpdateComplaintInput) =>
         patch<Complaint>(SPRING_API_PATH, `/complaints/${id}`, changes),
+
+    /** Step 1 of the photo flow: permission to PUT one photo straight to storage. */
+    photoIntent: (id: string, body: { contentType: string; sizeBytes: number; uploadToken?: string }) =>
+        post<PhotoIntent>(SPRING_API_PATH, `/complaints/${id}/photo-intent`, body),
+
+    /** Step 3: the server checks what arrived, strips its metadata and attaches it. */
+    confirmPhoto: (id: string, body: { objectKey: string; uploadToken?: string }) =>
+        post<Complaint>(SPRING_API_PATH, `/complaints/${id}/photo`, body),
+
+    /** Officers and the owner: short-lived signed links, minted per request. */
+    photo: (id: string) => get<PhotoLinks>(SPRING_API_PATH, `/complaints/${id}/photo`),
 };
+
+/** docs/photo-upload-contract.md §2. */
+export interface PhotoIntent {
+    uploadUrl: string;
+    objectKey: string;
+    expiresAt: string;
+    maxBytes: number;
+    contentType: string;
+}
+
+export interface PhotoLinks {
+    url: string;
+    thumbnailUrl: string;
+    expiresAt: string;
+}
+
+export const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+export const PHOTO_MAX_BYTES = 8 * 1024 * 1024;

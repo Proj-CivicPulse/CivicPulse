@@ -35,6 +35,9 @@ public final class ErrorCode {
     /** backend-node or the model provider failed to produce an answer. */
     public static final String COPILOT_UPSTREAM_ERROR = "COPILOT_UPSTREAM_ERROR";
 
+    /** Photo storage is not configured on this server (docs/photo-upload-contract.md). */
+    public static final String PHOTO_UPLOAD_UNAVAILABLE = "PHOTO_UPLOAD_UNAVAILABLE";
+
     private ErrorCode() {
     }
 }

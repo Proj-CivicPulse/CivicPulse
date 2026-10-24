@@ -1,13 +1,15 @@
 # Photo Upload — the contract, decided before the code
 
-> **STATUS: DEFERRED.** The contract below is decided and approved. The
-> implementation is deliberately not started and is **out of scope for this
-> release**. The submit form says photo upload is unavailable, and that copy
-> stays until this ships.
+> **STATUS: SHIPPED 2026-10-25.** Built as specified below, with the open
+> points of §7 decided and one deviation in §5, both marked **(as built)**.
+> Storage: any S3-compatible bucket — a Railway Bucket in production,
+> SeaweedFS locally. With no bucket configured the feature is off: the
+> endpoints answer 503 `PHOTO_UPLOAD_UNAVAILABLE` and the confirmation screen
+> says photo upload is unavailable.
 >
-> The caller-supplied `photoUrl` hole described in §8 is **now closed on both
-> write paths** — `POST /complaints` no longer accepts the field, and
-> `/internal/ingest` no longer carries an upstream one into the column.
+> The caller-supplied `photoUrl` hole described in §8 stays **closed on both
+> write paths** — `POST /complaints` does not accept the field, and
+> `/internal/ingest` does not carry an upstream one into the column.
 
 ISSUE-16's instruction was to **define the media contract before implementing or
 exposing the feature as complete**. This is that definition.
@@ -113,7 +115,7 @@ report — the same principle the address field already follows.
 
 | Actor | Can |
 |---|---|
-| Anonymous submitter | Request an intent and upload, for a complaint created in the same session (the reference number is the proof) |
+| Anonymous submitter | Request an intent and upload, for a complaint created in the same session. **(as built)** The proof is the `photoUploadToken` returned once on the create response — an HMAC over the complaint id and a 2-hour expiry — not the reference number: reference numbers are sequential, so the next one is guessable and anyone could attach a photo to a stranger's report |
 | Citizen | The same, for their own complaints only |
 | Officer | Read any photo, via a signed GET |
 | Anyone else | Nothing |
@@ -142,18 +144,26 @@ connection and an unspecified one produces a form that silently loses a report.
 
 ---
 
-## 7. What is NOT decided
+## 7. The open points — decided 2026-10-25 (as built)
 
-- **Which provider.** The flow above is provider-neutral and works with S3, R2,
-  GCS or Supabase Storage. Nothing should be written until one is chosen,
-  because the intent endpoint's shape depends on its signing API.
-- **Whether images are stripped of EXIF.** A phone photo carries GPS
-  coordinates and a device identifier. Since the complaint already carries
-  coordinates deliberately, the EXIF copy adds no function and some risk. The
-  likely answer is "strip on confirm", which needs an image library and belongs
-  in the implementation decision.
-- **Thumbnails.** The officer dashboard will want them; whether they are
-  generated on confirm or on read is a performance question with no data yet.
+- **Provider: any S3-compatible bucket**, through the AWS SDK's S3 client and
+  presigner (`S3PhotoStorage`). Production: a **Railway Bucket** (private,
+  S3 API, presigned PUT/GET/HEAD; no lifecycle rules, hence the sweep in §4).
+  Locally: a **SeaweedFS** container on :8333. Configured by
+  `PHOTO_STORAGE_*` on backend-spring and `VITE_PHOTO_STORAGE_ORIGIN` on the
+  frontend, which adds that one origin to the CSP's `connect-src` and
+  `img-src` so the browser may PUT to and show from the bucket.
+- **EXIF: stripped on confirm, by re-encoding.** The server decodes the upload
+  (that is also the real type check) and writes a fresh JPEG of at most
+  2048 px on its long edge: GPS, device id and every other metadata block are
+  gone. The raw upload is then deleted. The declared canvas is checked from
+  the header **before** decoding (≤ 50 MP), so a small file cannot ask for
+  gigabytes of heap.
+- **Thumbnails: generated on confirm**, 320 px, stored beside the photo
+  (`photos/{complaintId}/{uuid}-thumb.jpg`). The officer's panel shows the
+  thumbnail and links to the full image.
+- **Column (§4): renamed** `photo_url` → `photo_object_key` (V26), with a
+  CHECK that it starts `photos/`. The API exposes only `hasPhoto`.
 
 ---
 
@@ -197,6 +207,6 @@ a rejection with no reason behind it.
 `photo_url` is NULL on all 167 production complaints. The submit form has always
 said photo upload is unavailable, so removing the field broke no caller.
 
-**What still holds.** Nothing may render `photo_url` until §2 ships. That is the
-property that kept this inert while the field was open, and it is still the one
-to guard in review.
+**What still holds.** Nothing renders a stored value directly: the column holds
+an object key the server wrote (`photo_object_key`, V26), and the browser only
+ever sees a signed URL minted per request. Guard that in review.

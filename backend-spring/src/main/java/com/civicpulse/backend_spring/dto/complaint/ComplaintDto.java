@@ -61,7 +61,12 @@ public class ComplaintDto {
 
     /** Human-readable location. Null when geocoding is disabled. */
     private final String address;
-    private final String photoUrl;
+
+    /**
+     * Whether a photo is attached. The photo itself is never on this shape:
+     * GET /complaints/{id}/photo mints a short-lived signed URL per request.
+     */
+    private final boolean hasPhoto;
 
     /**
      * When the problem was reported. Equal to {@code createdAt} for a website
@@ -92,11 +97,25 @@ public class ComplaintDto {
                 Wire.enumValue(complaint.getStatus()),
                 Wire.enumValue(complaint.getMatchingStatus()),
                 complaint.getAddress(),
-                complaint.getPhotoUrl(),
+                complaint.getPhotoObjectKey() != null,
                 Wire.timestamp(complaint.getReportedAt()),
                 Wire.timestamp(complaint.getCreatedAt()),
-                Wire.timestamp(complaint.getUpdatedAt())
+                Wire.timestamp(complaint.getUpdatedAt()),
+                null
         );
+    }
+
+    /**
+     * Only on the POST /complaints response, and only when photo storage is
+     * on: the proof that lets whoever just filed this report attach its photo
+     * without an account. Short-lived and bound to this complaint id.
+     */
+    private final String photoUploadToken;
+
+    public ComplaintDto withPhotoUploadToken(String token) {
+        return new ComplaintDto(id, referenceNo, userId, wardId, incidentId, incidentComplaintCount, departmentId,
+                title, description, category, lat, lng, status, matchingStatus, address, hasPhoto, reportedAt,
+                createdAt, updatedAt, token);
     }
 
     /** For contexts that do not need the group size, e.g. an incident's own report list. */

@@ -51,8 +51,8 @@ boundary).
       accepts today) lets anyone store any URL against a complaint and render it
       in an officer's dashboard. `CreateComplaintRequest.photoUrl` must be
       removed when this ships. Full contract, validation rules, storage
-      lifecycle and access rules: `photo-upload-contract.md`. NOT yet
-      implemented — the submit form still says so.
+      lifecycle and access rules: `photo-upload-contract.md`.
+      **Implemented 2026-10-25.**
 - [x] **Auth between services** — resolved: `/internal/*` requires the
       `X-Internal-Token` header, compared in constant time, failing closed when
       `INTERNAL_TOKEN` is blank. Rotation policy is still open.
@@ -122,16 +122,18 @@ default (`EMAIL_PROVIDER=log`), so auth has no runtime email dependency.
 - [x] `GET /complaints/{id}` — citizen reads only their own, 404 (not 403) otherwise
 - [x] `GET /complaints/mine` — citizen
 - [x] `PATCH /complaints/{id}` — **officer only**; previously fell through to `anyRequest().authenticated()`
-- [ ] `POST /complaints/{id}/photo-intent` *(not built — contract decided, see `photo-upload-contract.md`)*
-- [ ] `POST /complaints/{id}/photo` *(not built — confirms an upload by object key, never a caller-supplied URL)*
+- [x] `POST /complaints/{id}/photo-intent` — presigned PUT for one photo (2026-10-25; `photo-upload-contract.md`)
+- [x] `POST /complaints/{id}/photo` — confirms by object key, re-encodes without metadata, attaches
+- [x] `GET /complaints/{id}/photo` — officer or owner; short-lived signed links
 
 ### Incidents — Phase 2/3
 - [x] `GET /incidents` — **paged** (E1, 2026-10-13): repeatable `wardId`/`category`/`status`/`priorityBand`, `from`/`to` on member `reportedAt`, `q`, `sort`/`dir`, `limit`/`offset`. `minPriority` still accepted for one release
 - [x] `GET /incidents/{id}`
 - [x] `GET /incidents/{id}/complaints`
 - [x] `PATCH /incidents/{id}` — does not recompute priority; status is not a model input
-- [ ] `POST /incidents/{id}/merge` *(manual merge override)*
-- [ ] `POST /incidents/{incidentId}/complaints/{complaintId}/unlink` *(manual false-merge override)*
+- [x] `POST /incidents/{id}/merge` — manual merge override (2026-10-22)
+- [x] `POST /incidents/{incidentId}/complaints/{complaintId}/unlink` — manual false-merge override (2026-10-22)
+- [x] `GET /incidents/{id}/grouping` — why each report is grouped, in an officer's terms (2026-10-22)
 
 > Still deferred. Semantic matching has landed, but the officer-facing override
 > is separate work. The transactional *reattach* it needs already exists

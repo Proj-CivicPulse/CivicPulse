@@ -68,6 +68,11 @@ public class GlobalExceptionHandler {
         return build(ex.getStatus(), ex.getCode(), ex.getMessage());
     }
 
+    @ExceptionHandler(PhotoUnavailableException.class)
+    public ResponseEntity<ApiError> handlePhotoUnavailable(PhotoUnavailableException ex) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ErrorCode.PHOTO_UPLOAD_UNAVAILABLE, ex.getMessage());
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleResourceNotFound(ResourceNotFoundException ex) {
         return build(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, ex.getMessage());

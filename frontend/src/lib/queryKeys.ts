@@ -56,6 +56,8 @@ export const queryKeys = {
         complaints: (id: string) => ['incidents', 'detail', id, 'complaints'] as const,
         recommendation: (id: string) => ['incidents', 'detail', id, 'recommendation'] as const,
         grouping: (id: string) => ['incidents', 'detail', id, 'grouping'] as const,
+        /** Signed links expire, so this is refetched rather than cached for long. */
+        photo: (complaintId: string) => ['incidents', 'photo', complaintId] as const,
     },
 
     dashboard: {

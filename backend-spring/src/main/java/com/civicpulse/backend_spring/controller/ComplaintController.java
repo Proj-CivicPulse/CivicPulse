@@ -2,10 +2,12 @@ package com.civicpulse.backend_spring.controller;
 
 import com.civicpulse.backend_spring.dto.PageResponse;
 import com.civicpulse.backend_spring.dto.complaint.ComplaintDto;
+import com.civicpulse.backend_spring.dto.complaint.PhotoRequest;
 import com.civicpulse.backend_spring.dto.complaint.CreateComplaintRequest;
 import com.civicpulse.backend_spring.dto.complaint.UpdateComplaintRequest;
 import com.civicpulse.backend_spring.exception.UnauthorizedException;
 import com.civicpulse.backend_spring.service.complaint.ComplaintService;
+import com.civicpulse.backend_spring.service.photo.ComplaintPhotoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,7 @@ import java.util.List;
 public class ComplaintController {
 
     private final ComplaintService complaintService;
+    private final ComplaintPhotoService photoService;
 
     /**
      * Public. Reporting a problem does not require an account
@@ -45,6 +48,8 @@ public class ComplaintController {
             Authentication authentication) {
 
         ComplaintDto created = complaintService.create(request, userIdOrNull(authentication));
+        // The submitter's proof for attaching a photo; null when photos are off.
+        created = created.withPhotoUploadToken(photoService.tokenFor(Long.parseLong(created.getId())));
 
         return ResponseEntity
                 .created(URI.create("/complaints/" + created.getId()))
@@ -107,6 +112,35 @@ public class ComplaintController {
             @Valid @RequestBody UpdateComplaintRequest request) {
 
         return ResponseEntity.ok(complaintService.update(id, request));
+    }
+
+    /**
+     * Step 1 of the photo flow: permission to upload one photo, as a presigned
+     * PUT (docs/photo-upload-contract.md). Open to the submitter's token or the
+     * owning citizen; 404 for anyone else, 503 when storage is off.
+     */
+    @PostMapping("/{id}/photo-intent")
+    public ResponseEntity<ComplaintPhotoService.Intent> photoIntent(
+            @PathVariable Long id, @RequestBody PhotoRequest request, Authentication authentication) {
+        return ResponseEntity.ok(photoService.intent(
+                id, request.getContentType(), request.getSizeBytes(), request.getUploadToken(),
+                userIdOrNull(authentication)));
+    }
+
+    /** Step 3: the server checks what arrived, re-encodes it, and attaches it. */
+    @PostMapping("/{id}/photo")
+    public ResponseEntity<ComplaintDto> confirmPhoto(
+            @PathVariable Long id, @RequestBody PhotoRequest request, Authentication authentication) {
+        return ResponseEntity.ok(photoService.confirm(
+                id, request.getObjectKey(), request.getUploadToken(), userIdOrNull(authentication)));
+    }
+
+    /** Short-lived signed links to the photo and its thumbnail: officers, and the owner. */
+    @GetMapping("/{id}/photo")
+    public ResponseEntity<ComplaintPhotoService.PhotoLinks> photo(
+            @PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(photoService.links(
+                id, requireUserId(authentication), isOfficer(authentication)));
     }
 
     private static Long userIdOrNull(Authentication authentication) {

@@ -195,6 +195,24 @@ One thing that surprises people: a complaint you have just submitted shows
 *after* the response so you are never kept waiting on an embedding call. It
 becomes `matched` a second or two later.
 
+### Photos locally (optional)
+
+Photo upload needs an S3-compatible bucket; without one it is simply off. A
+local one in two commands:
+
+```bash
+echo '{"identities":[{"name":"dev","credentials":[{"accessKey":"localphotos","secretKey":"localphotos-secret"}],"actions":["Admin","Read","Write","List"]}]}' > s3.json
+docker run -d --name civicpulse-s3 -p 8333:8333 -v "$PWD/s3.json:/etc/s3.json" \
+  chrislusf/seaweedfs:4.48 server -s3 -s3.port=8333 -s3.config=/etc/s3.json -dir=/data
+docker exec civicpulse-s3 sh -c 'echo "s3.bucket.create -name civicpulse-photos" | weed shell'
+```
+
+Then in `backend-spring/.env`: `PHOTO_STORAGE_ENDPOINT=http://localhost:8333`,
+`PHOTO_STORAGE_BUCKET=civicpulse-photos`, `PHOTO_STORAGE_ACCESS_KEY=localphotos`,
+`PHOTO_STORAGE_SECRET_KEY=localphotos-secret`, `PHOTO_STORAGE_REGION=us-east-1`,
+`PHOTO_STORAGE_PATH_STYLE=true`; and in `frontend/.env.local`:
+`VITE_PHOTO_STORAGE_ORIGIN=http://localhost:8333`. Restart both.
+
 Each service's own `README.md` (inside its folder) has service-specific details:
 [`backend-spring`](backend-spring/README.md) ·
 [`backend-node`](backend-node/README.md) ·

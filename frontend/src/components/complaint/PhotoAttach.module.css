@@ -1,0 +1,69 @@
+.box {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.hint {
+    font: var(--t-data);
+    color: var(--ink-muted);
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+/* The file input's label, drawn as a secondary button (Button.module.css). */
+.pick {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 36px;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--r-sharp);
+    font: var(--t-ui);
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    transition:
+        border-color var(--motion-base) var(--ease),
+        color var(--motion-base) var(--ease);
+}
+
+.pick:hover {
+    border-color: var(--seal);
+    color: var(--seal);
+}
+
+/* The real input is visually hidden; its focus shows on the label. */
+.row:has(input:focus-visible) .pick {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.pick[aria-disabled='true'] {
+    cursor: progress;
+    opacity: 0.6;
+}
+
+@media (pointer: coarse) {
+    .pick {
+        min-height: 44px;
+    }
+}
+
+.done {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font: var(--t-ui);
+    color: var(--status-resolved);
+}
+
+.error {
+    font: var(--t-data);
+    color: var(--priority-critical-ink);
+}

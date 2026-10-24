@@ -203,6 +203,22 @@
     color: var(--ink);
 }
 
+/* A report's photo: a fixed-size thumbnail, the full image a click away. */
+.photoLink {
+    grid-column: 1 / -1;
+    justify-self: start;
+    line-height: 0;
+}
+
+.photoThumb {
+    width: 160px;
+    height: 120px;
+    object-fit: cover;
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    background: var(--rule);
+}
+
 /* Why the report is in this incident: secondary, under its text. */
 .complaintWhy {
     grid-column: 1 / -1;

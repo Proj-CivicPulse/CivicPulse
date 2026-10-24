@@ -15,6 +15,16 @@ export default defineConfig(({ mode }) => {
     // src/config/constants.ts.
     const appName = env.VITE_APP_NAME || 'CivicPulse';
 
+    // Photos go from the browser straight to the bucket
+    // (docs/photo-upload-contract.md), so the CSP must allow that one origin
+    // for the PUT (connect-src) and the signed thumbnails (img-src). Unset,
+    // the policy is unchanged and photo upload simply cannot reach storage.
+    // An origin only: anything else would widen the policy.
+    const photoOrigin = env.VITE_PHOTO_STORAGE_ORIGIN?.trim() ?? '';
+    if (photoOrigin && !/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(photoOrigin)) {
+        throw new Error(`VITE_PHOTO_STORAGE_ORIGIN must be an origin like https://bucket.example.com, got "${photoOrigin}"`);
+    }
+
     return {
         plugins: [
             react(),
@@ -22,7 +32,8 @@ export default defineConfig(({ mode }) => {
                 name: 'civicpulse:html-app-name',
                 transformIndexHtml: {
                     order: 'pre',
-                    handler: (html) => html.replaceAll('%VITE_APP_NAME%', appName),
+                    handler: (html) =>
+                        html.replaceAll('%VITE_APP_NAME%', appName).replaceAll('%PHOTO_STORAGE_ORIGIN%', photoOrigin),
                 },
             },
         ],
