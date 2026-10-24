@@ -1,6 +1,6 @@
 # CivicPulse — Roadmap and Status
 
-**The single source for what is done and what is left.** Updated 2026-10-24.
+**The single source for what is done and what is left.** Updated 2026-10-25: **project complete.**
 It replaces the earlier phase documents (`roadmap.md` v1, `post-midsem-roadmap.md`,
 `next-phases-plan.md`, `release-readiness.md`, `audit-register.md`), which are
 in git history if anyone needs them.
@@ -32,45 +32,26 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | 9 | Hotspots | ✅ Done (2026-10-21) |
 | 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
 | 11 | Decision support | ✅ Done (2026-10-21); the Copilot note was cut |
-| 12 | Officer Copilot | ✅ Panel merged (PR #2); eval 21/22 on 2026-10-24 |
-| 13 | Paper + demo | 🟡 Every section's results exist; the paper is only needed if required |
+| 12 | Officer Copilot | ✅ On every Explorer page; sees hotspots and life-safety flags; eval 22/22 (2026-10-25) |
+| 13 | Paper + demo | ✅ Final deck and speaker script in `presentation/`; a paper only if required (every section's results exist) |
 | B | Backlog items delivered 2026-10-22 | ✅ Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`, label review |
 
-**All planned product work and evaluations are done.** What is left:
+**Every phase, evaluation and loose end is done.** Nothing is open. Only the
+backlog below remains, and it is deliberately deferred. If a paper is
+required, every section's results are in the docs listed under Phase 13.
 
-1. **Deploy:** redeploy both Railway backends (below).
-2. **13:** the paper, if it is required, and a backup demo video.
-3. **Polish:** the Copilot panel's styles (12.4), and hotspots and
-   life-safety flags in the Copilot's packet (12.5 finding).
-
-### Deployment status (2026-10-24)
-- **GitHub:** `main` has every phase, the backlog items above and the Copilot
-  panel. The PR #2 merge (`3669fd2`) broke `npm run build` with a duplicate
-  key in `IncidentDashboard.tsx`; `86a7de7` fixes it and is pushed, so
-  Vercel can build `main` again.
-- **Frontend (Vercel):** builds from `main`; check the Vercel dashboard that
-  the build after `86a7de7` went live.
-- **Backends (Railway):** unverified since 2026-10-21, when they were still on
-  the build before Phases 9–11 after a Railway outage (the CLI here is logged
-  out). Until they are redeployed, the hotspot list, the "needs attention"
-  strip, the suggested next step, the life-safety flag, merge/unlink and the
-  Copilot fail quietly on the live site. Locally, all of them work. From the
-  repo:
-
-  ```bash
-  railway login
-  railway redeploy -s backend-spring --from-source -y
-  railway redeploy -s backend-node --from-source -y
-  ```
-
-  The Spring deploy applies migrations V22–V25:
-  - V22 adds the `recommendation_feedback` table.
-  - V23 converts every timestamp column to `timestamptz` in place, without
-    changing any stored instant.
-  - V24 adds the life-safety columns to `incidents`.
-  - V25 adds the officer and note columns to `incident_match_log`.
-
-  Back up the database first: V23 rewrites 36 columns.
+### Deployment status (2026-10-25)
+- **Railway** auto-deploys `main` on every push. On 2026-10-24 it deployed
+  `634bf7f` and applied V22–V25 cleanly (0.4 s). Pushing the commits since
+  deploys the Copilot packet and panel changes; no migration is pending.
+- **Vercel** builds the frontend from `main` the same way.
+- **Production data** was reseeded on 2026-10-25, after a full `pg_dump` to
+  `deploy-secrets/backups/prod-before-reseed-2026-10-25.sql` (gitignored).
+  249 demo complaints became 45 incidents, all matched semantically; user
+  accounts, wards and categories were kept. To reseed again: back up, clear
+  `complaints`, `incidents`, `incident_match_log` and
+  `recommendation_feedback` in one transaction, then run
+  `SEED_API=<spring url> SEED_DB=railway SEED_INTERNAL_TOKEN=… node backend-spring/scripts/seed-dev-data.mjs`.
 
 ---
 
@@ -202,7 +183,7 @@ then they read the shipped formula, as everything else does.
 
 ---
 
-## Left to do
+## Closing phases (all complete)
 
 ### 12 — Officer Copilot 🟡 (owner: Manya)
 An officer asks "what's urgent in Ward 48?" and gets a short answer built only
@@ -240,12 +221,12 @@ development.
 **12.4 — the panel, as merged.** "Ask Copilot" on the incident queue opens the
 panel. It sends the queue's ward, category and window as the scope, links
 each source, and handles every state below, including 429 with its
-`Retry-After` wait. Two things are left:
-- **Styles.** `CopilotPanel.css` hard-codes 33 colours and uses none of the
-  tokens, so it does not match the rest of the app. Move it to `tokens.css`
-  variables and a CSS module, like every other component.
-- **Wards and Categories pages.** The panel is only on the Incidents page.
-  The plan below put it on every Explorer page.
+`Retry-After` wait. Finished 2026-10-25 (`0106b84`):
+- **Styles.** The panel is a CSS module on `tokens.css` with the shared
+  `Button` and `Field`, replacing 33 hard-coded colours.
+- **Every Explorer page.** `CopilotSection` puts the same panel on the Wards
+  and Categories pages, scoped to each page's filters. A cited incident opens
+  in the queue with its filters cleared; a hotspot opens the Wards page.
 
 The original plan for the panel, kept for reference. A drawer on the Explorer pages:
 - A question box, and the answer.
@@ -280,14 +261,29 @@ packet the model saw. The packet is captured by backend-node only when
 | Numbers not in the packet | 0 of 81 |
 | Median latency | 4.3 s |
 
-**The one failure is a packet gap, not a hallucination.** Asked "where are the
-hotspots?", the Copilot named the busiest wards. Every figure it gave was
+**The one failure was a packet gap, not a hallucination.** Asked "where are
+the hotspots?", the Copilot named the busiest wards. Every figure it gave was
 true, but a CivicPulse hotspot is 3+ incidents of one category within 500 m
-(Phase 9), and the packet holds no hotspots and no life-safety flags: both
-were built after it. The fix is in Spring's `CopilotPacketBuilder`: add the
-hotspots and flagged incidents, or at least a definition line saying they
-are not in this view. The eval has only been run on Gemini; running it on
-Ollama or Claude is the remaining comparison for the paper.
+(Phase 9), and the packet held no hotspots and no life-safety flags.
+
+**Fixed and re-run 2026-10-25** (`8023201`). The packet now holds the scope's
+hotspots, each incident's life-safety flag and the "needs attention" signals,
+with their definitions. The hotspot and life-safety questions (h1, h2) became
+answerable and must state the right count. Report:
+`backend-node/eval/results/copilot-2026-10-25/report.md`.
+
+| Check, re-run | Result |
+|---|---|
+| Questions passing every check | **22/22** |
+| Answerable questions answered | 14/14 |
+| Expected fact stated (now including the hotspot and life-safety counts) | 12/12 |
+| Unanswerable questions declined, citing nothing | 7/7 |
+| Citations not in the packet | 0 of 38 |
+| Numbers not in the packet | 0 of 81 |
+| Median latency | 5.1 s |
+
+Both runs are on Gemini; running the same set on Ollama or Claude would be
+the provider comparison, if a paper wants one.
 
 ### 8 — Priority calibration ✅ (closed 2026-10-22)
 The weights stay frozen until an officer has ranked a real queue. The steps
@@ -301,22 +297,21 @@ officer session".
 | 8.3 | Ranking session. **Proxy run done 2026-10-22:** Gemini ranked 45 incidents three times, blind to the formula ([priority-calibration-proxy.md](priority-calibration-proxy.md)). The formula beats the naive baseline in every run. **A human ranking is still to come** | 🟡 |
 | 8.4 | **Applied 2026-10-22: age saturates at 30 d** (it beat 14 d on both halves in 3/3 runs). **Category severity: decided against** on published evidence, because the hazard belongs to the problem, not its category. The life-safety flag that replaces it was delivered 2026-10-22 (below) | ✅ |
 
-### 13 — Paper + demo 🟡
+### 13 — Paper + demo ✅ (paper only if required)
 | Section | Source | Ready |
 |---|---|---|
 | System: architecture, data quality, ingestion gate | service-boundaries.md, data-quality-rules.md | ✅ now |
 | Matching: method, labelled sets, P/R/F1/F2, ablation, distance check | matching-evaluation.md, `backend-node/eval/results/` | ✅ now |
-| Copilot: grounding design and eval results | api-contract.md "Copilot", `backend-node/eval/results/copilot-2026-10-24/` | ✅ now (Gemini only) |
+| Copilot: grounding design and eval results | api-contract.md "Copilot", `backend-node/eval/results/copilot-2026-10-2{4,5}/` | ✅ now (Gemini only) |
 | Priority: explainability, formula vs naive baseline, proxy calibration | priority-evaluation.md, priority-calibration-proxy.md | ✅ now (human ranking would strengthen it) |
-| Demo: rehearsed run and a backup video | deck and four-speaker script in `presentation/` (2026-10-22) | 🟡 backup video left |
+| Demo | final deck and four-speaker script in `presentation/` | ✅ |
 
 ### Decisions and reviews (people, not code)
 | Item | Owner |
 |---|---|
 | ~~Review the 30 hand labels~~ Done 2026-10-22 (`3725294`): a blind second labeller agreed 63% (κ 0.45) with no same/different flips; 3 labels moved to ambiguous; 0.84 + 500 m still wins | — |
-| Push `main` (this roadmap update) | team |
-| Reseed the live demo data after the backends deploy (the heaviest hotspots are now 35 days old, so the demo has a high band under the 30-day age rule): clear it, then run the seed | team (bulk delete on production) |
-| Redeploy both backends once Railway builds again (commands in "Deployment status") | team |
+| ~~Reseed the live demo data~~ Done 2026-10-25, after a full backup (see "Deployment status") | — |
+| ~~Redeploy both backends~~ Done 2026-10-24: Railway auto-deploys `main` | — |
 
 ### UI review ✅ (2026-10-22)
 Two passes by Gemini (`gemini-3.8-flash`) on screenshots of the new screens,

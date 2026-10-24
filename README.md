@@ -1,8 +1,5 @@
 # CivicPulse
 
-> TODO: add badges here once CI is set up, e.g. build status, license badge
-> `![Build](TODO)` `![License: MIT](TODO)`
-
 CivicPulse is a civic-complaint management platform that turns raw citizen
 complaints into **grouped, prioritized, explainable incidents** for city
 officers — using semantic matching (embeddings + pgvector) instead of naive
@@ -74,8 +71,8 @@ from grouping. V13 imports 243 real BBMP boundaries and
 `PostGisWardResolver` is now the default.
 
 **Still deferred until actually needed:** real-time WebSocket updates (polling
-is sufficient for MVP), Python/scikit-learn predictive hotspots (only if Phase 7
-is triggered by sufficient historical data).
+is sufficient). Hotspots are rule-based (PostGIS clustering), not a trained
+model: there is no historical data to train one on.
 
 ### Service boundaries
 
@@ -110,7 +107,6 @@ racing — is decision 2 in `service-boundaries.md`.
 - Java (**latest LTS** — e.g. 21) for `backend-spring`. No Maven install
   needed — the repo ships the Maven wrapper (`./mvnw`).
 - Node.js (**latest LTS** — e.g. 22) for `backend-node` and `frontend`
-- Python (**latest LTS/stable** — e.g. 3.12) for `ml-hotspots`, if/when Phase 7 is triggered
 - **Docker Desktop** — the local database is PostgreSQL 16 + `pgvector` +
   PostGIS, built from [`infra/postgres`](infra/postgres/Dockerfile).
 - A **Google AI Studio API key** for embeddings
@@ -121,7 +117,7 @@ racing — is decision 2 in `service-boundaries.md`.
   a billed one — see `COPILOT_PROVIDER` in `backend-node/.env.example`.
 
 > **Version policy:** this project uses **LTS versions only** for all
-> runtimes (Java, Node.js, Python). Do not use bleeding-edge/current
+> runtimes (Java, Node.js). Do not use bleeding-edge/current
 > releases — check the LTS schedule before upgrading anything.
 
 ### Local setup
@@ -263,7 +259,7 @@ provisioned the first time you run the Spring service.
 ## Project status
 
 **[docs/roadmap.md](docs/roadmap.md) is the single list of what is done and
-what is left.** In short (2026-10-24):
+what is left.** In short (2026-10-25):
 
 - [x] 0–5 — Foundations, complaint ingestion, embeddings + incident matching,
       explainable priority, officer dashboard + map, trends
@@ -274,7 +270,7 @@ what is left.** In short (2026-10-24):
 - [x] 8 — Priority calibration (proxy run; age now saturates at 30 days)
 - [x] 9 — Hotspots → 10 — "Needs attention" → 11 — Decision support
 - [x] Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`
-- [x] 12 — Officer Copilot — backend, panel, and golden-question eval (21/22)
+- [x] 12 — Officer Copilot — on every Explorer page; eval 21/22; sees hotspots and life-safety flags
 - [ ] 13 — Paper (if required) + backup demo video
 
 ---
@@ -283,24 +279,24 @@ what is left.** In short (2026-10-24):
 
 This is a private group project repo. Workflow for contributors:
 
-1. Branch off `main`: `git checkout -b feature/TODO-short-description`
-2. Commit with clear messages
-3. Open a PR against `main` — TODO: confirm required number of reviewers
-4. TODO: add link to issue tracker / project board (e.g. GitHub Projects,
-   Jira, Trello) once set up
+1. Branch off `main`: `git checkout -b feature/short-description`
+2. Commit with clear messages, and keep `docs/` in step with the code
+3. Open a PR against `main` and have a teammate review it
+4. Run the tests before merging (see "Things to know" above: point `TEST_DB_*`
+   at a throwaway database, never production)
 
 ---
 
 ## Team
 
-| Name | Role | GitHub |
-|---|---|---|
-| Suryansh | Backend — Spring Boot | TODO: @handle |
-| Abhishek | Backend — Node.js (AI layer) | TODO: @handle |
-| Devansh | UI/UX — design | TODO: @handle |
-| Manya | ML / Python | TODO: @handle |
-| Ria | TODO — not yet decided | TODO: @handle |
-| Alaafiya | TODO — not yet decided | TODO: @handle |
+| Name | Role |
+|---|---|
+| Suryansh | Backend — Spring Boot |
+| Abhishek | Backend — Node.js (AI layer) |
+| Devansh | UI/UX — design |
+| Manya | ML / Python; Officer Copilot panel |
+| Ria | Team member |
+| Alaafiya | Team member |
 
 ---
 
