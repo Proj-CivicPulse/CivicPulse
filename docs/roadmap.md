@@ -46,9 +46,9 @@ required, every section's results are in the docs listed under Phase 13.
   `_ACCESS_KEY`, `_SECRET_KEY` (and `_PATH_STYLE` if its Credentials tab says
   path-style) on backend-spring, and `VITE_PHOTO_STORAGE_ORIGIN` on Vercel.
   Until then the confirmation screen says photo upload is unavailable.
-- **Railway** auto-deploys `main` on every push. On 2026-10-24 it deployed
-  `634bf7f` and applied V22–V25 cleanly (0.4 s). Pushing the commits since
-  deploys the Copilot packet and panel changes; no migration is pending.
+- **Railway** auto-deploys `main` on every push. Production applied V22–V25
+  on 2026-10-24 and V26 (photo key) on 2026-10-25, each cleanly; it runs the
+  Copilot packet and panel changes and the photo code with storage off.
 - **Vercel** builds the frontend from `main` the same way.
 - **Production data** was reseeded on 2026-10-25, after a full `pg_dump` to
   `deploy-secrets/backups/prod-before-reseed-2026-10-25.sql` (gitignored).
