@@ -158,10 +158,6 @@ export default function IncidentDashboard() {
             {
                 key: 'title',
                 header: 'Incident',
-                cell: (row) =>
-                    truncate(incidentName(row, categoryLabel), 44),
-                sortValue: (row) =>
-                    incidentName(row, categoryLabel),
                 cell: (row) => (
                     <span className={styles.titleCell}>
                         {truncate(incidentName(row, categoryLabel), 44)}
