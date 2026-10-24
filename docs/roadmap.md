@@ -33,14 +33,19 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
 | 11 | Decision support | ✅ Done (2026-10-21); the Copilot note was cut |
 | 12 | Officer Copilot | ✅ On every Explorer page; sees hotspots and life-safety flags; eval 22/22 (2026-10-25) |
-| 13 | Paper + demo | ✅ Final deck and speaker script in `presentation/`; a paper only if required (every section's results exist) |
-| B | Backlog items delivered 2026-10-22 | ✅ Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`, label review |
+| 13 | Paper | ✅ Only if required: every section's results exist. Final deck and speaker script in `presentation/` |
+| B | Backlog items delivered 2026-10-22/25 | ✅ Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`, label review, photo upload, upstream-edit rule |
 
 **Every phase, evaluation and loose end is done.** Nothing is open. Only the
 backlog below remains, and it is deliberately deferred. If a paper is
 required, every section's results are in the docs listed under Phase 13.
 
 ### Deployment status (2026-10-25)
+- **Photo upload is built but off in production** until a bucket exists:
+  create a Railway Bucket, set `PHOTO_STORAGE_ENDPOINT`, `_BUCKET`,
+  `_ACCESS_KEY`, `_SECRET_KEY` (and `_PATH_STYLE` if its Credentials tab says
+  path-style) on backend-spring, and `VITE_PHOTO_STORAGE_ORIGIN` on Vercel.
+  Until then the confirmation screen says photo upload is unavailable.
 - **Railway** auto-deploys `main` on every push. On 2026-10-24 it deployed
   `634bf7f` and applied V22–V25 cleanly (0.4 s). Pushing the commits since
   deploys the Copilot packet and panel changes; no migration is pending.
@@ -66,7 +71,8 @@ decided in writing ([service-boundaries.md](service-boundaries.md)).
 Public anonymous submission. Reference numbers (`CP-2026-W48-00001`). Reverse
 geocoding with a cache. Ward from coordinates by PostGIS point-in-polygon over
 243 real BBMP wards; out-of-area coordinates are refused. Citizen "my
-complaints". Photo upload is **deferred**, with its contract approved
+complaints". One photo per report since 2026-10-25: uploaded straight to an
+S3-compatible bucket, re-encoded without its metadata
 ([photo-upload-contract.md](photo-upload-contract.md)).
 
 ### 2 — Embeddings + incident matching ✅
@@ -297,14 +303,13 @@ officer session".
 | 8.3 | Ranking session. **Proxy run done 2026-10-22:** Gemini ranked 45 incidents three times, blind to the formula ([priority-calibration-proxy.md](priority-calibration-proxy.md)). The formula beats the naive baseline in every run. **A human ranking is still to come** | 🟡 |
 | 8.4 | **Applied 2026-10-22: age saturates at 30 d** (it beat 14 d on both halves in 3/3 runs). **Category severity: decided against** on published evidence, because the hazard belongs to the problem, not its category. The life-safety flag that replaces it was delivered 2026-10-22 (below) | ✅ |
 
-### 13 — Paper + demo ✅ (paper only if required)
+### 13 — Paper ✅ (only if required)
 | Section | Source | Ready |
 |---|---|---|
 | System: architecture, data quality, ingestion gate | service-boundaries.md, data-quality-rules.md | ✅ now |
 | Matching: method, labelled sets, P/R/F1/F2, ablation, distance check | matching-evaluation.md, `backend-node/eval/results/` | ✅ now |
 | Copilot: grounding design and eval results | api-contract.md "Copilot", `backend-node/eval/results/copilot-2026-10-2{4,5}/` | ✅ now (Gemini only) |
 | Priority: explainability, formula vs naive baseline, proxy calibration | priority-evaluation.md, priority-calibration-proxy.md | ✅ now (human ranking would strengthen it) |
-| Demo | final deck and four-speaker script in `presentation/` | ✅ |
 
 ### Decisions and reviews (people, not code)
 | Item | Owner |
@@ -351,14 +356,28 @@ Checked and not changed:
   place, and every pooled session runs in UTC.
 - **Landing page** (`7a7e63f`): the ward strip shows only the ten wards with
   the most open incidents.
+- **Photo upload** (2026-10-25, V26). One photo per report, attached after
+  submitting: the browser PUTs straight to an S3-compatible bucket (Railway
+  Bucket in production, SeaweedFS locally) and the server re-encodes it,
+  which strips GPS and device metadata, plus a thumbnail for the officer's
+  panel. An anonymous submitter proves the report is theirs with a signed,
+  2-hour token rather than the guessable reference number. **Off until a
+  bucket is configured** (see "Deployment status").
+- **Upstream edits to imported records** (2026-10-25). Decided: a record's
+  identity is `(source, source_record_id)`, so a changed source timestamp is
+  the same report corrected, never a new one. The incident is recomputed; if
+  the location, ward, category or text changed, the stale embedding is
+  dropped and the report is re-matched.
 
 ### Backlog — deliberately deferred
 - **Optional human ranking** of the calibration sheet, to confirm the 30-day
-  age change; `npm run eval:priority` scores it in one command.
-- **Photo upload.** Contract approved, not built.
-- **First real data feed** through `/internal/ingest`. Two open points:
-  - Decide whether a changed source timestamp counts as a new record.
-  - Re-run the matching evaluation on real complaints.
+  age change; `npm run eval:priority` scores it in one command. Needs a
+  person, ideally a ward officer; no code is missing.
+- **First real data feed** through `/internal/ingest`. The gate, its
+  timestamp rule and its update path are done; what is missing is a real
+  feed that carries complaint **text** and coordinates. When one exists:
+  ingest it, label a sample, and re-run `npm run eval:production-joins` on
+  real complaints.
 - **Code-mixed text** (Kannada/Hindi–English). Evaluate transliteration before
   embedding, using the existing harness.
 
