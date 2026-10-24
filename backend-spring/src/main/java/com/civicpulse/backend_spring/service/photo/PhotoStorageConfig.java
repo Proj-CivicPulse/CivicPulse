@@ -27,7 +27,19 @@ public class PhotoStorageConfig {
         }
         log.info("Photo storage: bucket {} at {}", config.getBucket(),
                 config.getEndpoint() == null || config.getEndpoint().isBlank() ? "AWS default" : config.getEndpoint());
-        return new S3PhotoStorage(config);
+        S3PhotoStorage storage = new S3PhotoStorage(config);
+        List<String> origins = properties.getFrontendOrigin() == null ? List.of() : properties.getFrontendOrigin();
+        try {
+            storage.applyCors(origins);
+            log.info("Photo storage: CORS allows PUT/GET from {}", origins);
+        } catch (RuntimeException e) {
+            // Not fatal: the API still works, and a bucket whose CORS is set
+            // by hand still takes uploads. Loud, because otherwise every
+            // browser upload fails its preflight with nothing in this log.
+            log.warn("Photo storage: could not set the bucket's CORS rule ({}). Browser uploads will fail "
+                    + "unless the bucket allows PUT from {}", e.getMessage(), origins);
+        }
+        return storage;
     }
 
     /** Refuses everything; callers check {@link PhotoStorage#isEnabled()} first. */

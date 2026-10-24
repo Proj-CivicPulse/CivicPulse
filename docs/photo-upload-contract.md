@@ -153,6 +153,12 @@ connection and an unspecified one produces a form that silently loses a report.
   `PHOTO_STORAGE_*` on backend-spring and `VITE_PHOTO_STORAGE_ORIGIN` on the
   frontend, which adds that one origin to the CSP's `connect-src` and
   `img-src` so the browser may PUT to and show from the bucket.
+- **Bucket CORS: set by the app.** A direct browser PUT needs the bucket to
+  answer its CORS preflight. On startup Spring applies the rule itself
+  (`PutBucketCors`: PUT/GET/HEAD, header `content-type`) for exactly the
+  `FRONTEND_ORIGIN` list the API's own CORS uses, so the two cannot drift and
+  there is no manual bucket step. A provider that refuses the call leaves a
+  warning in the log, not a failed start.
 - **EXIF: stripped on confirm, by re-encoding.** The server decodes the upload
   (that is also the real type check) and writes a fresh JPEG of at most
   2048 px on its long edge: GPS, device id and every other metadata block are

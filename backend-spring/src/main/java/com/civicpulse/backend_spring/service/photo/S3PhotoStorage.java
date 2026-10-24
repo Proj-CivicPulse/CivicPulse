@@ -59,6 +59,23 @@ public class S3PhotoStorage implements PhotoStorage {
         return true;
     }
 
+    /**
+     * Lets the frontend's origins PUT to and GET from the bucket — the browser
+     * talks to storage directly, so without this rule every upload fails its
+     * CORS preflight. Applied by the app itself on startup, from the same
+     * FRONTEND_ORIGIN list the API's own CORS uses, so the two cannot drift
+     * and there is no manual bucket step to forget. Replaces any existing
+     * rule on the bucket.
+     */
+    public void applyCors(List<String> origins) {
+        client.putBucketCors(r -> r.bucket(bucket).corsConfiguration(c -> c.corsRules(rule -> rule
+                .allowedOrigins(origins)
+                .allowedMethods("PUT", "GET", "HEAD")
+                .allowedHeaders("content-type")
+                .exposeHeaders("ETag")
+                .maxAgeSeconds(3600))));
+    }
+
     @Override
     public String presignPut(String key, String contentType, long sizeBytes, Duration ttl) {
         // Type and length are part of the signature, so storage refuses a PUT
