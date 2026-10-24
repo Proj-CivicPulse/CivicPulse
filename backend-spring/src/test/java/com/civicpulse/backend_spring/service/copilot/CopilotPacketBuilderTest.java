@@ -79,6 +79,22 @@ class CopilotPacketBuilderTest {
         return id;
     }
 
+    /** An incident at a point, so hotspot clustering (which reads incident centres) can see it. */
+    private Long incidentAt(String category, double score, String address, double lat, double lng) {
+        Long id = incident(category, score, address);
+        entityManager.createNativeQuery("UPDATE incidents SET latitude = ?1, longitude = ?2 WHERE id = ?3")
+                .setParameter(1, lat).setParameter(2, lng).setParameter(3, id).executeUpdate();
+        return id;
+    }
+
+    private void flagLifeSafety(Long id, String reason) {
+        entityManager.createNativeQuery("""
+                UPDATE incidents SET life_safety = TRUE, life_safety_source = 'REPORT_TEXT', life_safety_reason = ?1
+                WHERE id = ?2
+                """)
+                .setParameter(1, reason).setParameter(2, id).executeUpdate();
+    }
+
     private static CopilotQueryRequest request(String ward) {
         CopilotQueryRequest r = new CopilotQueryRequest();
         r.setQuestion("what is urgent?");
@@ -150,6 +166,54 @@ class CopilotPacketBuilderTest {
         assertThat(ids).containsAll(city.sources().keySet());
         // City scope lists the busiest wards; the seeded ward is among them.
         assertThat(ids).contains("ward:" + wardId);
+    }
+
+    @Test
+    @DisplayName("the packet holds the scope's hotspots, with every member incident citable")
+    void hotspots() {
+        // Three street-light incidents within ~100 m: one hotspot. A fourth 5 km away is not in it.
+        Long a = incidentAt("streetlight", 2.0, "1, 5th Cross Rd, Bengaluru", 12.97160, 77.59460);
+        Long b = incidentAt("streetlight", 2.5, "2, 6th Cross Rd, Bengaluru", 12.97200, 77.59500);
+        Long c = incidentAt("streetlight", 1.5, "3, 7th Cross Rd, Bengaluru", 12.97130, 77.59420);
+        Long far = incidentAt("streetlight", 1.0, "Outer Ring Rd, Bengaluru", 13.01700, 77.59460);
+
+        CopilotPacketBuilder.Packet packet = builder.build(request(String.valueOf(wardId)));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> section = (Map<String, Object>) packet.body().get("hotspots");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) section.get("items");
+        assertThat(items).hasSize(1);
+        assertThat(items.getFirst().get("incidentCount")).isEqualTo(3);
+        assertThat(idsIn(items.getFirst().get("incidents")))
+                .containsExactlyInAnyOrder("incident:" + a, "incident:" + b, "incident:" + c)
+                .doesNotContain("incident:" + far);
+        String hotspotId = (String) items.getFirst().get("id");
+        assertThat(packet.sources().get(hotspotId).getKind()).isEqualTo("hotspot");
+        assertThat(packet.sources().keySet()).containsAll(idsIn(packet.body()));
+    }
+
+    @Test
+    @DisplayName("a life-safety incident carries its flag and appears in the 'needs attention' life_safety signal")
+    void lifeSafety() {
+        Long hazard = incident("drainage", 2.0, "12, 5th Cross Rd, Bengaluru");
+        flagLifeSafety(hazard, "Reports mention an open drain: \"open drain\"");
+
+        CopilotPacketBuilder.Packet packet = builder.build(request(String.valueOf(wardId)));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>)
+                ((Map<String, Object>) packet.body().get("activeIncidents")).get("items");
+        Map<String, Object> row = items.stream().filter(m -> ("incident:" + hazard).equals(m.get("id"))).findFirst().orElseThrow();
+        assertThat(row.get("lifeSafety")).isEqualTo(Map.of(
+                "status", "suggested", "reason", "Reports mention an open drain: \"open drain\""));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> signals = (List<Map<String, Object>>)
+                ((Map<String, Object>) packet.body().get("needsAttention")).get("signals");
+        Map<String, Object> lifeSafety = signals.stream().filter(s -> "life_safety".equals(s.get("key"))).findFirst().orElseThrow();
+        assertThat(idsIn(lifeSafety.get("incidents"))).contains("incident:" + hazard);
+        assertThat(packet.sources().keySet()).containsAll(idsIn(packet.body()));
     }
 
     @Test

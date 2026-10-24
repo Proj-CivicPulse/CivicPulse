@@ -4,7 +4,9 @@ import com.civicpulse.backend_spring.dto.PageResponse;
 import com.civicpulse.backend_spring.dto.QueryParams;
 import com.civicpulse.backend_spring.dto.copilot.CopilotAnswerDto;
 import com.civicpulse.backend_spring.dto.copilot.CopilotQueryRequest;
+import com.civicpulse.backend_spring.dto.dashboard.AttentionDto;
 import com.civicpulse.backend_spring.dto.dashboard.CategoryExplorerSummaryDto;
+import com.civicpulse.backend_spring.dto.dashboard.HotspotsDto;
 import com.civicpulse.backend_spring.dto.dashboard.TrendDto;
 import com.civicpulse.backend_spring.dto.dashboard.WardDashboardSummaryDto;
 import com.civicpulse.backend_spring.dto.dashboard.WardExplorerSummaryDto;
@@ -19,6 +21,8 @@ import com.civicpulse.backend_spring.service.dashboard.DashboardService;
 import com.civicpulse.backend_spring.service.explorer.ExplorerService;
 import com.civicpulse.backend_spring.service.incident.IncidentQuery;
 import com.civicpulse.backend_spring.service.incident.IncidentService;
+import com.civicpulse.backend_spring.service.intelligence.AttentionService;
+import com.civicpulse.backend_spring.service.intelligence.HotspotService;
 import com.civicpulse.backend_spring.service.ward.WardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -69,6 +73,8 @@ public class CopilotPacketBuilder {
     private final CategoryService categoryService;
     private final WardService wardService;
     private final DepartmentRepository departmentRepository;
+    private final HotspotService hotspotService;
+    private final AttentionService attentionService;
     private final AppProperties appProperties;
 
     /** The packet sent to the model, the ids it may cite, and the scope it describes. */
@@ -133,7 +139,14 @@ public class CopilotPacketBuilder {
                 "fixed = status resolved; closed means ended WITHOUT a fix and never counts as fixed",
                 "time to fix runs from an incident's first report to its resolution; recorded from 2026-10-06 only",
                 "an incident groups complaints about one problem; complaintCount is how many residents reported it",
-                "incidents have no titles yet; 'name' is the category plus the nearest place"));
+                "incidents have no titles yet; 'name' is the category plus the nearest place",
+                "lifeSafety on an incident = a possible hazard to life (open drain, exposed wiring, sewage overflow, collapsed road, fallen tree or pole); "
+                        + "'suggested' means read from the reports' wording and not yet confirmed by an officer. It never changes the priority score",
+                "hotspot = " + HotspotService.MIN_INCIDENTS + " or more active incidents of one category within "
+                        + Math.round(HotspotService.RADIUS_METRES) + " m of each other, each reported in the hotspot window "
+                        + "(the scope's window, or the last " + HotspotService.DEFAULT_WINDOW_DAYS + " days when the scope has none)",
+                "needsAttention = the dashboard's 'needs attention' signals as of now, ignoring the window: "
+                        + "life_safety, high_priority, worsening (2+ new reports in 72 h), in_hotspot, category_spike"));
 
         // ── Headline metrics, from the per-category summary under the same filters ──
         List<CategoryExplorerSummaryDto> categoryRows = explorerService.categorySummaries(wardIds, from, to);
@@ -181,6 +194,13 @@ public class CopilotPacketBuilder {
                     ? "none - triage by hand"
                     : departmentNames.getOrDefault(incident.getOwningDepartmentId(), "department " + incident.getOwningDepartmentId()));
             row.put("address", incident.getAddress());
+            if (incident.isLifeSafety()) {
+                Map<String, Object> hazard = new LinkedHashMap<>();
+                hazard.put("status", "report_text".equals(incident.getLifeSafetySource())
+                        ? "suggested" : "confirmed by an officer");
+                hazard.put("reason", incident.getLifeSafetyReason());
+                row.put("lifeSafety", hazard);
+            }
             incidents.add(row);
         }
         Map<String, Object> incidentSection = new LinkedHashMap<>();
@@ -243,6 +263,66 @@ public class CopilotPacketBuilder {
             sources.put(id, new CopilotAnswerDto.Source(id, "ward", wardName, String.valueOf(wardId)));
         }
 
+        // ── Hotspots: the Explorer's rule under the same filters ──
+        HotspotsDto hotspots = hotspotService.hotspots(categories, wardIds, from, to);
+        List<Map<String, Object>> hotspotOut = new ArrayList<>();
+        for (HotspotsDto.Hotspot h : hotspots.getHotspots()) {
+            String id = "hotspot:" + h.getId();
+            String wards = h.getWards().stream().map(HotspotsDto.WardRef::getName).collect(Collectors.joining(", "));
+            sources.put(id, new CopilotAnswerDto.Source(id, "hotspot",
+                    categoryName.apply(h.getCategory()) + " hotspot · " + wards, h.getId()));
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("id", id);
+            out.put("category", categoryName.apply(h.getCategory()));
+            out.put("wards", wards);
+            out.put("incidentCount", h.getIncidentCount());
+            out.put("complaints", h.getComplaintCount());
+            out.put("radiusMetres", h.getRadiusMetres());
+            out.put("highestPriorityBand", h.getMaxPriorityBand());
+            out.put("lastReportedAt", h.getLastReportedAt());
+            out.put("incidents", h.getIncidents().stream()
+                    .map(m -> incidentRef(sources, m.getId(), h.getCategory(), m.getAddress(), categoryName))
+                    .toList());
+            hotspotOut.add(out);
+        }
+        Map<String, Object> hotspotSection = new LinkedHashMap<>();
+        hotspotSection.put("windowFrom", hotspots.getDefinition().getFrom());
+        hotspotSection.put("windowTo", hotspots.getDefinition().getTo());
+        hotspotSection.put("items", hotspotOut);
+        body.put("hotspots", hotspotSection);
+
+        // ── "Needs attention": the strip above the officer's queue ──
+        AttentionDto attention = attentionService.attention(wardIds, categories);
+        List<Map<String, Object>> signalOut = new ArrayList<>();
+        for (AttentionDto.Signal signal : attention.getSignals()) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("key", signal.getKey());
+            out.put("rule", signal.getDefinition());
+            if ("category_spike".equals(signal.getKey())) {
+                out.put("count", signal.getCategories().size());
+                out.put("categories", signal.getCategories().stream()
+                        .map(c -> {
+                            Map<String, Object> spike = new LinkedHashMap<>();
+                            spike.put("category", categoryName.apply(c.getCategory()));
+                            spike.put("reportsLastWeek", c.getLastWeek());
+                            spike.put("priorWeeklyMean", Math.round(c.getPriorWeeklyMean() * 10) / 10.0);
+                            return spike;
+                        })
+                        .toList());
+            } else {
+                out.put("count", signal.getIncidents().size());
+                out.put("incidents", signal.getIncidents().stream()
+                        .limit(config.getPacketIncidents())
+                        .map(i -> incidentRef(sources, i.getId(), i.getCategory(), i.getAddress(), categoryName))
+                        .toList());
+            }
+            signalOut.add(out);
+        }
+        Map<String, Object> attentionSection = new LinkedHashMap<>();
+        attentionSection.put("asOf", attention.getAsOf());
+        attentionSection.put("signals", signalOut);
+        body.put("needsAttention", attentionSection);
+
         // ── Recent trend ──
         LocalDate tomorrow = LocalDate.now(ZoneOffset.UTC).plusDays(1);
         String trendTo = tomorrow + "T00:00:00Z";
@@ -260,6 +340,23 @@ public class CopilotPacketBuilder {
         body.put("recentTrend", trendOut);
 
         return new Packet(body, sources, scope);
+    }
+
+    /**
+     * A citable reference to an incident named in another section (a hotspot
+     * member, an attention signal). Registers it as a source if the urgent
+     * list did not already, so the model can cite every incident it is shown.
+     */
+    private static Map<String, Object> incidentRef(Map<String, CopilotAnswerDto.Source> sources, String incidentId,
+                                                   String category, String address, Function<String, String> categoryName) {
+        String id = "incident:" + incidentId;
+        String place = placeName(address);
+        String name = place == null ? categoryName.apply(category) : categoryName.apply(category) + " · " + place;
+        sources.putIfAbsent(id, new CopilotAnswerDto.Source(id, "incident", name, incidentId));
+        Map<String, Object> ref = new LinkedHashMap<>();
+        ref.put("id", id);
+        ref.put("name", sources.get(id).getLabel());
+        return ref;
     }
 
     private static void metric(List<Map<String, Object>> metrics, Map<String, CopilotAnswerDto.Source> sources,

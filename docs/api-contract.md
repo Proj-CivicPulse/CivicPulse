@@ -919,6 +919,14 @@ same services as the Explorer (`CopilotPacketBuilder`), records every id it put
 in, and drops any citation not among them. Resident complaint text is not in
 the packet — only incident-level fields.
 
+A source's `kind` is `incident`, `ward`, `category`, `hotspot` or `metric`.
+`targetId` is what the panel navigates with: the incident (opened in the
+queue), the ward, the category code, or the hotspot id (the panel opens the
+Wards page, which lists hotspots); a `metric` has none. Since 2026-10-25 the
+packet also holds the scope's hotspots (the `GET /dashboard/hotspots` rule)
+and the "needs attention" signals, so life-safety flags, worsening incidents
+and spiking categories are answerable; every incident they name is citable.
+
 #### `POST /internal/copilot/answer` (Node, `X-Internal-Token`)
 
 ```jsonc

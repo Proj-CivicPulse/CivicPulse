@@ -31,9 +31,9 @@ public class CopilotAnswerDto {
     private final String generatedAt;
 
     /**
-     * One citation. {@code kind} is incident | ward | category | metric;
+     * One citation. {@code kind} is incident | ward | category | hotspot | metric;
      * {@code targetId} is what the UI navigates with (incident id, ward id,
-     * category code) and is null for metrics.
+     * category code, hotspot id) and is null for metrics.
      */
     @Getter
     @AllArgsConstructor
