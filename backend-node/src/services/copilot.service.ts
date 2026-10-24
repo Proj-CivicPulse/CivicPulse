@@ -15,6 +15,8 @@
  * Copilot is off and says so with 503 COPILOT_UNAVAILABLE.
  */
 
+import { appendFileSync } from 'node:fs';
+import { env } from '../config/env.ts';
 import { logger } from '../config/logger.ts';
 import { HttpError } from '../middleware/errorHandler.ts';
 import { type CopilotOutput, type CopilotProvider, providerFromEnv } from './copilotProviders.ts';
@@ -90,5 +92,26 @@ export async function answerQuestion(question: string, packet: unknown): Promise
         },
         'copilot answered',
     );
-    return { ...result.output, model: result.model, refused: false };
+    const answer = { ...result.output, model: result.model, refused: false };
+    captureForEval(question, packet, answer);
+    return answer;
+}
+
+/**
+ * Evaluation only: with COPILOT_EVAL_CAPTURE set, append the question, packet
+ * and raw answer (citations before Spring filters them) as one JSON line, so
+ * npm run eval:copilot can check every cited id and every number against the
+ * packet the model actually saw. A failed write is logged, never thrown — the
+ * officer's answer must not depend on the eval.
+ */
+function captureForEval(question: string, packet: unknown, answer: CopilotAnswer): void {
+    if (!env.COPILOT_EVAL_CAPTURE) return;
+    try {
+        appendFileSync(
+            env.COPILOT_EVAL_CAPTURE,
+            JSON.stringify({ at: new Date().toISOString(), question, packet, answer }) + '\n',
+        );
+    } catch (err) {
+        logger.warn({ err }, 'copilot eval capture failed');
+    }
 }

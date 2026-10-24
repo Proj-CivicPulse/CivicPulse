@@ -132,6 +132,14 @@ const EnvSchema = z.object({
     COPILOT_MAX_TOKENS: z.coerce.number().int().positive().max(16000).default(8000),
     // Must stay below backend-spring's copilot read timeout.
     COPILOT_TIMEOUT_MS: z.coerce.number().int().positive().default(45_000),
+    // Evaluation only (npm run eval:copilot): a file to append each question,
+    // its grounding packet and the model's answer to, one JSON line each, so
+    // the eval can check the answer against the packet. Unset in every
+    // deployed environment — the packet must not be written to disk there.
+    COPILOT_EVAL_CAPTURE: z
+        .string()
+        .optional()
+        .transform((v) => (v && v.trim().length > 0 ? v.trim() : undefined)),
 
     // A PROCESSING claim older than this is considered abandoned (Node crashed
     // mid-run) and may be re-taken. MUST match backend-spring's
