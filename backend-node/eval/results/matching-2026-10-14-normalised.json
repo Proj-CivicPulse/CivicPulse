@@ -1,0 +1,1243 @@
+{
+  "version": "2026-10-14",
+  "settings": "gemini-embedding-001|1536|SEMANTIC_SIMILARITY",
+  "textMode": "normalised",
+  "languageSummary": {
+    "english-english": {
+      "sameN": 108,
+      "sameMedian": 0.9127035168502081,
+      "sameMin": 0.8502367774301869,
+      "differentN": 324,
+      "differentMedian": 0.8127687233988177,
+      "differentMax": 0.8855784465048538
+    },
+    "english-mixed": {
+      "sameN": 108,
+      "sameMedian": 0.9375053346925344,
+      "sameMin": 0.8601203911118163,
+      "differentN": 216,
+      "differentMedian": 0.8154686669042206,
+      "differentMax": 0.8849364811157515
+    },
+    "mixed-mixed": {
+      "sameN": 0,
+      "sameMedian": null,
+      "sameMin": null,
+      "differentN": 36,
+      "differentMedian": 0.8210644557313314,
+      "differentMax": 0.8937190593048479
+    }
+  },
+  "productionThreshold": 0.84,
+  "pools": 12,
+  "complaints": 144,
+  "truthIncidentsPerPool": 3,
+  "distribution": {
+    "positives": {
+      "n": 216,
+      "min": 0.8502367774301869,
+      "p5": 0.8716533938477493,
+      "p10": 0.8801421083743458,
+      "median": 0.9216446520303487
+    },
+    "negatives": {
+      "n": 576,
+      "median": 0.8150056753940472,
+      "p90": 0.8481597353249051,
+      "p95": 0.859396299265221,
+      "max": 0.8937190593048479
+    }
+  },
+  "hardestNegatives": [
+    {
+      "pool": "garbage-rajajinagar",
+      "a": "2nd Block bus stop pakka kasada raashi beLeyuttide",
+      "b": "2nd Block market hora bin tumbi horage kasa chellide",
+      "sim": 0.8937190593048479
+    },
+    {
+      "pool": "garbage-rajajinagar",
+      "a": "rubbish heap at 2nd block bus stop growing bigger",
+      "b": "market bin full and overflowing 2nd block",
+      "sim": 0.8855784465048538
+    },
+    {
+      "pool": "garbage-rajajinagar",
+      "a": "2nd Block bus stop pakka kasada raashi beLeyuttide",
+      "b": "market bin full and overflowing 2nd block",
+      "sim": 0.8849364811157515
+    },
+    {
+      "pool": "pothole-jayanagar",
+      "a": "4th Block bus stand munde dodda gundi ide, bikes skid aagtide, please repair maadi",
+      "b": "Twice this week I have seen bikes nearly crash on the manhole near the temple on 9th Cross. The lid is cracked and raised and there is no reflector or barricade. Please fix before someone is hurt.",
+      "sim": 0.8824092100581955
+    },
+    {
+      "pool": "garbage-rajajinagar",
+      "a": "rubbish heap at 2nd block bus stop growing bigger",
+      "b": "2nd Block market hora bin tumbi horage kasa chellide",
+      "sim": 0.8768043086222003
+    },
+    {
+      "pool": "garbage-rajajinagar",
+      "a": "A garbage black spot has formed next to the 2nd Block bus stop in Rajajinagar, with a growing heap of mixed waste.",
+      "b": "2nd Block market hora bin tumbi horage kasa chellide",
+      "sim": 0.8753862838815063
+    },
+    {
+      "pool": "drainage-hsr",
+      "a": "A blocked drain on 27th Main, HSR Layout is overflowing and raw sewage is spreading across the road.",
+      "b": "open drain no cover 14th main hsr",
+      "sim": 0.8730446311993766
+    },
+    {
+      "pool": "drainage-hsr",
+      "a": "27th Main alli charandi block aagi gaLiju neeru road mele",
+      "b": "open drain no cover 14th main hsr",
+      "sim": 0.8702276235884873
+    }
+  ],
+  "weakestPositives": [
+    {
+      "pool": "pothole-jayanagar",
+      "a": "There is a deep pothole on the road directly in front of the Jayanagar 4th Block bus stand. Buses swerve to avoid it and it fills with water when it rains.",
+      "b": "My scooter tyre burst this morning because of that enormous hole right where the buses pull in at the 4th Block bus stand. It has been there for weeks and nobody from BBMP has bothered. Someone will get killed.",
+      "sim": 0.8502367774301869
+    },
+    {
+      "pool": "streetlight-indiranagar",
+      "a": "The lane behind the Indiranagar club has no working street lights at all; residents have to use phone torches to walk home.",
+      "b": "Our lane behind the club has been dark for a month. Two chain-snatching incidents have already happened. We have complained before and nothing was done.",
+      "sim": 0.8556301728928553
+    },
+    {
+      "pool": "pothole-jayanagar",
+      "a": "broken manhole lid 9th cross jayanagar near temple, raised above road",
+      "b": "Twice this week I have seen bikes nearly crash on the manhole near the temple on 9th Cross. The lid is cracked and raised and there is no reflector or barricade. Please fix before someone is hurt.",
+      "sim": 0.8563173396712832
+    },
+    {
+      "pool": "pothole-jayanagar",
+      "a": "Twice this week I have seen bikes nearly crash on the manhole near the temple on 9th Cross. The lid is cracked and raised and there is no reflector or barricade. Please fix before someone is hurt.",
+      "b": "temple hattira 9th Cross alli manhole mucchala odedide, road ginta mele ide",
+      "sim": 0.8601203911118163
+    },
+    {
+      "pool": "streetlight-malleshwaram",
+      "a": "8th cross lights on in day time also",
+      "b": "Every afternoon at 2 pm the lights on 8th Cross are blazing away. The timer must be broken. What a waste of public money while other streets have no light at all.",
+      "sim": 0.8628102148973422
+    },
+    {
+      "pool": "garbage-koramangala",
+      "a": "Large amounts of construction debris — broken concrete and tiles — have been dumped along the Koramangala lake bund.",
+      "b": "Trucks are coming at night and dumping building rubble on the lake bund. It is choking the lake edge and nobody stops them. Please catch them and clear it.",
+      "sim": 0.8633230071180341
+    },
+    {
+      "pool": "drainage-hsr",
+      "a": "Yesterday's rain left cars stranded in the HSR underpass again. It happens every single time it rains — the storm water drain is clearly undersized or choked.",
+      "b": "Silk Board kade underpass male bandaaga neerininda tumbutte",
+      "sim": 0.863979868278177
+    },
+    {
+      "pool": "streetlight-malleshwaram",
+      "a": "A street light pole near Malleshwaram market has its junction box open with exposed live wires at hand height. Children play nearby.",
+      "b": "The metal box on the light pole beside the market entrance is hanging open and bare wires are sticking out. If it rains someone will be electrocuted. Please send someone urgently.",
+      "sim": 0.865501498538465
+    }
+  ],
+  "sweep": [
+    {
+      "threshold": 0.55,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.56,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.57,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.58,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.59,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.6,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.61,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.62,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.63,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.64,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.65,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.66,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.67,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.68,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.69,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.7,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.71,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.72,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.73,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.74,
+      "pairwise": {
+        "tp": 216,
+        "fp": 576,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.75,
+      "pairwise": {
+        "tp": 216,
+        "fp": 574,
+        "fn": 0,
+        "tn": 2,
+        "precision": 0.27341772151898736,
+        "recall": 1,
+        "f1": 0.4294234592445328,
+        "f2": 0.6529625151148731
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14400,
+        "fn": 0,
+        "tn": 0,
+        "precision": 0.2727272727272727,
+        "recall": 1,
+        "f1": 0.42857142857142855,
+        "f2": 0.6521739130434783,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1
+      }
+    },
+    {
+      "threshold": 0.76,
+      "pairwise": {
+        "tp": 216,
+        "fp": 571,
+        "fn": 0,
+        "tn": 5,
+        "precision": 0.2744599745870394,
+        "recall": 1,
+        "f1": 0.4307078763708874,
+        "f2": 0.6541490006056935
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14304,
+        "fn": 0,
+        "tn": 96,
+        "precision": 0.2740560292326431,
+        "recall": 1,
+        "f1": 0.43021032504780116,
+        "f2": 0.653689715281813,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1.01
+      }
+    },
+    {
+      "threshold": 0.77,
+      "pairwise": {
+        "tp": 216,
+        "fp": 554,
+        "fn": 0,
+        "tn": 22,
+        "precision": 0.2805194805194805,
+        "recall": 1,
+        "f1": 0.43813387423935085,
+        "f2": 0.6609547123623012
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 14176,
+        "fn": 0,
+        "tn": 224,
+        "precision": 0.2758479771148345,
+        "recall": 1,
+        "f1": 0.43241511851377323,
+        "f2": 0.655721779677482,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1.0233333333333334
+      }
+    },
+    {
+      "threshold": 0.78,
+      "pairwise": {
+        "tp": 216,
+        "fp": 517,
+        "fn": 0,
+        "tn": 59,
+        "precision": 0.2946793997271487,
+        "recall": 1,
+        "f1": 0.45521601685985247,
+        "f2": 0.6762680025046963
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 13440,
+        "fn": 0,
+        "tn": 960,
+        "precision": 0.28662420382165604,
+        "recall": 1,
+        "f1": 0.44554455445544555,
+        "f2": 0.6676557863501484,
+        "mixedIncidentsPerPool": 1,
+        "incidentsPerPool": 1.1
+      }
+    },
+    {
+      "threshold": 0.79,
+      "pairwise": {
+        "tp": 216,
+        "fp": 462,
+        "fn": 0,
+        "tn": 114,
+        "precision": 0.3185840707964602,
+        "recall": 1,
+        "f1": 0.4832214765100671,
+        "f2": 0.7003891050583657
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 12368,
+        "fn": 0,
+        "tn": 2032,
+        "precision": 0.3039171544349392,
+        "recall": 1,
+        "f1": 0.4661602209944751,
+        "f2": 0.6858362121520016,
+        "mixedIncidentsPerPool": 0.9966666666666667,
+        "incidentsPerPool": 1.2133333333333334
+      }
+    },
+    {
+      "threshold": 0.8,
+      "pairwise": {
+        "tp": 216,
+        "fp": 394,
+        "fn": 0,
+        "tn": 182,
+        "precision": 0.3540983606557377,
+        "recall": 1,
+        "f1": 0.523002421307506,
+        "f2": 0.7327001356852103
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 10800,
+        "fn": 0,
+        "tn": 3600,
+        "precision": 0.3333333333333333,
+        "recall": 1,
+        "f1": 0.5,
+        "f2": 0.7142857142857143,
+        "mixedIncidentsPerPool": 0.9566666666666667,
+        "incidentsPerPool": 1.3966666666666667
+      }
+    },
+    {
+      "threshold": 0.81,
+      "pairwise": {
+        "tp": 216,
+        "fp": 324,
+        "fn": 0,
+        "tn": 252,
+        "precision": 0.4,
+        "recall": 1,
+        "f1": 0.5714285714285715,
+        "f2": 0.7692307692307692
+      },
+      "clustering": {
+        "tp": 5400,
+        "fp": 9216,
+        "fn": 0,
+        "tn": 5184,
+        "precision": 0.3694581280788177,
+        "recall": 1,
+        "f1": 0.5395683453237411,
+        "f2": 0.7455268389662028,
+        "mixedIncidentsPerPool": 0.92,
+        "incidentsPerPool": 1.58
+      }
+    },
+    {
+      "threshold": 0.82,
+      "pairwise": {
+        "tp": 216,
+        "fp": 239,
+        "fn": 0,
+        "tn": 337,
+        "precision": 0.4747252747252747,
+        "recall": 1,
+        "f1": 0.6438152011922503,
+        "f2": 0.8188021228203185
+      },
+      "clustering": {
+        "tp": 5394,
+        "fp": 7152,
+        "fn": 6,
+        "tn": 7248,
+        "precision": 0.4299378287900526,
+        "recall": 0.9988888888888889,
+        "f1": 0.6011367435640254,
+        "f2": 0.7898436127218416,
+        "mixedIncidentsPerPool": 0.8366666666666667,
+        "incidentsPerPool": 1.84
+      }
+    },
+    {
+      "threshold": 0.83,
+      "pairwise": {
+        "tp": 216,
+        "fp": 162,
+        "fn": 0,
+        "tn": 414,
+        "precision": 0.5714285714285714,
+        "recall": 1,
+        "f1": 0.7272727272727273,
+        "f2": 0.8695652173913042
+      },
+      "clustering": {
+        "tp": 5367,
+        "fp": 4618,
+        "fn": 33,
+        "tn": 9782,
+        "precision": 0.5375062593890836,
+        "recall": 0.9938888888888889,
+        "f1": 0.6976925576860579,
+        "f2": 0.84961215766978,
+        "mixedIncidentsPerPool": 0.6633333333333333,
+        "incidentsPerPool": 2.21
+      }
+    },
+    {
+      "threshold": 0.84,
+      "pairwise": {
+        "tp": 216,
+        "fp": 93,
+        "fn": 0,
+        "tn": 483,
+        "precision": 0.6990291262135923,
+        "recall": 1,
+        "f1": 0.8228571428571428,
+        "f2": 0.9207161125319694
+      },
+      "clustering": {
+        "tp": 5358,
+        "fp": 2518,
+        "fn": 42,
+        "tn": 11882,
+        "precision": 0.6802945657694262,
+        "recall": 0.9922222222222222,
+        "f1": 0.8071708345887317,
+        "f2": 0.9088750169629529,
+        "mixedIncidentsPerPool": 0.4533333333333333,
+        "incidentsPerPool": 2.54
+      }
+    },
+    {
+      "threshold": 0.85,
+      "pairwise": {
+        "tp": 216,
+        "fp": 51,
+        "fn": 0,
+        "tn": 525,
+        "precision": 0.8089887640449438,
+        "recall": 1,
+        "f1": 0.8944099378881988,
+        "f2": 0.9549071618037136
+      },
+      "clustering": {
+        "tp": 5355,
+        "fp": 1538,
+        "fn": 45,
+        "tn": 12862,
+        "precision": 0.7768750906716959,
+        "recall": 0.9916666666666667,
+        "f1": 0.8712275278613846,
+        "f2": 0.9397044888218158,
+        "mixedIncidentsPerPool": 0.31666666666666665,
+        "incidentsPerPool": 2.7133333333333334
+      }
+    },
+    {
+      "threshold": 0.86,
+      "pairwise": {
+        "tp": 213,
+        "fp": 28,
+        "fn": 3,
+        "tn": 548,
+        "precision": 0.8838174273858921,
+        "recall": 0.9861111111111112,
+        "f1": 0.9321663019693655,
+        "f2": 0.9638009049773757
+      },
+      "clustering": {
+        "tp": 5328,
+        "fp": 967,
+        "fn": 72,
+        "tn": 13433,
+        "precision": 0.8463860206513105,
+        "recall": 0.9866666666666667,
+        "f1": 0.9111586147926465,
+        "f2": 0.9550098583975624,
+        "mixedIncidentsPerPool": 0.23333333333333334,
+        "incidentsPerPool": 2.84
+      }
+    },
+    {
+      "threshold": 0.87,
+      "pairwise": {
+        "tp": 206,
+        "fp": 10,
+        "fn": 10,
+        "tn": 566,
+        "precision": 0.9537037037037037,
+        "recall": 0.9537037037037037,
+        "f1": 0.9537037037037037,
+        "f2": 0.9537037037037037
+      },
+      "clustering": {
+        "tp": 5252,
+        "fp": 338,
+        "fn": 148,
+        "tn": 14062,
+        "precision": 0.9395348837209302,
+        "recall": 0.9725925925925926,
+        "f1": 0.9557779799818016,
+        "f2": 0.9657962486208163,
+        "mixedIncidentsPerPool": 0.10666666666666667,
+        "incidentsPerPool": 3.0566666666666666
+      }
+    },
+    {
+      "threshold": 0.88,
+      "pairwise": {
+        "tp": 195,
+        "fp": 4,
+        "fn": 21,
+        "tn": 572,
+        "precision": 0.9798994974874372,
+        "recall": 0.9027777777777778,
+        "f1": 0.9397590361445783,
+        "f2": 0.9172154280338664
+      },
+      "clustering": {
+        "tp": 5036,
+        "fp": 198,
+        "fn": 364,
+        "tn": 14202,
+        "precision": 0.9621704241497898,
+        "recall": 0.9325925925925926,
+        "f1": 0.9471506488621404,
+        "f2": 0.938361779831557,
+        "mixedIncidentsPerPool": 0.08,
+        "incidentsPerPool": 3.3233333333333333
+      }
+    },
+    {
+      "threshold": 0.89,
+      "pairwise": {
+        "tp": 178,
+        "fp": 1,
+        "fn": 38,
+        "tn": 575,
+        "precision": 0.994413407821229,
+        "recall": 0.8240740740740741,
+        "f1": 0.9012658227848102,
+        "f2": 0.8533077660594439
+      },
+      "clustering": {
+        "tp": 4641,
+        "fp": 80,
+        "fn": 759,
+        "tn": 14320,
+        "precision": 0.9830544376191485,
+        "recall": 0.8594444444444445,
+        "f1": 0.9171030530579982,
+        "f2": 0.8816154401428516,
+        "mixedIncidentsPerPool": 0.016666666666666666,
+        "incidentsPerPool": 3.8533333333333335
+      }
+    },
+    {
+      "threshold": 0.9,
+      "pairwise": {
+        "tp": 159,
+        "fp": 0,
+        "fn": 57,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.7361111111111112,
+        "f1": 0.8480000000000001,
+        "f2": 0.777126099706745
+      },
+      "clustering": {
+        "tp": 4254,
+        "fp": 0,
+        "fn": 1146,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.7877777777777778,
+        "f1": 0.8812927284027345,
+        "f2": 0.8226966813645858,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 4.3
+      }
+    },
+    {
+      "threshold": 0.91,
+      "pairwise": {
+        "tp": 138,
+        "fp": 0,
+        "fn": 78,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.6388888888888888,
+        "f1": 0.7796610169491525,
+        "f2": 0.6886227544910178
+      },
+      "clustering": {
+        "tp": 3689,
+        "fp": 0,
+        "fn": 1711,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.6831481481481482,
+        "f1": 0.8117504675981957,
+        "f2": 0.7293685001384002,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 4.96
+      }
+    },
+    {
+      "threshold": 0.92,
+      "pairwise": {
+        "tp": 110,
+        "fp": 0,
+        "fn": 106,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.5092592592592593,
+        "f1": 0.6748466257668712,
+        "f2": 0.564681724845996
+      },
+      "clustering": {
+        "tp": 2911,
+        "fp": 0,
+        "fn": 2489,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.539074074074074,
+        "f1": 0.7005173865960774,
+        "f2": 0.5938150218269348,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 6.006666666666667
+      }
+    },
+    {
+      "threshold": 0.93,
+      "pairwise": {
+        "tp": 97,
+        "fp": 0,
+        "fn": 119,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.44907407407407407,
+        "f1": 0.6198083067092652,
+        "f2": 0.5046826222684703
+      },
+      "clustering": {
+        "tp": 2564,
+        "fp": 0,
+        "fn": 2836,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.4748148148148148,
+        "f1": 0.6438975389251632,
+        "f2": 0.5305413011090879,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 6.48
+      }
+    },
+    {
+      "threshold": 0.94,
+      "pairwise": {
+        "tp": 71,
+        "fp": 0,
+        "fn": 145,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.3287037037037037,
+        "f1": 0.4947735191637631,
+        "f2": 0.3796791443850267
+      },
+      "clustering": {
+        "tp": 1863,
+        "fp": 0,
+        "fn": 3537,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.345,
+        "f1": 0.5130111524163569,
+        "f2": 0.3970080552359033,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 7.663333333333333
+      }
+    },
+    {
+      "threshold": 0.95,
+      "pairwise": {
+        "tp": 47,
+        "fp": 0,
+        "fn": 169,
+        "tn": 576,
+        "precision": 1,
+        "recall": 0.2175925925925926,
+        "f1": 0.3574144486692015,
+        "f2": 0.25795828759604833
+      },
+      "clustering": {
+        "tp": 1243,
+        "fp": 0,
+        "fn": 4157,
+        "tn": 14400,
+        "precision": 1,
+        "recall": 0.2301851851851852,
+        "f1": 0.37422851121481254,
+        "f2": 0.27207459615637175,
+        "mixedIncidentsPerPool": 0,
+        "incidentsPerPool": 8.793333333333333
+      }
+    }
+  ],
+  "floors": [
+    {
+      "floor": 0.45,
+      "clustering": {
+        "tp": 5358,
+        "fp": 2518,
+        "fn": 42,
+        "tn": 11882,
+        "precision": 0.6802945657694262,
+        "recall": 0.9922222222222222,
+        "f1": 0.8071708345887317,
+        "f2": 0.9088750169629529,
+        "mixedIncidentsPerPool": 0.4533333333333333,
+        "incidentsPerPool": 2.54
+      }
+    },
+    {
+      "floor": 0.5,
+      "clustering": {
+        "tp": 5358,
+        "fp": 2518,
+        "fn": 42,
+        "tn": 11882,
+        "precision": 0.6802945657694262,
+        "recall": 0.9922222222222222,
+        "f1": 0.8071708345887317,
+        "f2": 0.9088750169629529,
+        "mixedIncidentsPerPool": 0.4533333333333333,
+        "incidentsPerPool": 2.54
+      }
+    },
+    {
+      "floor": 0.55,
+      "clustering": {
+        "tp": 5358,
+        "fp": 2518,
+        "fn": 42,
+        "tn": 11882,
+        "precision": 0.6802945657694262,
+        "recall": 0.9922222222222222,
+        "f1": 0.8071708345887317,
+        "f2": 0.9088750169629529,
+        "mixedIncidentsPerPool": 0.4533333333333333,
+        "incidentsPerPool": 2.54
+      }
+    },
+    {
+      "floor": 0.6,
+      "clustering": {
+        "tp": 5358,
+        "fp": 2518,
+        "fn": 42,
+        "tn": 11882,
+        "precision": 0.6802945657694262,
+        "recall": 0.9922222222222222,
+        "f1": 0.8071708345887317,
+        "f2": 0.9088750169629529,
+        "mixedIncidentsPerPool": 0.4533333333333333,
+        "incidentsPerPool": 2.54
+      }
+    }
+  ],
+  "bestPairwiseF1": 0.87,
+  "bestClusteringF1": 0.87,
+  "bestClusteringF2": 0.87
+}

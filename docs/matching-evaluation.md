@@ -262,8 +262,53 @@ here to reopen the contract's single-linkage decision.
    signal — e.g. a fault-type label within a category — or the higher
    threshold above.
 2. **Code-mixed language.** Candidate fix: normalise text (transliterate or
-   translate to English) before embedding. Must be evaluated with this
-   harness before shipping; it changes every stored vector.
+   translate to English) before embedding. Evaluated 2026-10-25: §4a.
+
+### 4a. Normalising to English before embedding (2026-10-25)
+
+`EVAL_TEXT=normalised npm run eval:matching` first has Gemini
+(`gemini-3.8-flash`, temperature 0) rewrite every one of the 144 descriptions
+as plain English, keeping places, numbers and facts, then embeds the production
+text. That is one call per complaint, never batched, so no complaint is
+rewritten to sound like its neighbours. English complaints are rewritten too,
+as production would have to do. Rewrites are cached in `eval/.cache`; results
+are in `backend-node/eval/results/matching-2026-10-14-normalised.json`.
+
+A rewrite, for example: "4th Block bus stand munde dodda gundi ide, bikes skid
+aagtide, please repair maadi" became "There is a big pothole in front of 4th
+Block bus stand, bikes are skidding, please repair."
+
+| At 0.84 (production) | As shipped | Normalised |
+|---|---|---|
+| Cluster precision | 61.5% | **68.0%** |
+| Cluster recall | 94.3% | **99.2%** |
+| Cluster F1 / F2 | 0.744 / 0.852 | **0.807 / 0.909** |
+| Pair F1 | 0.797 | **0.823** |
+| Mixed incidents per pool | 0.63 | **0.45** |
+| Lowest same-problem similarity | 0.809 | **0.850** |
+
+| Pairing, normalised | Same problem: median (min) | Different problem: median (max) |
+|---|---|---|
+| English – English | 0.913 (0.850) | 0.813 (0.886) |
+| English – code-mixed | **0.938** (0.860), was 0.894 (0.809) | 0.815 (0.885) |
+| Code-mixed – code-mixed | — | **0.821** (0.894), was 0.841 (0.903) |
+
+**It works on the failure §2 found.** A code-mixed report of the same problem now
+sits as close to its English siblings as English reports do to each other, and
+two code-mixed reports of different problems no longer score as if they were
+one. The best threshold stays 0.87 on this set, so 0.84 keeps its margin.
+
+**Decision: not switched on yet.** Two conditions, both stated before the run:
+- **Real code-mixed complaints.** The code-mixed texts here were written for
+  this evaluation (§5). The project's rule is to change matching only on
+  evidence from real data, so normalisation ships when a real feed or real
+  submissions give a labelled code-mixed sample that shows the same gain.
+- **Cost and a re-embed.** It adds one model call per complaint before embedding
+  (asynchronous, so a citizen still never waits), and every stored vector must
+  be re-embedded from normalised text, so old and new vectors stay comparable.
+
+When both hold, the change is small: call the same rewrite in backend-node's
+embedding step behind a setting, then re-embed through the reconcile sweep.
 
 ---
 

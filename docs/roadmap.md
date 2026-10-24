@@ -378,8 +378,12 @@ Checked and not changed:
   feed that carries complaint **text** and coordinates. When one exists:
   ingest it, label a sample, and re-run `npm run eval:production-joins` on
   real complaints.
-- **Code-mixed text** (Kannada/Hindi–English). Evaluate transliteration before
-  embedding, using the existing harness.
+- **Code-mixed text** (Kannada/Hindi–English). **Evaluated 2026-10-25**
+  ([matching-evaluation.md](matching-evaluation.md) §4a): rewriting every
+  report as English before embedding lifts grouping F2 at 0.84 from 0.852 to
+  0.909 (recall 94% → 99%, precision 62% → 68%). Not switched on until real
+  code-mixed complaints confirm it, because the test texts were authored; the
+  change then is one rewrite call in the embedding step plus a re-embed.
 
 ---
 

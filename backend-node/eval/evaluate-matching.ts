@@ -48,8 +48,14 @@ const PRODUCTION = env.MATCH_SIMILARITY_THRESHOLD;
  * EVAL_TEXT=production (default) embeds exactly what production does,
  * "[category] description". EVAL_TEXT=plain drops the category prefix — an
  * ablation, to see how much of the similarity floor the shared prefix causes.
+ * EVAL_TEXT=normalised first has Gemini rewrite every description as plain
+ * English (code-mixed Kannada/Hindi translated, places kept), then embeds it
+ * the production way: the backlog's "transliterate before embedding" test.
+ * Billed: one model call per complaint, cached in eval/.cache like the vectors.
  */
-const TEXT_MODE = process.env.EVAL_TEXT === 'plain' ? 'plain' : 'production';
+type TextMode = 'production' | 'plain' | 'normalised';
+const TEXT_MODE: TextMode =
+    process.env.EVAL_TEXT === 'plain' ? 'plain' : process.env.EVAL_TEXT === 'normalised' ? 'normalised' : 'production';
 const FLOORS = [0.45, 0.5, 0.55, 0.6];
 
 interface EvalSet {
@@ -89,6 +95,52 @@ async function embed(text: string): Promise<number[]> {
     }
 }
 
+// ── Normalisation to English, cached (EVAL_TEXT=normalised only) ───────────
+
+const NORMALISE_MODEL = env.COPILOT_GEMINI_MODEL;
+const normaliseFile = join(cacheDir, 'normalised.json');
+const normalised: Record<string, string> = existsSync(normaliseFile)
+    ? JSON.parse(readFileSync(normaliseFile, 'utf8'))
+    : {};
+const NORMALISE_PROMPT = `You rewrite one civic complaint from Bengaluru as plain English.
+Translate every word that is not English (Kannada or Hindi, in any script or romanised) into English.
+Keep every place name, landmark, road, number and fact exactly as given. Add nothing, remove nothing, do not explain.
+Reply with the rewritten complaint only.`;
+
+async function normalise(text: string): Promise<string> {
+    const key = createHash('sha256').update(`${NORMALISE_MODEL}
+${NORMALISE_PROMPT}
+${text}`).digest('hex');
+    const hit = normalised[key];
+    if (hit !== undefined) return hit;
+    const apiKey = env.GEMINI_API_KEY ?? env.EMBEDDING_API_KEY;
+    for (let attempt = 1; ; attempt++) {
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${NORMALISE_MODEL}:generateContent?key=${encodeURIComponent(apiKey ?? '')}`,
+            {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: NORMALISE_PROMPT }] },
+                    contents: [{ role: 'user', parts: [{ text }] }],
+                    generationConfig: { temperature: 0 },
+                }),
+            },
+        );
+        if (response.ok) {
+            const data = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+            const out = (data.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim();
+            if (out) {
+                normalised[key] = out;
+                writeFileSync(normaliseFile, JSON.stringify(normalised, null, 1));
+                return out;
+            }
+        }
+        if (attempt >= 5) throw new Error(`normalise failed: HTTP ${response.status}`);
+        await new Promise((r) => setTimeout(r, 2000 * attempt));
+    }
+}
+
 // ── Pools ─────────────────────────────────────────────────────────────────
 
 interface Pool {
@@ -105,11 +157,16 @@ for (const scenario of set.scenarios) {
     );
     const vectors: number[][] = [];
     for (const c of complaints) {
-        // Production embeds "[category] description" (no title); plain is the ablation.
+        // Production embeds "[category] description" (no title); plain is the ablation;
+        // normalised is production's text after an English rewrite.
         const text =
-            TEXT_MODE === 'production'
-                ? buildEmbeddingText({ category: scenario.category, title: null, description: c.text })
-                : c.text;
+            TEXT_MODE === 'plain'
+                ? c.text
+                : buildEmbeddingText({
+                      category: scenario.category,
+                      title: null,
+                      description: TEXT_MODE === 'normalised' ? await normalise(c.text) : c.text,
+                  });
         vectors.push(await embed(text));
         embedded++;
     }
@@ -246,7 +303,7 @@ const result = {
 const resultsDir = join(here, 'results');
 mkdirSync(resultsDir, { recursive: true });
 writeFileSync(
-    join(resultsDir, `matching-${set.version}${TEXT_MODE === 'plain' ? '-plain' : ''}.json`),
+    join(resultsDir, `matching-${set.version}${TEXT_MODE === 'production' ? '' : `-${TEXT_MODE}`}.json`),
     JSON.stringify(result, null, 2),
 );
 
