@@ -70,6 +70,11 @@
     overflow: hidden;
 }
 
+/* The Copilot opens under the queue, never over it. */
+.copilot {
+    margin-top: var(--space-5);
+}
+
 .queueHead {
     display: flex;
     align-items: baseline;

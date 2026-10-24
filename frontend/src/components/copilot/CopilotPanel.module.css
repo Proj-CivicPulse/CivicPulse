@@ -1,0 +1,137 @@
+/*
+ * Officer Copilot. A hairline panel like the suggested next step: it is
+ * advice beside the queue, not a headline. Tokens only (tokens.css).
+ */
+.panel {
+    display: grid;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-sharp);
+    background: var(--surface);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--rule);
+}
+
+.title {
+    font: var(--t-section);
+    color: var(--ink);
+}
+
+.intro {
+    font: var(--t-data);
+    color: var(--ink-muted);
+    margin-top: var(--space-1);
+}
+
+.form {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.status {
+    font: var(--t-data);
+    color: var(--ink-muted);
+}
+
+.error {
+    font: var(--t-data);
+    color: var(--priority-critical-ink);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--priority-critical-ink);
+    border-radius: var(--r-sharp);
+}
+
+.result {
+    display: grid;
+    gap: var(--space-3);
+}
+
+/* Not an error: the model answered, but the officer should read it with care. */
+.warning {
+    font: var(--t-data);
+    color: var(--priority-medium-ink);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--priority-medium-ink);
+    border-radius: var(--r-sharp);
+}
+
+.heading {
+    font: var(--t-micro);
+    color: var(--ink-muted);
+}
+
+/* The model writes numbered lists as plain lines; keep its line breaks. */
+.answer {
+    font: var(--t-body);
+    color: var(--ink);
+    white-space: pre-line;
+}
+
+.note,
+.meta {
+    font: var(--t-data);
+    color: var(--ink-faint);
+}
+
+.sources {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.sourceList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.source {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    max-width: 100%;
+    padding: var(--space-1) var(--space-2);
+    font: var(--t-data);
+    color: var(--seal);
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--r-sharp);
+    cursor: pointer;
+    text-align: left;
+    transition: background var(--motion-fast) var(--ease);
+}
+
+.source:hover:not(:disabled) {
+    background: var(--seal-wash);
+}
+
+.source:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+
+/* A metric has nowhere to go: it reads as a label, not a link. */
+.source:disabled {
+    color: var(--ink-muted);
+    cursor: default;
+}
+
+.sourceKind {
+    font: var(--t-micro);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-ui);
+    color: var(--ink-faint);
+}
+
+.sourceLabel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

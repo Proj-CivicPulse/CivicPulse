@@ -11,6 +11,7 @@ import { reportWindow, trendRange } from '@/lib/reportWindow';
 import { useCategoryRegistry, useDepartmentNames } from '@/lib/useRegistry';
 import { useDashboardStore } from '@/stores/dashboard.store';
 import AppHeader from '@/components/AppHeader';
+import CopilotSection, { copilotScope } from '@/components/copilot/CopilotSection';
 import ExplorerFilterBar, { EXPLORER_NAV } from '@/components/explorer/ExplorerFilterBar';
 import { Sparkline, type TrendPoint } from '@/components/explorer/TrendChart';
 import Button from '@/components/ui/Button';
@@ -164,6 +165,8 @@ export default function CategoryExplorer() {
                     <h1 className={styles.title}>Categories</h1>
                     <ExplorerFilterBar ward />
                 </div>
+
+                <CopilotSection scope={copilotScope(selectedWardId, null, windowDays)} />
 
                 {error ? (
                     <Panel>

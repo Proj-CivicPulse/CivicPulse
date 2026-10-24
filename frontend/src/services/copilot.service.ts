@@ -3,6 +3,7 @@ export type CopilotSourceKind =
   | "incident"
   | "ward"
   | "category"
+  | "hotspot"
   | "metric";
 
 export interface CopilotQuery {

@@ -19,7 +19,9 @@ import { incidentName } from '@/components/explorer/IncidentList';
 import AttentionStrip from '@/components/dashboard/AttentionStrip';
 import WardRail from '@/components/dashboard/WardRail';
 import IncidentDetail from '@/components/dashboard/IncidentDetail';
+import { useNavigate } from 'react-router-dom';
 import CopilotPanel from '@/components/copilot/CopilotPanel';
+import { copilotScope } from '@/components/copilot/CopilotSection';
 import Button from '@/components/ui/Button';
 import DataTable, { type Column } from '@/components/ui/DataTable';
 import EmptyState from '@/components/ui/EmptyState';
@@ -44,6 +46,7 @@ export default function IncidentDashboard() {
 
     // Copilot panel visibility.
     const [copilotOpen, setCopilotOpen] = useState(false);
+    const navigate = useNavigate();
 
     // Debounced incident search.
     const [searchInput, setSearchInput] = useState('');
@@ -222,29 +225,8 @@ export default function IncidentDashboard() {
         ? describeError(incidentsQuery.error, 'incidents')
         : null;
 
-    /*
-     * Reuse the dashboard's reporting-window helper.
-     * Only include dates if that helper returns fields named "from" and "to".
-     */
-    const copilotWindow = reportWindow(windowDays) as Record<
-        string,
-        unknown
-    >;
-
-    const copilotScope = {
-        ...(selectedWardId !== null
-            ? { wardId: String(selectedWardId) }
-            : {}),
-        ...(categoryFilter !== null
-            ? { category: categoryFilter }
-            : {}),
-        ...(typeof copilotWindow.from === 'string'
-            ? { from: copilotWindow.from }
-            : {}),
-        ...(typeof copilotWindow.to === 'string'
-            ? { to: copilotWindow.to }
-            : {}),
-    };
+    // The Copilot answers for exactly what the queue is showing.
+    const scope = copilotScope(selectedWardId, categoryFilter, windowDays);
 
     return (
         <div className={styles.page}>
@@ -397,17 +379,13 @@ export default function IncidentDashboard() {
                         <section
                             id="dashboard-copilot"
                             aria-label="Copilot assistant"
-                            style={{ marginTop: '20px' }}
+                            className={styles.copilot}
                         >
                             <CopilotPanel
-                                scope={copilotScope}
+                                scope={scope}
                                 onClose={() => setCopilotOpen(false)}
-                                onOpenIncident={(incidentId) => {
-                                    selectIncident(incidentId);
-                                }}
-                                onNavigate={(path) => {
-                                    window.location.assign(path);
-                                }}
+                                onOpenIncident={selectIncident}
+                                onNavigate={navigate}
                             />
                         </section>
                     )}

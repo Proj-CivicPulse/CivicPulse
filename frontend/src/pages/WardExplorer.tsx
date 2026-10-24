@@ -12,6 +12,7 @@ import { useCategoryRegistry } from '@/lib/useRegistry';
 import { useOpenIncident } from '@/lib/useOpenIncident';
 import { useDashboardStore } from '@/stores/dashboard.store';
 import AppHeader from '@/components/AppHeader';
+import CopilotSection, { copilotScope } from '@/components/copilot/CopilotSection';
 import ExplorerFilterBar, { EXPLORER_NAV } from '@/components/explorer/ExplorerFilterBar';
 import WardShapes, { DensityLegend } from '@/components/explorer/WardShapes';
 import HotspotLayer from '@/components/explorer/HotspotLayer';
@@ -151,6 +152,8 @@ export default function WardExplorer() {
                     <h1 className={styles.title}>Wards</h1>
                     <ExplorerFilterBar category />
                 </div>
+
+                <CopilotSection scope={copilotScope(null, categoryFilter, windowDays)} />
 
                 {error ? (
                     <Panel>
