@@ -17,7 +17,7 @@
  *
  * Billed: one model call per question (21 on the default set). Spring allows
  * 30 questions per officer per hour, so one run fits; a second needs a wait.
- * Writes eval/results/copilot-<date>/raw.json and report.md.
+ * Writes eval/results/copilot-<date>/raw.json and report.md (EVAL_OUT overrides the folder name).
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -45,7 +45,8 @@ const args = process.argv.slice(2);
 const scoreOnly = args[0] === '--score' ? args[1] : undefined;
 
 const today = new Date().toISOString().slice(0, 10);
-const outDir = scoreOnly ?? path.join(HERE, 'results', `copilot-${today}`);
+// EVAL_OUT names the run's folder, so a second run on the same day keeps the first.
+const outDir = scoreOnly ?? path.join(HERE, 'results', process.env.EVAL_OUT ?? `copilot-${today}`);
 
 let results: (QuestionResult & { scope: string; mention?: string })[];
 let meta: Record<string, unknown>;
@@ -158,6 +159,8 @@ interface PacketShape {
     activeIncidents?: { items?: { name: string; priorityReasons?: string[] }[] };
     categories?: { name: string; activeIncidents: number }[];
     busiestWards?: { name: string; activeIncidents: number }[];
+    hotspots?: { items?: unknown[] };
+    needsAttention?: { signals?: { key: string; count: number }[] };
 }
 
 /** What the answer must contain, read from the packet the model was given. */
@@ -179,6 +182,12 @@ function resolveMention(key: string, packet: unknown): string[] | undefined {
         case 'topCategoryByActive': {
             const c = [...(p.categories ?? [])].sort((a, b) => b.activeIncidents - a.activeIncidents)[0];
             return c ? [c.name, c.name.split(/[ /]/)[0]] : undefined;
+        }
+        case 'hotspotCount':
+            return p.hotspots?.items ? [String(p.hotspots.items.length)] : undefined;
+        case 'lifeSafetyCount': {
+            const n = p.needsAttention?.signals?.find((x) => x.key === 'life_safety')?.count;
+            return typeof n === 'number' ? [String(n)] : undefined;
         }
         case 'topWard': {
             const w = p.busiestWards?.[0];
