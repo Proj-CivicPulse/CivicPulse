@@ -11,8 +11,8 @@ keyword or category grouping.
 Citizens submit complaints (category, location, description). CivicPulse
 automatically matches related complaints into a single **Incident**, computes a
 transparent priority score, and gives officers a dashboard to act on what
-matters most. Photo upload and the officer Copilot are planned, not shipped —
-see the phase list at the end.
+matters most. Photo upload is planned, not shipped — see the phase list at
+the end.
 
 ---
 
@@ -32,11 +32,12 @@ instead of incidents. CivicPulse:
   [docs/ward-data.md](docs/ward-data.md)
 - **Prioritizes** incidents with a rule-based, explainable formula — every
   priority score comes with human-readable reasons, not a black box
-- **Surfaces** trends and hotspots so officers can act proactively, not just
-  reactively *(Phase 5/7)*
-- **Answers questions** via a grounded Copilot that will respond only from
-  CivicPulse's own retrieved data — no hallucinated city information
-  *(Phase 6; the endpoint currently returns 501)*
+- **Surfaces** trends, hotspots and a "needs attention" list so officers can
+  act proactively, not just reactively, and flags life-safety hazards from
+  report text for the officer to confirm
+- **Answers questions** via a grounded Copilot that responds only from
+  CivicPulse's own data, citing an incident, ward or category for every claim
+  — no hallucinated city information
 
 ---
 
@@ -262,7 +263,7 @@ provisioned the first time you run the Spring service.
 ## Project status
 
 **[docs/roadmap.md](docs/roadmap.md) is the single list of what is done and
-what is left.** In short (2026-10-21):
+what is left.** In short (2026-10-24):
 
 - [x] 0–5 — Foundations, complaint ingestion, embeddings + incident matching,
       explainable priority, officer dashboard + map, trends
@@ -270,10 +271,11 @@ what is left.** In short (2026-10-21):
       wards, ingestion gate, dataset validation
 - [x] 6 — Explorer: wards, categories and incidents on one shared filter state
 - [x] 7 — Matching evaluation (threshold set to 0.84)
-- [ ] 12 — Officer Copilot — backend live on Gemini; panel and eval left
-- [ ] 8 — Priority calibration (needs an officer to rank a real queue)
-- [ ] 9 — Hotspots → 10 — "Needs attention" → 11 — Decision support
-- [ ] 13 — Paper + demo (matching and system sections ready)
+- [x] 8 — Priority calibration (proxy run; age now saturates at 30 days)
+- [x] 9 — Hotspots → 10 — "Needs attention" → 11 — Decision support
+- [x] Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`
+- [ ] 12 — Officer Copilot — backend and panel done; golden-question eval left
+- [ ] 13 — Paper + demo (system, matching and priority sections ready)
 
 ---
 

@@ -1,6 +1,6 @@
 # CivicPulse — Roadmap and Status
 
-**The single source for what is done and what is left.** Updated 2026-10-21.
+**The single source for what is done and what is left.** Updated 2026-10-24.
 It replaces the earlier phase documents (`roadmap.md` v1, `post-midsem-roadmap.md`,
 `next-phases-plan.md`, `release-readiness.md`, `audit-register.md`), which are
 in git history if anyone needs them.
@@ -32,31 +32,45 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | 9 | Hotspots | ✅ Done (2026-10-21) |
 | 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
 | 11 | Decision support | ✅ Done (2026-10-21); the Copilot note was cut |
-| 12 | Officer Copilot | 🟡 Backend live; panel + eval left (Manya) |
-| 13 | Paper + demo | 🟡 Matching and system sections ready |
+| 12 | Officer Copilot | 🟡 Backend live; panel merged 2026-10-24 (PR #2); eval left (Manya) |
+| 13 | Paper + demo | 🟡 System, matching and priority sections ready; Copilot section waits on 12.5 |
+| B | Backlog items delivered 2026-10-22 | ✅ Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`, label review |
 
-**All code-only work is done, and Phase 8 is closed.** Two things are left:
+**All planned product code is done.** What is left:
 
-1. **12.4–12.5:** the Copilot panel and its question set (Manya).
-2. **13:** the paper and a rehearsed demo, after the backends are redeployed.
+1. **12.5:** the Copilot golden-question eval (Manya). It feeds the paper.
+2. **Deploy:** redeploy both Railway backends (below).
+3. **13:** the paper, and a backup demo video.
+4. **Polish:** the Copilot panel's styles (below, 12.4).
 
-### Deployment status (2026-10-21)
-- **GitHub:** `main` at `4cd2721`, with every phase through 11.
-- **Frontend (Vercel):** live with the new code.
-- **Backends (Railway):** still on the build before Phases 9–11. Railway had a
-  platform outage the same day, with builds paused in every region, so the
-  push did not deploy. Until the backends are redeployed, the hotspot list,
-  the "needs attention" strip and the suggested next step fail quietly on the
-  live site; everything else works. Once Railway builds again, run from the
+### Deployment status (2026-10-24)
+- **GitHub:** `main` has every phase, the backlog items above and the Copilot
+  panel. The PR #2 merge (`3669fd2`) broke `npm run build` with a duplicate
+  key in `IncidentDashboard.tsx`; `86a7de7` fixes it and is pushed, so
+  Vercel can build `main` again.
+- **Frontend (Vercel):** builds from `main`; check the Vercel dashboard that
+  the build after `86a7de7` went live.
+- **Backends (Railway):** unverified since 2026-10-21, when they were still on
+  the build before Phases 9–11 after a Railway outage (the CLI here is logged
+  out). Until they are redeployed, the hotspot list, the "needs attention"
+  strip, the suggested next step, the life-safety flag, merge/unlink and the
+  Copilot fail quietly on the live site. Locally, all of them work. From the
   repo:
 
   ```bash
+  railway login
   railway redeploy -s backend-spring --from-source -y
   railway redeploy -s backend-node --from-source -y
   ```
 
-  The Spring deploy applies migration V22, which adds one table and changes
-  nothing that exists.
+  The Spring deploy applies migrations V22–V25:
+  - V22 adds the `recommendation_feedback` table.
+  - V23 converts every timestamp column to `timestamptz` in place, without
+    changing any stored instant.
+  - V24 adds the life-safety columns to `incidents`.
+  - V25 adds the officer and note columns to `incident_match_log`.
+
+  Back up the database first: V23 rewrites 36 columns.
 
 ---
 
@@ -216,14 +230,24 @@ Resident complaint text is not sent to the model.
 | 12.1 | Contract + service-boundary decision | ✅ api-contract.md "Copilot"; service-boundaries.md §5 |
 | 12.2 | Node `/internal/copilot/answer`, swappable provider (none / ollama / gemini / anthropic) | ✅ |
 | 12.3 | Spring `/copilot/query`: packet builder, citation check, per-officer limit | ✅ |
-| 12.4 | **Copilot panel in the Explorer** | ⬜ |
+| 12.4 | Copilot panel | ✅ merged 2026-10-24 (PR #2), on the Incidents page; polish left, see below |
 | 12.5 | **Golden-question eval** (~20 questions, some unanswerable) | ⬜ |
 
 **Live now on Gemini** (`gemini-3.8-flash`) in production and locally. Verified
 end to end on 2026-10-21. Ollama (`qwen2.5:7b`) is the free option for
 development.
 
-**12.4 — the panel.** A drawer on the Explorer pages:
+**12.4 — the panel, as merged.** "Ask Copilot" on the incident queue opens the
+panel. It sends the queue's ward, category and window as the scope, links
+each source, and handles every state below, including 429 with its
+`Retry-After` wait. Two things are left:
+- **Styles.** `CopilotPanel.css` hard-codes 33 colours and uses none of the
+  tokens, so it does not match the rest of the app. Move it to `tokens.css`
+  variables and a CSS module, like every other component.
+- **Wards and Categories pages.** The panel is only on the Incidents page.
+  The plan below put it on every Explorer page.
+
+The original plan for the panel, kept for reference. A drawer on the Explorer pages:
 - A question box, and the answer.
 - Each `sources` entry is a chip that links to its target: `incident` opens it in
   the queue, `ward` goes to `/dashboard/wards/:id`, `category` to
@@ -258,7 +282,7 @@ officer session".
 | 8.1 | `GET /dashboard/ranking-sheet`: the active queue as a CSV with the formula's inputs, no score, in a scrambled order; `?withScores=true` is the analyst's key | ✅ DB-backed tests with hand-computed scores |
 | 8.2 | `npm run eval:priority`: Kendall τ-b, precision@10, each term alone, the age variants on two halves, officer vs officer. It first checks its copy of the formula against the key | ✅ unit tests on a stand-in officer; end-to-end on local data (the copy reproduces 45/45 scores) |
 | 8.3 | Ranking session. **Proxy run done 2026-10-22:** Gemini ranked 45 incidents three times, blind to the formula ([priority-calibration-proxy.md](priority-calibration-proxy.md)). The formula beats the naive baseline in every run. **A human ranking is still to come** | 🟡 |
-| 8.4 | **Applied 2026-10-22: age saturates at 30 d** (it beat 14 d on both halves in 3/3 runs). **Category severity: decided against** on published evidence, because the hazard belongs to the problem, not its category. A life-safety flag is in the backlog | ✅ |
+| 8.4 | **Applied 2026-10-22: age saturates at 30 d** (it beat 14 d on both halves in 3/3 runs). **Category severity: decided against** on published evidence, because the hazard belongs to the problem, not its category. The life-safety flag that replaces it was delivered 2026-10-22 (below) | ✅ |
 
 ### 13 — Paper + demo 🟡
 | Section | Source | Ready |
@@ -267,12 +291,13 @@ officer session".
 | Matching: method, labelled sets, P/R/F1/F2, ablation, distance check | matching-evaluation.md, `backend-node/eval/results/` | ✅ now |
 | Copilot: grounding design and eval results | 12.5 | after 12.5 |
 | Priority: explainability, formula vs naive baseline, proxy calibration | priority-evaluation.md, priority-calibration-proxy.md | ✅ now (human ranking would strengthen it) |
-| Demo: rehearsed run and a backup video | — | ⬜ |
+| Demo: rehearsed run and a backup video | deck and four-speaker script in `presentation/` (2026-10-22) | 🟡 backup video left |
 
 ### Decisions and reviews (people, not code)
 | Item | Owner |
 |---|---|
-| Review the 30 hand labels in `backend-node/eval/production-joins-labelled.json` | team |
+| ~~Review the 30 hand labels~~ Done 2026-10-22 (`3725294`): a blind second labeller agreed 63% (κ 0.45) with no same/different flips; 3 labels moved to ambiguous; 0.84 + 500 m still wins | — |
+| Push `main` (this roadmap update) | team |
 | Reseed the live demo data after the backends deploy (the heaviest hotspots are now 35 days old, so the demo has a high band under the 30-day age rule): clear it, then run the seed | team (bulk delete on production) |
 | Redeploy both backends once Railway builds again (commands in "Deployment status") | team |
 
@@ -297,21 +322,28 @@ Checked and not changed:
 - the phone hotspot table, which scrolls sideways like the ward table;
 - the phone incident queue: same, and it predates this work.
 
+### Delivered from the backlog ✅ (2026-10-22)
+- **Life-safety flag** (`d3c8fc0`, V24). Open drains and manholes, exposed
+  wiring, sewage overflow, collapsed roads and fallen trees or poles are
+  detected from report text, quoting the words that raised the flag; the
+  officer's yes or no is final. It is never part of the score: it fires a
+  new first decision rule (escalate) and a new "needs attention" signal, and
+  shows as a chip in the queue and the panel.
+- **Officer merge and unlink** (`1d52b22`, V25). Merge folds one active
+  incident into another in the same ward and category; unlink splits a report
+  into its own incident. Both are logged with the officer and a reason, and
+  the reconcile sweep never undoes them.
+- **"Why are these grouped"** (`1d52b22`). Each report in the panel says why
+  it belongs, in distance and words, never as a similarity score.
+- **`timestamptz`** (`9f5d411`, V23). All 36 timestamp columns, converted in
+  place, and every pooled session runs in UTC.
+- **Landing page** (`7a7e63f`): the ward strip shows only the ten wards with
+  the most open incidents.
+
 ### Backlog — deliberately deferred
-- **Life-safety flag on incidents** (from Phase 8). Flags an open drain,
-  exposed wiring, sewage overflow or a collapsed road, set by an officer or
-  from report text. It feeds decision support (escalate), not the score.
-  Needs a sub-type taxonomy or text classification
-  ([priority-calibration-proxy.md](priority-calibration-proxy.md)).
 - **Optional human ranking** of the calibration sheet, to confirm the 30-day
   age change; `npm run eval:priority` scores it in one command.
 - **Photo upload.** Contract approved, not built.
-- **Officer merge / unlink of complaints.** The manual override for false
-  merges; the backend hook exists, there is no endpoint or UI.
-- **"Why are these grouped".** Explain a match in operator language (for example
-  "40 m away, same problem"), not cosine scores.
-- **`timestamptz` migration.** Touches every timestamp column
-  ([data-quality-rules.md](data-quality-rules.md) §2).
 - **First real data feed** through `/internal/ingest`. Two open points:
   - Decide whether a changed source timestamp counts as a new record.
   - Re-run the matching evaluation on real complaints.
