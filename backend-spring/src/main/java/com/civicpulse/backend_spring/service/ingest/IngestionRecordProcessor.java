@@ -10,6 +10,7 @@ import com.civicpulse.backend_spring.repository.ComplaintRepository;
 import com.civicpulse.backend_spring.repository.IngestionRecordRepository;
 import com.civicpulse.backend_spring.service.complaint.ReferenceNumberService;
 import com.civicpulse.backend_spring.service.geocoding.GeocodingService;
+import com.civicpulse.backend_spring.service.incident.IncidentAttachmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -56,6 +57,7 @@ public class IngestionRecordProcessor {
     private final ReferenceNumberService referenceNumberService;
     private final GeocodingService geocodingService;
     private final ApplicationEventPublisher eventPublisher;
+    private final IncidentAttachmentService attachmentService;
 
     /**
      * A PRIVATE mapper with fixed configuration, deliberately NOT the
@@ -122,10 +124,26 @@ public class IngestionRecordProcessor {
                 return IngestionOutcome.UNCHANGED;
             }
 
+            // Same report, corrected upstream — never a new one, whatever
+            // changed, including its timestamp (UpstreamChange).
+            UpstreamChange change = UpstreamChange.of(existing.get(), valid);
             Complaint updated = applyTo(existing.get(), valid);
+            if (change == UpstreamChange.REMATCH && updated.getIncident() != null) {
+                // Its grouping may now be wrong: back through the same matching
+                // path as a new report, which moves it if it must.
+                updated.setMatchingStatus(MatchingStatus.PENDING);
+            }
             complaintRepository.save(updated);
+            if (change == UpstreamChange.REMATCH && updated.getIncident() != null) {
+                complaintRepository.clearEmbedding(updated.getId());
+                eventPublisher.publishEvent(new ComplaintCreatedEvent(updated.getId()));
+            } else if (change == UpstreamChange.RECOMPUTE && updated.getIncident() != null) {
+                // Grouping stands; the incident's span, age and score do not.
+                attachmentService.recomputeById(updated.getIncident().getId());
+            }
             recordRepository.save(record(source, batchId, valid.sourceRecordId(), raw, contentHash,
                     IngestionOutcome.UPDATED, List.of(), updated.getId()));
+            log.info("Ingest {}/{}: updated upstream ({})", source, valid.sourceRecordId(), change);
             return IngestionOutcome.UPDATED;
         }
 
