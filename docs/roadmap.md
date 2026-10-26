@@ -40,11 +40,14 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 backlog below remains, and it is deliberately deferred. If a paper is
 required, every section's results are in the docs listed under Phase 13.
 
-### Deployment status (2026-10-25)
-- **Photo upload is built but off in production.** Status 2026-10-26: the
-  bucket exists (`photos`, region `sin`) and Vercel already has
+### Deployment status (2026-10-26)
+- **Photo upload is built but deliberately off in production.** Decided
+  2026-10-26 by the team: for a student project the live site runs without
+  photos, so nothing residents upload needs storing or moderating. The form
+  says photo upload is unavailable, and reports work exactly as before. The
+  bucket exists (`photos`, region `sin`, empty) and Vercel already has
   `VITE_PHOTO_STORAGE_ORIGIN=https://photos-7zlmvtzrgsgqyyls-s.t3.storageapi.dev`
-  (live CSP verified). **Only step 2 is left.** To switch it on:
+  (live CSP verified), so turning it on later is only step 2:
   1. ~~In Railway, add a **Bucket** to the project.~~ Done.
   2. On backend-spring, set these from the bucket's variables (Railway
      variable references): `PHOTO_STORAGE_ENDPOINT=${{Bucket.ENDPOINT}}`,
