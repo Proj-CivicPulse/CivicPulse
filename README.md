@@ -8,8 +8,8 @@ keyword or category grouping.
 Citizens submit complaints (category, location, description). CivicPulse
 automatically matches related complaints into a single **Incident**, computes a
 transparent priority score, and gives officers a dashboard to act on what
-matters most. Photo upload is planned, not shipped — see the phase list at
-the end.
+matters most. Photo upload is built but switched off in the live
+deployment, by decision — see the project status at the end.
 
 ---
 
@@ -277,7 +277,7 @@ provisioned the first time you run the Spring service.
 ## Project status
 
 **[docs/roadmap.md](docs/roadmap.md) is the single list of what is done and
-what is left.** In short (2026-10-25):
+what is left.** In short (2026-10-26) — **complete:**
 
 - [x] 0–5 — Foundations, complaint ingestion, embeddings + incident matching,
       explainable priority, officer dashboard + map, trends
@@ -288,8 +288,8 @@ what is left.** In short (2026-10-25):
 - [x] 8 — Priority calibration (proxy run; age now saturates at 30 days)
 - [x] 9 — Hotspots → 10 — "Needs attention" → 11 — Decision support
 - [x] Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`
-- [x] 12 — Officer Copilot — on every Explorer page; eval 21/22; sees hotspots and life-safety flags
-- [ ] 13 — Paper (if required) + backup demo video
+- [x] 12 — Officer Copilot — on every Explorer page; eval 22/22; sees hotspots and life-safety flags
+- [x] 13 — Final presentation in [`presentation/`](presentation/) (deck, PDF, speaker script); no paper
 
 ---
 

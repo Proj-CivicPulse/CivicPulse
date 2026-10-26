@@ -1,6 +1,6 @@
 # CivicPulse — Roadmap and Status
 
-**The single source for what is done and what is left.** Updated 2026-10-25: **project complete.**
+**The single source for what is done and what is left.** Updated 2026-10-26: **project complete.**
 It replaces the earlier phase documents (`roadmap.md` v1, `post-midsem-roadmap.md`,
 `next-phases-plan.md`, `release-readiness.md`, `audit-register.md`), which are
 in git history if anyone needs them.
@@ -33,12 +33,12 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | 10 | Operational intelligence ("needs attention") | ✅ Done (2026-10-21) |
 | 11 | Decision support | ✅ Done (2026-10-21); the Copilot note was cut |
 | 12 | Officer Copilot | ✅ On every Explorer page; sees hotspots and life-safety flags; eval 22/22 (2026-10-25) |
-| 13 | Paper | ✅ Only if required: every section's results exist. Final deck and speaker script in `presentation/` |
+| 13 | Final presentation | ✅ 2026-10-26: 12-slide deck, PDF and speaker script in `presentation/`. No paper: decided against |
 | B | Backlog items delivered 2026-10-22/25 | ✅ Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`, label review, photo upload (built, off by decision), upstream-edit rule |
 
-**Every phase, evaluation and loose end is done.** Nothing is open. Only the
-backlog below remains, and it is deliberately deferred. If a paper is
-required, every section's results are in the docs listed under Phase 13.
+**Every phase, evaluation and loose end is done.** Nothing is open. The
+project ends with the final presentation; there is no paper. Only the backlog
+below remains, and it is deliberately deferred beyond this project.
 
 ### Deployment status (2026-10-26)
 - **Photo upload is built but switched off in production, by decision**
@@ -291,13 +291,13 @@ answerable and must state the right count. Report:
 | Numbers not in the packet | 0 of 81 |
 | Median latency | 5.1 s |
 
-Both runs are on Gemini; running the same set on Ollama or Claude would be
-the provider comparison, if a paper wants one.
+Both runs are on Gemini. The harness can run the same set on Ollama or
+Claude; with no paper, no provider comparison is planned.
 
 ### 8 — Priority calibration ✅ (closed 2026-10-22)
-The weights stay frozen until an officer has ranked a real queue. The steps
-are in [priority-evaluation.md](priority-evaluation.md), "Phase 8 — the
-officer session".
+**Final.** The team adopted the proxy calibration below; the weights and
+bands are not reopened. The ranking tooling and method are documented in
+[priority-evaluation.md](priority-evaluation.md).
 
 | # | Milestone | State |
 |---|---|---|
@@ -306,13 +306,25 @@ officer session".
 | 8.3 | Ranking session. **Proxy run done 2026-10-22:** Gemini ranked 45 incidents three times, blind to the formula ([priority-calibration-proxy.md](priority-calibration-proxy.md)). The formula beats the naive baseline in every run. **Final:** the team adopted this calibration; no human ranking is planned | ✅ |
 | 8.4 | **Applied 2026-10-22: age saturates at 30 d** (it beat 14 d on both halves in 3/3 runs). **Category severity: decided against** on published evidence, because the hazard belongs to the problem, not its category. The life-safety flag that replaces it was delivered 2026-10-22 (below) | ✅ |
 
-### 13 — Paper ✅ (only if required)
-| Section | Source | Ready |
-|---|---|---|
-| System: architecture, data quality, ingestion gate | service-boundaries.md, data-quality-rules.md | ✅ now |
-| Matching: method, labelled sets, P/R/F1/F2, ablation, distance check | matching-evaluation.md, `backend-node/eval/results/` | ✅ now |
-| Copilot: grounding design and eval results | api-contract.md "Copilot", `backend-node/eval/results/copilot-2026-10-2{4,5}/` | ✅ now (Gemini only) |
-| Priority: explainability, formula vs naive baseline, proxy calibration | priority-evaluation.md, priority-calibration-proxy.md | ✅ now |
+### 13 — Final presentation ✅ (2026-10-26)
+Decided 2026-10-26: **no paper**; the project is presented with a deck. In
+`presentation/`:
+
+| File | What it is |
+|---|---|
+| `CivicPulse-final.pptx` | 12 slides, Playfair Display + Poppins with the fonts embedded, speaker notes on every slide |
+| `CivicPulse-final.pdf` | The same deck as a PDF backup |
+| `CivicPulse-final-speaker-script.pdf` | One page per slide with its script, a four-speaker split (≈ 9 min) and a likely-questions sheet |
+
+Every number on the slides comes from these sources:
+
+| Slide | Source |
+|---|---|
+| Architecture | service-boundaries.md |
+| Smart grouping: threshold sweep, 55% → 95% | matching-evaluation.md, `backend-node/eval/results/` |
+| Explainable priority, Results: formula vs baseline in 3/3 runs | priority-evaluation.md, priority-calibration-proxy.md |
+| Officer Copilot: 22/22, 0 of 38 citations, 0 of 81 numbers | `backend-node/eval/results/copilot-2026-10-25/` |
+| Beyond this project: code-mixed F2 0.85 → 0.91 | matching-evaluation.md §4a |
 
 ### Decisions and reviews (people, not code)
 | Item | Owner |
@@ -364,8 +376,8 @@ Checked and not changed:
   Bucket in production, SeaweedFS locally) and the server re-encodes it,
   which strips GPS and device metadata, plus a thumbnail for the officer's
   panel. An anonymous submitter proves the report is theirs with a signed,
-  2-hour token rather than the guessable reference number. **Off until a
-  bucket is configured** (see "Deployment status").
+  2-hour token rather than the guessable reference number. **Off in
+  production by decision** (see "Deployment status").
 - **Upstream edits to imported records** (2026-10-25). Decided: a record's
   identity is `(source, source_record_id)`, so a changed source timestamp is
   the same report corrected, never a new one. The incident is recomputed; if
@@ -409,7 +421,7 @@ Code comments and older docs use these labels.
 | Pre-midsem Phases 0–5 | Phases 0–5 |
 | Pre-midsem Phase 6 "Officer Copilot", next-phases "Phase A" | Phase 12 |
 | Pre-midsem Phase 7 "Predictive hotspots", post-midsem Phase 9, next-phases "C" | Phase 9 |
-| Pre-midsem **Phase 8 "Evaluation + paper"** (the "Phase 8 evaluation" in code comments) | Phases 7 (matching), 8 (priority), 13 (paper) |
+| Pre-midsem **Phase 8 "Evaluation + paper"** (the "Phase 8 evaluation" in code comments) | Phases 7 (matching), 8 (priority), 13 (final presentation) |
 | Post-midsem Phases 1–2 (data foundation, API contract freeze) | Phase S |
 | Post-midsem Phases 3–6 (Explorer), "roadmap §7–§16" | Phase 6 |
 | Post-midsem Phase 7 / §17 | Phase 7 |
@@ -430,7 +442,7 @@ Several code comments cite these.
 | ISSUE-05 | Ward data was placeholder | Resolved: 243 BBMP wards |
 | ISSUE-06 | Nearest-centroid ward assignment | Resolved: PostGIS containment |
 | ISSUE-07 | Priority scores go stale | Resolved: `PriorityRefreshJob` |
-| ISSUE-08 | Priority not calibrated | Measured; decision recorded, so the weights stay frozen → **Phase 8** |
+| ISSUE-08 | Priority not calibrated | Resolved in **Phase 8**: proxy calibration adopted as final |
 | ISSUE-09 | O(N²) geographic spread | Measured; deliberately not optimised |
 | ISSUE-10 | No ingestion validation gate | Resolved: `/internal/ingest` |
 | ISSUE-11 | External/internal ward ID governance | Resolved: crosswalk view |
@@ -438,4 +450,4 @@ Several code comments cite these.
 | ISSUE-13 | Matcher lacks spatial/temporal bounds | Resolved (documented); 500 m check added in Phase 7 |
 | ISSUE-14 | Single-linkage chaining | Demonstrated; kept as an explicit decision |
 | ISSUE-15 | Seed data insufficient | Mitigated (seed script; Phase 7 eval set) |
-| ISSUE-16 | Photo upload unresolved | Deferred, contract approved → backlog |
+| ISSUE-16 | Photo upload unresolved | Resolved: built 2026-10-25, off in production by decision |

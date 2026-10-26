@@ -48,9 +48,8 @@ cd backend-spring && ./mvnw spring-boot:run   # :8080
 cd backend-node   && npm run dev              # :3001
 ```
 
-There is no global "backend is down" banner yet. `services/health.service.ts`
-wraps `GET /health` on both backends, but no screen calls it — each page surfaces
-its own failure through `EmptyState` and a **Try again** button instead.
+There is no global "backend is down" banner: each page surfaces its own
+failure through `EmptyState` and a **Try again** button.
 
 ### Seeing real data
 
