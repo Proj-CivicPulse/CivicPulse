@@ -41,8 +41,11 @@ backlog below remains, and it is deliberately deferred. If a paper is
 required, every section's results are in the docs listed under Phase 13.
 
 ### Deployment status (2026-10-25)
-- **Photo upload is built but off in production.** To switch it on:
-  1. In Railway, add a **Bucket** to the project.
+- **Photo upload is built but off in production.** Status 2026-10-26: the
+  bucket exists (`photos`, region `sin`) and Vercel already has
+  `VITE_PHOTO_STORAGE_ORIGIN=https://photos-7zlmvtzrgsgqyyls-s.t3.storageapi.dev`
+  (live CSP verified). **Only step 2 is left.** To switch it on:
+  1. ~~In Railway, add a **Bucket** to the project.~~ Done.
   2. On backend-spring, set these from the bucket's variables (Railway
      variable references): `PHOTO_STORAGE_ENDPOINT=${{Bucket.ENDPOINT}}`,
      `PHOTO_STORAGE_BUCKET=${{Bucket.BUCKET}}`,
@@ -51,7 +54,7 @@ required, every section's results are in the docs listed under Phase 13.
      `PHOTO_STORAGE_REGION=${{Bucket.REGION}}`; add
      `PHOTO_STORAGE_PATH_STYLE=true` only if its Credentials tab says
      path-style.
-  3. On Vercel, set `VITE_PHOTO_STORAGE_ORIGIN` to the bucket's origin:
+  3. ~~On Vercel, set `VITE_PHOTO_STORAGE_ORIGIN`~~ Done. It is the bucket's origin:
      `https://<BUCKET>.t3.storageapi.dev` for a virtual-hosted bucket (the
      host of `ENDPOINT` with the bucket name in front), and redeploy.
   4. **CORS needs no manual step:** on startup Spring sets the bucket's CORS
