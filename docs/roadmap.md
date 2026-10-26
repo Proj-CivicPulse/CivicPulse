@@ -34,38 +34,21 @@ are: [api-contract.md](api-contract.md), [endpoints.md](endpoints.md),
 | 11 | Decision support | ✅ Done (2026-10-21); the Copilot note was cut |
 | 12 | Officer Copilot | ✅ On every Explorer page; sees hotspots and life-safety flags; eval 22/22 (2026-10-25) |
 | 13 | Paper | ✅ Only if required: every section's results exist. Final deck and speaker script in `presentation/` |
-| B | Backlog items delivered 2026-10-22/25 | ✅ Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`, label review, photo upload, upstream-edit rule |
+| B | Backlog items delivered 2026-10-22/25 | ✅ Life-safety flag, officer merge/unlink, "why grouped", `timestamptz`, label review, photo upload (built, off by decision), upstream-edit rule |
 
 **Every phase, evaluation and loose end is done.** Nothing is open. Only the
 backlog below remains, and it is deliberately deferred. If a paper is
 required, every section's results are in the docs listed under Phase 13.
 
 ### Deployment status (2026-10-26)
-- **Photo upload is built but deliberately off in production.** Decided
-  2026-10-26 by the team: for a student project the live site runs without
-  photos, so nothing residents upload needs storing or moderating. The form
-  says photo upload is unavailable, and reports work exactly as before. The
-  bucket exists (`photos`, region `sin`, empty) and Vercel already has
-  `VITE_PHOTO_STORAGE_ORIGIN=https://photos-7zlmvtzrgsgqyyls-s.t3.storageapi.dev`
-  (live CSP verified), so turning it on later is only step 2:
-  1. ~~In Railway, add a **Bucket** to the project.~~ Done.
-  2. On backend-spring, set these from the bucket's variables (Railway
-     variable references): `PHOTO_STORAGE_ENDPOINT=${{Bucket.ENDPOINT}}`,
-     `PHOTO_STORAGE_BUCKET=${{Bucket.BUCKET}}`,
-     `PHOTO_STORAGE_ACCESS_KEY=${{Bucket.ACCESS_KEY_ID}}`,
-     `PHOTO_STORAGE_SECRET_KEY=${{Bucket.SECRET_ACCESS_KEY}}`,
-     `PHOTO_STORAGE_REGION=${{Bucket.REGION}}`; add
-     `PHOTO_STORAGE_PATH_STYLE=true` only if its Credentials tab says
-     path-style.
-  3. ~~On Vercel, set `VITE_PHOTO_STORAGE_ORIGIN`~~ Done. It is the bucket's origin:
-     `https://<BUCKET>.t3.storageapi.dev` for a virtual-hosted bucket (the
-     host of `ENDPOINT` with the bucket name in front), and redeploy.
-  4. **CORS needs no manual step:** on startup Spring sets the bucket's CORS
-     rule itself (`PutBucketCors`) to allow PUT/GET from `FRONTEND_ORIGIN`,
-     and logs `Photo storage: CORS allows PUT/GET from [...]`. If it logs
-     "could not set the bucket's CORS rule" instead, browser uploads will fail
-     until the bucket allows PUT from the Vercel origin.
-  Until then the confirmation screen says photo upload is unavailable.
+- **Photo upload is built but switched off in production, by decision**
+  (2026-10-26): the project does not need photos. The bucket was deleted and
+  `VITE_PHOTO_STORAGE_ORIGIN` removed from Vercel, so the live CSP is back to
+  `'self'` only and nothing is billed. The code stays: with no
+  `PHOTO_STORAGE_BUCKET` the photo endpoints answer 503 and the confirmation
+  screen says photo upload is unavailable. Turning it on later is a bucket
+  plus the `PHOTO_STORAGE_*` variables and that Vercel variable
+  ([photo-upload-contract.md](photo-upload-contract.md) §7).
 - **Railway** auto-deploys `main` on every push. Production applied V22–V25
   on 2026-10-24 and V26 (photo key) on 2026-10-25, each cleanly; it runs the
   Copilot packet and panel changes and the photo code with storage off.
@@ -320,7 +303,7 @@ officer session".
 |---|---|---|
 | 8.1 | `GET /dashboard/ranking-sheet`: the active queue as a CSV with the formula's inputs, no score, in a scrambled order; `?withScores=true` is the analyst's key | ✅ DB-backed tests with hand-computed scores |
 | 8.2 | `npm run eval:priority`: Kendall τ-b, precision@10, each term alone, the age variants on two halves, officer vs officer. It first checks its copy of the formula against the key | ✅ unit tests on a stand-in officer; end-to-end on local data (the copy reproduces 45/45 scores) |
-| 8.3 | Ranking session. **Proxy run done 2026-10-22:** Gemini ranked 45 incidents three times, blind to the formula ([priority-calibration-proxy.md](priority-calibration-proxy.md)). The formula beats the naive baseline in every run. **A human ranking is still to come** | 🟡 |
+| 8.3 | Ranking session. **Proxy run done 2026-10-22:** Gemini ranked 45 incidents three times, blind to the formula ([priority-calibration-proxy.md](priority-calibration-proxy.md)). The formula beats the naive baseline in every run. **Final:** the team adopted this calibration; no human ranking is planned | ✅ |
 | 8.4 | **Applied 2026-10-22: age saturates at 30 d** (it beat 14 d on both halves in 3/3 runs). **Category severity: decided against** on published evidence, because the hazard belongs to the problem, not its category. The life-safety flag that replaces it was delivered 2026-10-22 (below) | ✅ |
 
 ### 13 — Paper ✅ (only if required)
@@ -329,7 +312,7 @@ officer session".
 | System: architecture, data quality, ingestion gate | service-boundaries.md, data-quality-rules.md | ✅ now |
 | Matching: method, labelled sets, P/R/F1/F2, ablation, distance check | matching-evaluation.md, `backend-node/eval/results/` | ✅ now |
 | Copilot: grounding design and eval results | api-contract.md "Copilot", `backend-node/eval/results/copilot-2026-10-2{4,5}/` | ✅ now (Gemini only) |
-| Priority: explainability, formula vs naive baseline, proxy calibration | priority-evaluation.md, priority-calibration-proxy.md | ✅ now (human ranking would strengthen it) |
+| Priority: explainability, formula vs naive baseline, proxy calibration | priority-evaluation.md, priority-calibration-proxy.md | ✅ now |
 
 ### Decisions and reviews (people, not code)
 | Item | Owner |
@@ -390,9 +373,6 @@ Checked and not changed:
   dropped and the report is re-matched.
 
 ### Backlog — deliberately deferred
-- **Optional human ranking** of the calibration sheet, to confirm the 30-day
-  age change; `npm run eval:priority` scores it in one command. Needs a
-  person, ideally a ward officer; no code is missing.
 - **First real data feed** through `/internal/ingest`. The gate, its
   timestamp rule and its update path are done; what is missing is a real
   feed that carries complaint **text** and coordinates. When one exists:

@@ -97,7 +97,7 @@ amended 2026-10-22 to 30 days on a proxy calibration.
 | | |
 |---|---|
 | Decided | 2026-09-17, pre-deployment audit; amended 2026-10-22 (age 14 -> 30 d) |
-| Scope | Until a human ranking confirms or overturns the amendment |
+| Scope | Final: the team adopted the proxy calibration (2026-10-26); no human ranking is planned |
 | Accepted defect | Growth is inert for ~62% of incidents. With age at 14 days it was also pinned for ~77%, a near-constant offset — the reason for the amendment. |
 | Why accept it | Ordering is what an officer acts on, and ordering is sound on every probe below. Changing a weight on synthetic evidence would be replacing a known, measured bias with an unmeasured one. |
 | Revisit trigger | Phase 8, once a real morning's queue has been ranked by an officer. Whichever comes first: 200 labelled incidents, or the first officer complaint that the ranking is wrong. |

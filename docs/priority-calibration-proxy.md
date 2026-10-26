@@ -89,9 +89,9 @@ Ranker consistency, τ-b between runs: 0.881, 0.749, 0.735.
   earns 14/30 of the age weight), and still lands in the same band in the
   probes. Live scores change when backend-spring deploys:
   `PriorityRefreshJob` rescores every open incident within 5 minutes.
-- **Optional:** a human ranking, through the same `eval:priority`, would
-  confirm or overturn it. `previous (age saturates at 14 d)` stays a variant
-  so that check is one command.
+- **Final (2026-10-26):** the team adopted this calibration as the model's
+  last word; no human ranking is planned. `previous (age saturates at 14 d)`
+  stays a variant in `eval:priority` for the record.
 - **Closed 2026-10-22: no category severity weight.** Decided on published
   evidence (next section), not on a ranking.
 

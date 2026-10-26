@@ -104,7 +104,7 @@ export default function MergeIncident({ incident, categoryLabel }: {
                     <option value="">Choose…</option>
                     {options.map(({ incident: c, metres }) => (
                         <option key={c.id} value={c.id}>
-                            {`${incidentName(c, categoryLabel)} · ${distanceLabel(metres)} · ${formatCount(c.complaintCount)} reports`}
+                            {`${incidentName(c, categoryLabel)} · ${distanceLabel(metres)} · ${formatCount(c.complaintCount)} ${c.complaintCount === 1 ? 'report' : 'reports'}`}
                         </option>
                     ))}
                 </Field>
