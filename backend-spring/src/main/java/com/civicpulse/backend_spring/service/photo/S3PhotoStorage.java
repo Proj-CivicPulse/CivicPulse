@@ -8,6 +8,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.CORSRule;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
@@ -68,12 +69,14 @@ public class S3PhotoStorage implements PhotoStorage {
      * rule on the bucket.
      */
     public void applyCors(List<String> origins) {
-        client.putBucketCors(r -> r.bucket(bucket).corsConfiguration(c -> c.corsRules(rule -> rule
+        CORSRule rule = CORSRule.builder()
                 .allowedOrigins(origins)
                 .allowedMethods("PUT", "GET", "HEAD")
                 .allowedHeaders("content-type")
                 .exposeHeaders("ETag")
-                .maxAgeSeconds(3600))));
+                .maxAgeSeconds(3600)
+                .build();
+        client.putBucketCors(r -> r.bucket(bucket).corsConfiguration(c -> c.corsRules(rule)));
     }
 
     @Override
