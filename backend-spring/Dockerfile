@@ -1,7 +1,7 @@
 # backend-spring — production image.
 #
 # A Dockerfile rather than Railway's Nixpacks auto-detect, for two reasons:
-#   1. This service needs Java 21 (see <java.version> in pom.xml, and Spring
+#   1. This service needs Java 25 (see <java.version> in pom.xml, and Spring
 #      Boot 4). Nixpacks picks a JDK on its own, and a silent default-version
 #      change is a build break with a confusing error.
 #   2. The build MUST skip tests. `./mvnw verify` here is a real integration
@@ -11,7 +11,7 @@
 # Railway uses this automatically when it is present in the service root.
 
 # --- Stage 1: build ---------------------------------------------------------
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 
 WORKDIR /build
 
@@ -39,7 +39,7 @@ COPY src/ src/
 RUN ./mvnw -B -DskipTests clean package
 
 # --- Stage 2: runtime -------------------------------------------------------
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 
 WORKDIR /app
 

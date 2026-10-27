@@ -40,7 +40,7 @@ it.
 
 | Concern | Choice |
 |---|---|
-| Runtime | Java 21 (LTS, per the project-wide version policy) |
+| Runtime | Java 25 (LTS, per the project-wide version policy) |
 | Framework | Spring Boot 4.0.8 — note: Boot 4 defaults to **Jackson 3** (`tools.jackson`), and splits auto-config into per-technology starters |
 | Persistence | Spring Data JPA / Hibernate 7, `ddl-auto: validate` |
 | Migrations | **Flyway** (`spring-boot-starter-flyway`) |

@@ -104,7 +104,7 @@ racing — is decision 2 in `service-boundaries.md`.
 
 ### Prerequisites
 
-- Java (**latest LTS** — e.g. 21) for `backend-spring`. No Maven install
+- Java (**latest LTS** — e.g. 25) for `backend-spring`. No Maven install
   needed — the repo ships the Maven wrapper (`./mvnw`).
 - Node.js (**latest LTS** — e.g. 22) for `backend-node` and `frontend`
 - **Docker Desktop** — the local database is PostgreSQL 16 + `pgvector` +

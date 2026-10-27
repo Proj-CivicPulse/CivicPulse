@@ -26,7 +26,7 @@
 	</scm>
 	<properties>
 		<!-- LTS only, per the project-wide version policy in the root README. -->
-		<java.version>21</java.version>
+		<java.version>25</java.version>
 	</properties>
 	<dependencies>
 		<dependency>
