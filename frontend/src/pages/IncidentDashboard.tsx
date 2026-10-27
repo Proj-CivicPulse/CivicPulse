@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
     incidentService,
@@ -46,7 +46,15 @@ export default function IncidentDashboard() {
 
     // Copilot panel visibility.
     const [copilotOpen, setCopilotOpen] = useState(false);
+    const copilotRef = useRef<HTMLElement>(null);
     const navigate = useNavigate();
+
+    // Below 1024 the Copilot opens under the whole queue; bring it into view.
+    useEffect(() => {
+        if (copilotOpen) {
+            copilotRef.current?.scrollIntoView({ block: 'nearest' });
+        }
+    }, [copilotOpen]);
 
     // Debounced incident search.
     const [searchInput, setSearchInput] = useState('');
@@ -260,7 +268,13 @@ export default function IncidentDashboard() {
                     )}
                 </aside>
 
-                <main className={styles.center}>
+                <main
+                    className={
+                        copilotOpen
+                            ? styles.centerWithCopilot
+                            : styles.center
+                    }
+                >
                     <div>
                         <AttentionStrip
                             wardId={selectedWardId}
@@ -378,6 +392,7 @@ export default function IncidentDashboard() {
                     {copilotOpen && (
                         <section
                             id="dashboard-copilot"
+                            ref={copilotRef}
                             aria-label="Copilot assistant"
                             className={styles.copilot}
                         >

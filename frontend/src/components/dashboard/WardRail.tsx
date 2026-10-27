@@ -34,35 +34,25 @@ export default function WardRail({ wards, categories, categoryLabel }: Props) {
 
     return (
         <div className={styles.rail}>
+            {/* A native select, as in the Explorer filter bar: 243 wards as a
+                list pushed every other filter a long scroll down the rail. */}
             <section className={styles.group} aria-labelledby="rail-wards">
                 <h2 className={styles.groupTitle} id="rail-wards">
-                    Wards
+                    Ward
                 </h2>
-                <ul className={styles.list}>
-                    <li>
-                        <button
-                            type="button"
-                            className={selectedWardId === null ? styles.itemActive : styles.item}
-                            aria-pressed={selectedWardId === null}
-                            onClick={() => selectWard(null)}
-                        >
-                            All wards
-                        </button>
-                    </li>
+                <select
+                    className={styles.select}
+                    aria-labelledby="rail-wards"
+                    value={selectedWardId ?? ''}
+                    onChange={(e) => selectWard(e.target.value === '' ? null : e.target.value)}
+                >
+                    <option value="">All wards</option>
                     {wards.map((ward) => (
-                        <li key={ward.id}>
-                            <button
-                                type="button"
-                                className={selectedWardId === ward.id ? styles.itemActive : styles.item}
-                                aria-pressed={selectedWardId === ward.id}
-                                onClick={() => selectWard(ward.id)}
-                            >
-                                {ward.name}
-                                {ward.zone && <span className={styles.zone}>{ward.zone}</span>}
-                            </button>
-                        </li>
+                        <option key={ward.id} value={ward.id}>
+                            {ward.code} · {ward.name}
+                        </option>
                     ))}
-                </ul>
+                </select>
             </section>
 
             {/* Shared with every Explorer view: incidents with a report in the window. */}

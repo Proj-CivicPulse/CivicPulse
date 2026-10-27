@@ -20,6 +20,8 @@
      * register ground rather than one edge-to-edge slab. The gap is what lets
      * each region carry its own border and radius and still look deliberate.
      */
+    /* One row, held to the viewport, so each region scrolls inside itself. */
+    grid-template-rows: minmax(0, 1fr);
     gap: var(--space-3);
     padding: var(--space-3);
     flex: 1;
@@ -33,6 +35,7 @@
 /* Each region is now a bordered panel in its own right. */
 .rail,
 .center,
+.centerWithCopilot,
 .detail {
     border: 1px solid var(--rule);
     border-radius: var(--r-panel);
@@ -48,13 +51,28 @@
     padding: var(--space-4);
 }
 
-.center {
+.center,
+.centerWithCopilot {
     display: grid;
-    /* "Needs attention" on top at its own height; then the map takes ~40% of
-       the rest and the queue, the working surface, the remainder. */
-    grid-template-rows: auto minmax(200px, 2fr) minmax(0, 3fr);
     min-width: 0;
     min-height: 0;
+    /*
+     * The rows fill the panel exactly while they fit. When their floors don't
+     * (a short screen, an open "Needs attention" list, the Copilot), the
+     * column scrolls instead of clipping whatever ends up below the fold.
+     */
+    overflow: hidden auto;
+}
+
+.center {
+    /* "Needs attention" on top at its own height; then the map takes ~40% of
+       the rest and the queue, the working surface, the remainder. */
+    grid-template-rows: auto minmax(200px, 2fr) minmax(240px, 3fr);
+}
+
+/* The Copilot takes a row of its own, so the map gives up the height. */
+.centerWithCopilot {
+    grid-template-rows: auto minmax(120px, 1fr) minmax(200px, 2fr) minmax(240px, 2fr);
 }
 
 .map {
@@ -70,9 +88,12 @@
     overflow: hidden;
 }
 
-/* The Copilot opens under the queue, never over it. */
+/* The Copilot opens under the queue, never over it, and scrolls in its row. */
 .copilot {
-    margin-top: var(--space-5);
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--space-3);
+    border-top: 1px solid var(--rule);
 }
 
 .queueHead {
@@ -178,11 +199,26 @@
         grid-template-columns: 1fr;
     }
 
+    .layout,
+    .layoutWithDetail {
+        grid-template-rows: auto;
+    }
+
+    .center,
+    .centerWithCopilot {
+        overflow: hidden;
+    }
+
     .center {
         grid-template-rows: auto 320px auto;
     }
 
-    .queue > :last-child {
+    .centerWithCopilot {
+        grid-template-rows: auto 320px auto auto;
+    }
+
+    .queue > :last-child,
+    .copilot {
         overflow-y: visible;
     }
 

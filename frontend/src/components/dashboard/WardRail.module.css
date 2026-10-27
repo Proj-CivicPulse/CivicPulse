@@ -20,49 +20,30 @@
     border-bottom: 1px solid var(--rule);
 }
 
-.list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    gap: 1px;
-}
-
-/* Officer density is 8/12/16, not the citizen side 24/32/48. */
-.item,
-.itemActive {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-2);
+.select {
     width: 100%;
-    padding: var(--space-2);
-    border: 0;
-    border-left: 2px solid transparent;
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--rule);
     border-radius: var(--r-sharp);
-    background: none;
+    background: var(--surface);
     font: var(--t-ui);
-    color: var(--ink-muted);
-    text-align: start;
+    color: var(--ink);
     cursor: pointer;
 }
 
-.item:hover {
-    background: var(--ground);
-    color: var(--ink);
+.select:hover {
+    border-color: var(--rule-strong);
 }
 
-.itemActive {
-    background: var(--seal-wash);
-    border-left-color: var(--seal);
-    color: var(--seal);
-    font-weight: 500;
+.select:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
 }
 
-.zone {
-    font: var(--t-micro);
-    font-weight: 400;
-    color: var(--ink-faint);
+@media (pointer: coarse) {
+    .select {
+        min-height: 44px;
+    }
 }
 
 .chips {
@@ -125,20 +106,9 @@
         flex: 0 0 auto;
     }
 
-    .list {
-        display: flex;
-        gap: var(--space-1);
-    }
-
-    .item,
-    .itemActive {
-        white-space: nowrap;
-        border-left: 0;
-        border-bottom: 2px solid transparent;
-    }
-
-    .itemActive {
-        border-bottom-color: var(--seal);
+    .select {
+        width: auto;
+        min-width: 200px;
     }
 
     .chips {
