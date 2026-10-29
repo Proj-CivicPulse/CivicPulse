@@ -7,6 +7,7 @@ import com.civicpulse.backend_spring.dto.incident.IncidentDto;
 import com.civicpulse.backend_spring.dto.incident.UpdateIncidentRequest;
 import com.civicpulse.backend_spring.entity.Department;
 import com.civicpulse.backend_spring.entity.Incident;
+import com.civicpulse.backend_spring.enums.ComplaintStatus;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
 import com.civicpulse.backend_spring.enums.LifeSafetySource;
 import com.civicpulse.backend_spring.exception.ResourceNotFoundException;
@@ -148,6 +149,7 @@ public class IncidentService {
     private void applyStatus(Incident incident, IncidentStatus next) {
         boolean wasResolved = incident.getStatus() == IncidentStatus.RESOLVED;
         boolean isResolved = next == IncidentStatus.RESOLVED;
+        boolean changed = incident.getStatus() != next;
 
         if (isResolved && !wasResolved) {
             incident.setResolvedAt(LocalDateTime.now());
@@ -156,6 +158,13 @@ public class IncidentService {
         }
 
         incident.setStatus(next);
+
+        // Only on a real transition: re-sending the current status alongside a
+        // summary edit must not undo a status an officer set on one report.
+        if (changed) {
+            complaintRepository.syncStatusWithIncident(
+                    incident.getId(), ComplaintStatus.valueOf(next.name()), LocalDateTime.now());
+        }
     }
 
     /**

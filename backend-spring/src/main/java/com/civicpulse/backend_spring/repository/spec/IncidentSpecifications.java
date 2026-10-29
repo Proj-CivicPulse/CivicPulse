@@ -1,9 +1,11 @@
 package com.civicpulse.backend_spring.repository.spec;
 
+import com.civicpulse.backend_spring.entity.Category;
 import com.civicpulse.backend_spring.entity.Complaint;
 import com.civicpulse.backend_spring.entity.Incident;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
 import com.civicpulse.backend_spring.service.priority.PriorityBand;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -12,6 +14,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -116,20 +119,77 @@ public final class IncidentSpecifications {
     }
 
     /**
-     * Case-insensitive substring over title and summary. LIKE wildcards in the
-     * input are escaped, so searching "100%" means the text "100%", not
-     * "anything starting with 100".
+     * Search over everything an officer can see of an incident, not just its
+     * title and summary: a resident's report carries no title and only an
+     * officer writes a summary, so those two alone left almost every incident
+     * unfindable.
+     *
+     * <p>Each word of the query must match (AND), each in any of: title,
+     * summary, address, category (code or display name), or the description,
+     * title or reference number of a report in the incident. A word matches at
+     * the START of a word — "pot" finds "pothole", "ole" does not — which is
+     * what keeps search-as-you-type results related rather than incidental.
+     *
+     * <p>LIKE wildcards in the input are escaped, so searching "100%" means the
+     * text "100%", not "anything starting with 100".
      */
     public static Specification<Incident> matchesText(String text) {
         return (root, query, cb) -> {
-            if (text == null || text.isBlank()) {
+            List<String> words = searchWords(text);
+            if (words.isEmpty()) {
                 return null;
             }
-            String pattern = "%" + escapeLike(text.trim().toLowerCase(Locale.ROOT)) + "%";
-            return cb.or(
-                    cb.like(cb.lower(root.get("title")), pattern, '\\'),
-                    cb.like(cb.lower(root.get("summary")), pattern, '\\'));
+            List<Predicate> all = new ArrayList<>();
+            for (String word : words) {
+                String escaped = escapeLike(word);
+                String atStart = escaped + "%";
+                String afterSpace = "% " + escaped + "%";
+
+                Subquery<Long> categories = query.subquery(Long.class);
+                Root<Category> category = categories.from(Category.class);
+                categories.select(cb.literal(1L)).where(
+                        cb.equal(category.get("code"), root.get("category")),
+                        startsWord(cb, cb.lower(category.get("displayName")), atStart, afterSpace));
+
+                Subquery<Long> members = query.subquery(Long.class);
+                Root<Complaint> complaint = members.from(Complaint.class);
+                members.select(cb.literal(1L)).where(
+                        cb.equal(complaint.get("incident"), root),
+                        cb.or(
+                                startsWord(cb, cb.lower(complaint.get("description")), atStart, afterSpace),
+                                startsWord(cb, cb.lower(complaint.get("title")), atStart, afterSpace),
+                                startsWord(cb, cb.lower(complaint.get("referenceNo")), atStart, afterSpace)));
+
+                all.add(cb.or(
+                        startsWord(cb, cb.lower(root.get("title")), atStart, afterSpace),
+                        startsWord(cb, cb.lower(root.get("summary")), atStart, afterSpace),
+                        startsWord(cb, cb.lower(root.get("address")), atStart, afterSpace),
+                        // street_light reads as "street light".
+                        startsWord(cb, cb.function("replace", String.class,
+                                root.get("category"), cb.literal("_"), cb.literal(" ")), atStart, afterSpace),
+                        cb.exists(categories),
+                        cb.exists(members)));
+            }
+            return cb.and(all.toArray(Predicate[]::new));
         };
+    }
+
+    /** Lower-cased words, at most {@value #MAX_SEARCH_WORDS}: each one is a subquery. */
+    static List<String> searchWords(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(text.trim().toLowerCase(Locale.ROOT).split("\\s+"))
+                .distinct()
+                .limit(MAX_SEARCH_WORDS)
+                .toList();
+    }
+
+    private static final int MAX_SEARCH_WORDS = 6;
+
+    private static Predicate startsWord(CriteriaBuilder cb, Expression<String> field,
+                                        String atStart, String afterSpace) {
+        return cb.or(cb.like(field, atStart, '\\'), cb.like(field, afterSpace, '\\'));
     }
 
     public static String escapeLike(String value) {

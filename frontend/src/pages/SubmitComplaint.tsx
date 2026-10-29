@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Check, Copy, LocateFixed } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { complaintService } from '@/services/complaint.service';
 import { categoryService, FALLBACK_CATEGORIES } from '@/services/category.service';
@@ -25,32 +25,62 @@ export default function SubmitComplaint() {
     // drag from, and `locating` only gates the "finding you" message.
     const [pin, setPin] = useState({ lat: FALLBACK[0], long: FALLBACK[1] });
     const [locating, setLocating] = useState(() => Boolean(navigator.geolocation));
+    // Whether the pin is where the device says the resident is. Anything else
+    // (the city-centre fallback, a drag, a tap) offers the way back.
+    const [atCurrentLocation, setAtCurrentLocation] = useState(false);
+    const [locateFailed, setLocateFailed] = useState(false);
     const [manualWardId, setManualWardId] = useState('');
     const [showErrors, setShowErrors] = useState(false);
     const [copied, setCopied] = useState(false);
+    const locateRequest = useRef(0);
 
-    useEffect(() => {
+    const requestFix = useCallback(() => {
         if (!navigator.geolocation) return;
 
-        let cancelled = false;
+        // Only the latest request may move the pin: a slow fix arriving after
+        // the resident has asked again, or after unmount, is dropped.
+        const request = ++locateRequest.current;
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                if (cancelled) return;
+                if (request !== locateRequest.current) return;
                 setPin({ lat: position.coords.latitude, long: position.coords.longitude });
+                setAtCurrentLocation(true);
                 setLocating(false);
             },
             () => {
-                // Denied or unavailable. Keep the fallback pin already in state.
-                if (cancelled) return;
+                // Denied or unavailable. Keep whatever pin is already in state.
+                if (request !== locateRequest.current) return;
+                setLocateFailed(true);
                 setLocating(false);
             },
             { enableHighAccuracy: true, timeout: 8000 }
         );
-
-        return () => {
-            cancelled = true;
-        };
     }, []);
+
+    // Initial state already says "locating", so the first fix needs no setState here.
+    useEffect(() => {
+        requestFix();
+        return () => {
+            // A request counter, not a DOM node: bumping it is exactly what
+            // drops a fix that lands after unmount.
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+            locateRequest.current++;
+        };
+    }, [requestFix]);
+
+    function locate() {
+        setLocating(true);
+        setLocateFailed(false);
+        requestFix();
+    }
+
+    function movePin(lat: number, long: number) {
+        // A pin placed by hand wins over a fix still on its way.
+        locateRequest.current++;
+        setLocating(false);
+        setPin({ lat, long });
+        setAtCurrentLocation(false);
+    }
 
     // The system knowing your ward from the pin is the trust moment. Showing it
     // is the point — this is never a dropdown the resident has to fill in.
@@ -246,9 +276,24 @@ export default function SubmitComplaint() {
                             size="inline"
                             ariaLabel="Choose the location of the problem"
                             pin={pin}
-                            onPinMove={(lat, long) => setPin({ lat, long })}
+                            onPinMove={movePin}
                             zoom={16}
                         />
+
+                        {navigator.geolocation && !atCurrentLocation && !locating && (
+                            <div className={styles.locateRow}>
+                                <Button variant="secondary" size="compact" onClick={locate}>
+                                    <LocateFixed size={14} strokeWidth={2} aria-hidden="true" />
+                                    Use my current location
+                                </Button>
+                                {locateFailed && (
+                                    <span className={styles.locateError} role="status">
+                                        Couldn&rsquo;t get your location. Check that this site
+                                        is allowed to use it.
+                                    </span>
+                                )}
+                            </div>
+                        )}
 
                         <dl className={styles.derived}>
                             <div className={styles.derivedRow}>

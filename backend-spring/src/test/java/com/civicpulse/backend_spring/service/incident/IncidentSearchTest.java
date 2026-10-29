@@ -68,17 +68,22 @@ class IncidentSearchTest {
     }
 
     private void member(Long incidentId, LocalDateTime reportedAt) {
+        member(incidentId, reportedAt, "search test member");
+    }
+
+    private void member(Long incidentId, LocalDateTime reportedAt, String description) {
         entityManager.createNativeQuery("""
                 INSERT INTO complaints
                     (ward_id, incident_id, description, category, latitude, longitude, status,
                      reference_no, matching_status, created_at, updated_at, reported_at)
-                VALUES (?1, ?2, 'search test member', 'pothole', 12.9716, 77.5946, 'OPEN',
+                VALUES (?1, ?2, ?5, 'pothole', 12.9716, 77.5946, 'OPEN',
                         ?3, 'MATCHED', NOW(), NOW(), ?4)
                 """)
                 .setParameter(1, wardId)
                 .setParameter(2, incidentId)
                 .setParameter(3, "T-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24))
                 .setParameter(4, reportedAt)
+                .setParameter(5, description)
                 .executeUpdate();
     }
 
@@ -172,6 +177,51 @@ class IncidentSearchTest {
                 marker + " 100%", null, null, null);
 
         assertThat(titles(page)).containsExactly("100% blocked");
+    }
+
+    @Test
+    @DisplayName("q finds an incident by what its reports say, not only by its title")
+    void textSearchReachesMemberReports() {
+        // A resident's report has no title and nobody has written a summary
+        // yet: the description is the only text the incident has.
+        LocalDateTime t = LocalDateTime.of(2026, 9, 1, 10, 0);
+        Long leak = incident("one", 3.0, "OPEN", t, t);
+        member(leak, t, "Water main leaking near the school gate");
+        Long other = incident("two", 3.0, "OPEN", t, t);
+        member(other, t, "Streetlight out since Monday");
+
+        PageResponse<IncidentDto> page = search(null, null, null, null,
+                marker + " leak", null, null, null);
+
+        assertThat(titles(page)).containsExactly("one");
+    }
+
+    @Test
+    @DisplayName("q matches the category, at the start of a word only")
+    void textSearchMatchesCategoryByWordStart() {
+        LocalDateTime t = LocalDateTime.of(2026, 9, 1, 10, 0);
+        incident("one", 3.0, "OPEN", t, t);
+
+        assertThat(titles(search(null, null, null, null, marker + " pot", null, null, null)))
+                .containsExactly("one");
+        // "thole" sits inside "pothole": incidental, not related.
+        assertThat(search(null, null, null, null, marker + " thole", null, null, null).getItems())
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("every word of q must match somewhere in the incident")
+    void textSearchAndsWords() {
+        LocalDateTime t = LocalDateTime.of(2026, 9, 1, 10, 0);
+        Long both = incident("both", 3.0, "OPEN", t, t);
+        member(both, t, "Garbage dumped beside the market");
+        Long garbageOnly = incident("garbage-only", 3.0, "OPEN", t, t);
+        member(garbageOnly, t, "Garbage not collected for a week");
+
+        PageResponse<IncidentDto> page = search(null, null, null, null,
+                marker + " garbage market", null, null, null);
+
+        assertThat(titles(page)).containsExactly("both");
     }
 
     @Test

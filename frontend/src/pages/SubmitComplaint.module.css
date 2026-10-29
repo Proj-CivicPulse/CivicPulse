@@ -75,6 +75,21 @@
     padding: var(--space-6) 0;
 }
 
+/* The way back to the device's own fix after the pin has been moved by hand. */
+.locateRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+}
+
+.locateError {
+    font: var(--t-micro);
+    font-weight: 400;
+    color: var(--ink-muted);
+}
+
 /* ------------------------------------------------- derived / review rows */
 
 .derived {

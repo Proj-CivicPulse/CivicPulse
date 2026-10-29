@@ -1,9 +1,10 @@
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { complaintService } from '@/services/complaint.service';
+import { complaintService, type Complaint } from '@/services/complaint.service';
 import { queryKeys } from '@/lib/queryKeys';
 import { describeError } from '@/lib/errors';
 import { formatMatchingSummary, truncate } from '@/lib/format';
-import { formatRelative } from '@/lib/datetime';
+import { formatRelative, parseServerDate } from '@/lib/datetime';
 import AppHeader from '@/components/AppHeader';
 import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
@@ -15,6 +16,40 @@ const NAV = [
     { label: 'Report a problem', to: '/complaints/new' },
     { label: 'My reports', to: '/complaints' },
 ] as const;
+
+type SortOrder = 'age-newest' | 'age-oldest' | 'reports-most' | 'reports-fewest';
+
+const SORT_OPTIONS: readonly { value: SortOrder; label: string }[] = [
+    { value: 'age-newest', label: 'Age · newest first' },
+    { value: 'age-oldest', label: 'Age · oldest first' },
+    { value: 'reports-most', label: 'Reports · most first' },
+    { value: 'reports-fewest', label: 'Reports · fewest first' },
+];
+
+/** reportedAt, not createdAt: the age of the problem, not of the row. */
+function reportedTime(complaint: Complaint): number {
+    return parseServerDate(complaint.reportedAt)?.getTime() ?? 0;
+}
+
+function sortComplaints(complaints: readonly Complaint[], order: SortOrder): Complaint[] {
+    const newestFirst = (a: Complaint, b: Complaint) => reportedTime(b) - reportedTime(a);
+    // A report not yet grouped counts as zero, so it sinks under "most first"
+    // rather than claiming a count the matcher has not established.
+    const reports = (c: Complaint) => c.incidentComplaintCount ?? 0;
+
+    return [...complaints].sort((a, b) => {
+        switch (order) {
+            case 'age-newest':
+                return newestFirst(a, b);
+            case 'age-oldest':
+                return -newestFirst(a, b);
+            case 'reports-most':
+                return reports(b) - reports(a) || newestFirst(a, b);
+            case 'reports-fewest':
+                return reports(a) - reports(b) || newestFirst(a, b);
+        }
+    });
+}
 
 /**
  * A stacked list, not a grid of cards. These are register entries and they read
@@ -40,13 +75,38 @@ export default function MyComplaints() {
                 : false,
     });
 
+    const [sortOrder, setSortOrder] = useState<SortOrder>('age-newest');
+    const complaints = useMemo(
+        () => (data ? sortComplaints(data, sortOrder) : []),
+        [data, sortOrder],
+    );
+
     return (
         <div className={styles.page}>
             <AppHeader nav={NAV} />
 
             <main className={styles.main}>
                 <div className={styles.column}>
-                    <h1 className={styles.title}>My reports</h1>
+                    <div className={styles.head}>
+                        <h1 className={styles.title}>My reports</h1>
+
+                        {complaints.length > 1 && (
+                            <label className={styles.sort}>
+                                <span className={styles.sortLabel}>Sort by</span>
+                                <select
+                                    className={styles.sortSelect}
+                                    value={sortOrder}
+                                    onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                                >
+                                    {SORT_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        )}
+                    </div>
 
                     {isPending ? (
                         <div className={styles.list}>
@@ -75,7 +135,7 @@ export default function MyComplaints() {
                         />
                     ) : (
                         <ul className={styles.list}>
-                            {data.map((complaint) => {
+                            {complaints.map((complaint) => {
                                 const matching = formatMatchingSummary(
                                     complaint.matchingStatus,
                                     complaint.incidentComplaintCount,

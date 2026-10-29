@@ -12,6 +12,7 @@ import { describeError } from '@/lib/errors';
 import { formatCount, humanizeEnum, truncate } from '@/lib/format';
 import { daysSince } from '@/lib/datetime';
 import { reportWindow } from '@/lib/reportWindow';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { useDashboardStore } from '@/stores/dashboard.store';
 import AppHeader from '@/components/AppHeader';
 import { EXPLORER_NAV } from '@/components/explorer/ExplorerFilterBar';
@@ -34,6 +35,8 @@ import styles from './IncidentDashboard.module.css';
 
 const QUEUE_PAGE_SIZE = 10;
 const QUEUE_FETCH_LIMIT = 200;
+const SEARCH_DEBOUNCE_MS = 350;
+const SEARCH_MIN_CHARS = 2;
 
 export default function IncidentDashboard() {
     const selectedWardId = useDashboardStore((s) => s.selectedWardId);
@@ -56,18 +59,14 @@ export default function IncidentDashboard() {
         }
     }, [copilotOpen]);
 
-    // Debounced incident search.
+    // Debounced incident search. A single letter would match the start of
+    // nearly every word on file, so nothing is sent below SEARCH_MIN_CHARS.
     const [searchInput, setSearchInput] = useState('');
-    const [search, setSearch] = useState('');
-
-    useEffect(() => {
-        const id = window.setTimeout(
-            () => setSearch(searchInput.trim()),
-            300,
-        );
-
-        return () => window.clearTimeout(id);
-    }, [searchInput]);
+    const typed = searchInput.trim();
+    const debouncedSearch = useDebouncedValue(typed, SEARCH_DEBOUNCE_MS);
+    const search = debouncedSearch.length >= SEARCH_MIN_CHARS ? debouncedSearch : '';
+    const searchSettling = typed.length >= SEARCH_MIN_CHARS && typed !== debouncedSearch;
+    const searchTooShort = typed.length > 0 && typed.length < SEARCH_MIN_CHARS;
 
     const wardsQuery = useQuery({
         queryKey: queryKeys.wards.list(),
@@ -322,7 +321,7 @@ export default function IncidentDashboard() {
                             <input
                                 type="search"
                                 className={styles.search}
-                                placeholder="Search titles and summaries"
+                                placeholder="Search incidents, reports, places"
                                 aria-label="Search incidents"
                                 value={searchInput}
                                 onChange={(event) =>
@@ -330,8 +329,12 @@ export default function IncidentDashboard() {
                                 }
                             />
 
-                            <span className={styles.queueCount}>
-                                {total > incidents.length
+                            <span className={styles.queueCount} aria-live="polite">
+                                {searchTooShort
+                                    ? `Type at least ${SEARCH_MIN_CHARS} letters to search`
+                                    : searchSettling || (search !== '' && incidentsQuery.isFetching)
+                                    ? 'Searching…'
+                                    : total > incidents.length
                                     ? `${formatCount(incidents.length)} of ${formatCount(total)} incidents`
                                     : `${formatCount(total)}${total === 1 ? ' incident' : ' incidents'}`}
                             </span>
@@ -365,9 +368,16 @@ export default function IncidentDashboard() {
                         ) : incidents.length === 0 ? (
                             <EmptyState
                                 message={
-                                    hasNarrowingFilters
+                                    search !== ''
+                                        ? `No incidents match “${search}”.`
+                                        : hasNarrowingFilters
                                         ? 'No incidents match these filters.'
                                         : 'No incidents in this ward yet.'
+                                }
+                                detail={
+                                    search !== ''
+                                        ? 'Every word has to match the start of a word in the incident or one of its reports.'
+                                        : undefined
                                 }
                             />
                         ) : (

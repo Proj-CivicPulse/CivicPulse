@@ -3,6 +3,7 @@ package com.civicpulse.backend_spring.service.incident;
 import com.civicpulse.backend_spring.dto.incident.IncidentDto;
 import com.civicpulse.backend_spring.dto.incident.UpdateIncidentRequest;
 import com.civicpulse.backend_spring.entity.Incident;
+import com.civicpulse.backend_spring.enums.ComplaintStatus;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
 import com.civicpulse.backend_spring.repository.ComplaintRepository;
 import com.civicpulse.backend_spring.repository.DepartmentRepository;
@@ -22,6 +23,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -159,6 +163,31 @@ class IncidentResolutionTest {
 
         assertThat(incident.getResolvedAt()).isEqualTo(original);
         assertThat(incident.getStatus()).isEqualTo(IncidentStatus.RESOLVED);
+    }
+
+    @Test
+    @DisplayName("a status change carries down to every report in the incident")
+    void statusReachesReports() {
+        // A resident can only read their own complaint, never the incident, so
+        // this is the only way "Resolved" reaches My reports.
+        existing(IncidentStatus.OPEN, null);
+
+        update("resolved");
+
+        verify(complaintRepository).syncStatusWithIncident(
+                eq(1L), eq(ComplaintStatus.RESOLVED), any(LocalDateTime.class));
+    }
+
+    @Test
+    @DisplayName("re-sending the current status leaves the reports alone")
+    void unchangedStatusDoesNotSync() {
+        // An officer may have set one report's status on its own; an edit that
+        // merely repeats the incident's status must not overwrite it.
+        existing(IncidentStatus.RESOLVED, LocalDateTime.now().minusDays(1));
+
+        update("resolved");
+
+        verify(complaintRepository, never()).syncStatusWithIncident(any(), any(), any());
     }
 
     @Test

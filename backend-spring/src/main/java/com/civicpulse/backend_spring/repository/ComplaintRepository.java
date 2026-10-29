@@ -75,6 +75,23 @@ public interface ComplaintRepository
     long countByIncidentIdAndCreatedAtAfter(Long incidentId, LocalDateTime since);
 
     /**
+     * Carries an officer's status decision on an incident down to every report
+     * in it, so the resident who filed one sees "Resolved" on My reports — they
+     * cannot read incidents, only their own complaints.
+     *
+     * <p>A bulk update skips {@code @UpdateTimestamp}, hence the explicit
+     * {@code updatedAt}. Rows already at the status are left untouched.
+     */
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            update Complaint c set c.status = :status, c.updatedAt = :now
+            where c.incident.id = :incidentId and c.status <> :status
+            """)
+    int syncStatusWithIncident(@Param("incidentId") Long incidentId,
+                               @Param("status") ComplaintStatus status,
+                               @Param("now") LocalDateTime now);
+
+    /**
      * Drops a stored embedding whose text has changed upstream, so backend-node
      * embeds the corrected text on its next run instead of reusing the old
      * vector. Spring never writes a vector; it only invalidates one.
