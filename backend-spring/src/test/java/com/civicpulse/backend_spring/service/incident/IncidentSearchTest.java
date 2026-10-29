@@ -48,12 +48,18 @@ class IncidentSearchTest {
 
     private Long incident(String title, double score, String status,
                           LocalDateTime firstReported, LocalDateTime lastReported) {
+        return incident(title, "pothole", score, status, firstReported, lastReported);
+    }
+
+    private Long incident(String title, String category, double score, String status,
+                          LocalDateTime firstReported, LocalDateTime lastReported) {
         entityManager.createNativeQuery("""
                 INSERT INTO incidents
                     (ward_id, category, title, status, priority_score, complaint_count,
                      created_at, updated_at, first_reported_at, last_reported_at)
-                VALUES (?1, 'pothole', ?2, ?3, ?4, 1, NOW(), NOW(), ?5, ?6)
+                VALUES (?1, ?7, ?2, ?3, ?4, 1, NOW(), NOW(), ?5, ?6)
                 """)
+                .setParameter(7, category)
                 .setParameter(1, wardId)
                 .setParameter(2, marker + " " + title)
                 .setParameter(3, status)
@@ -207,6 +213,23 @@ class IncidentSearchTest {
         // "thole" sits inside "pothole": incidental, not related.
         assertThat(search(null, null, null, null, marker + " thole", null, null, null).getItems())
                 .isEmpty();
+    }
+
+    @Test
+    @DisplayName("q matches the category's officer name and aliases, not just its code")
+    void textSearchMatchesCategoryNameAndAlias() {
+        // 'garbage' is shown to officers as "Solid waste": the code alone
+        // shares no word with it, so "sol" used to find nothing.
+        LocalDateTime t = LocalDateTime.of(2026, 9, 1, 10, 0);
+        incident("waste", "garbage", 3.0, "OPEN", t, t);
+        incident("road", 3.0, "OPEN", t, t);
+
+        assertThat(titles(search(null, null, null, null, marker + " sol", null, null, null)))
+                .containsExactly("waste");
+        assertThat(titles(search(null, null, null, null, marker + " solid waste", null, null, null)))
+                .containsExactly("waste");
+        assertThat(titles(search(null, null, null, null, marker + " uncollected", null, null, null)))
+                .containsExactly("waste");
     }
 
     @Test

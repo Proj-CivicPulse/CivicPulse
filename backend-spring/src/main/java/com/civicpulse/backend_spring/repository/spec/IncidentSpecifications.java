@@ -1,6 +1,7 @@
 package com.civicpulse.backend_spring.repository.spec;
 
 import com.civicpulse.backend_spring.entity.Category;
+import com.civicpulse.backend_spring.entity.CategoryAlias;
 import com.civicpulse.backend_spring.entity.Complaint;
 import com.civicpulse.backend_spring.entity.Incident;
 import com.civicpulse.backend_spring.enums.IncidentStatus;
@@ -125,7 +126,8 @@ public final class IncidentSpecifications {
      * unfindable.
      *
      * <p>Each word of the query must match (AND), each in any of: title,
-     * summary, address, category (code or display name), or the description,
+     * summary, address, category (code, officer name, resident label or a
+     * registered alias), or the description,
      * title or reference number of a report in the incident. A word matches at
      * the START of a word — "pot" finds "pothole", "ole" does not — which is
      * what keeps search-as-you-type results related rather than incidental.
@@ -145,11 +147,21 @@ public final class IncidentSpecifications {
                 String atStart = escaped + "%";
                 String afterSpace = "% " + escaped + "%";
 
+                // The officer name ("Solid waste") is what the queue shows;
+                // the resident label and aliases are what people also call it.
                 Subquery<Long> categories = query.subquery(Long.class);
                 Root<Category> category = categories.from(Category.class);
                 categories.select(cb.literal(1L)).where(
                         cb.equal(category.get("code"), root.get("category")),
-                        startsWord(cb, cb.lower(category.get("displayName")), atStart, afterSpace));
+                        cb.or(
+                                startsWord(cb, cb.lower(category.get("name")), atStart, afterSpace),
+                                startsWord(cb, cb.lower(category.get("displayName")), atStart, afterSpace)));
+
+                Subquery<Long> aliases = query.subquery(Long.class);
+                Root<CategoryAlias> alias = aliases.from(CategoryAlias.class);
+                aliases.select(cb.literal(1L)).where(
+                        cb.equal(alias.get("category").get("code"), root.get("category")),
+                        startsWord(cb, cb.lower(alias.get("alias")), atStart, afterSpace));
 
                 Subquery<Long> members = query.subquery(Long.class);
                 Root<Complaint> complaint = members.from(Complaint.class);
@@ -168,6 +180,7 @@ public final class IncidentSpecifications {
                         startsWord(cb, cb.function("replace", String.class,
                                 root.get("category"), cb.literal("_"), cb.literal(" ")), atStart, afterSpace),
                         cb.exists(categories),
+                        cb.exists(aliases),
                         cb.exists(members)));
             }
             return cb.and(all.toArray(Predicate[]::new));
